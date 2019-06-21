@@ -1,0 +1,186 @@
+<!-- Copyright (C) Bandicoot Imaging Sciences 2019 -->
+
+<!-- Parts adapted from Threejsfundamentals:
+    - Responsive layout
+    - On demand rendering
+    - Initial HTML and JS structure
+https://github.com/greggman/threejsfundamentals/blob/master/threejs/threejs-render-on-demand-w-gui.html
+
+This license applies to those parts:
+# Copyright 2018, Google Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#
+#     * Redistributions in binary form must reproduce the above
+#       copyright notice, this list of conditions and the following disclaimer
+#       in the documentation and/or other materials provided with the
+#       distribution.
+#
+#     * Neither the name of Google Inc. nor the names of their
+#       contributors may be used to endorse or promote products derived from
+#       this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bivot material viewer</title>
+    <style>
+    body {
+        margin: 0;
+    }
+    #c {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+    }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+  </body>
+<script src="third_party/threejs/three.min.js"></script>
+<script src="third_party/threejs/js/controls/OrbitControls.js"></script>
+<script src="third_party/threejs/js/libs/dat.gui.min.js"></script>
+<script src="third_party/threejs/js/WebGL.js"></script>
+<script>
+'use strict';
+
+function main() {
+  const canvas = document.querySelector('#c');
+  const renderer = new THREE.WebGLRenderer({canvas});
+
+  const fov = 75;
+  const aspect = 2;  // the canvas default
+  const near = 0.1;
+  const far = 5;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 2;
+
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.rotateSpeed = 0.1;
+  controls.target.set(0, 0, 0);
+  controls.update();
+
+  const gui = new dat.GUI();
+
+  const scene = new THREE.Scene();
+
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+  }
+
+  const planeWidth = 1;
+  const planeHeight = 1;
+  const planeWidthSegments = 1;
+  const planeHeightSegments = 1;
+  const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight, 
+                                                 planeWidthSegments, planeHeightSegments);
+
+  class ColorGUIHelper {
+    constructor(object, prop) {
+      this.object = object;
+      this.prop = prop;
+    }
+    get value() {
+      return `#${this.object[this.prop].getHexString()}`;
+    }
+    set value(hexString) {
+      this.object[this.prop].set(hexString);
+    }
+  }
+
+  function makeInstance(geometry, color, x) {
+    const material = new THREE.MeshPhongMaterial({color});
+
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    cube.position.x = x;
+
+    const folder = gui.addFolder(`Cube${x}`);
+    folder.addColor(new ColorGUIHelper(material, 'color'), 'value')
+        .name('color')
+        .onChange(requestRenderIfNotRequested);
+    folder.add(cube.scale, 'x', .1, 1.5)
+        .name('scale x')
+        .onChange(requestRenderIfNotRequested);
+    folder.open();
+
+    return cube;
+  }
+
+  makeInstance(geometry, 0x44aa88,  0);
+
+  function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const pixelRatio = window.devicePixelRatio;
+    const width  = canvas.clientWidth  * pixelRatio | 0;
+    const height = canvas.clientHeight * pixelRatio | 0;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
+  }
+
+  let renderRequested = false;
+
+  function render() {
+    renderRequested = undefined;
+
+    if (resizeRendererToDisplaySize(renderer)) {
+      const canvas = renderer.domElement;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  render();
+
+  function requestRenderIfNotRequested() {
+    if (!renderRequested) {
+      renderRequested = true;
+      requestAnimationFrame(render);
+    }
+  }
+
+  controls.addEventListener('change', requestRenderIfNotRequested);
+  window.addEventListener('resize', requestRenderIfNotRequested);
+}
+
+if ( WEBGL.isWebGLAvailable() === false ) {
+    document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+}
+
+main();
+</script>
+</html>
+
