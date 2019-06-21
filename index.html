@@ -129,6 +129,7 @@ function main() {
     loadingElem.style.display = 'none';
     const plane = new THREE.Mesh(geometry, materials);
     scene.add(plane);
+    render();
   };
 
   loadManager.onProgress = (urlOfLastItemLoaded, itemsLoaded, itemsTotal) => {
