@@ -97,19 +97,29 @@ function main() {
     light.position.set(-1, 2, 4);
     scene.add(light);
   }
-
+/*
   const planeWidth = 1;
   const planeHeight = 1;
   const planeWidthSegments = 1;
   const planeHeightSegments = 1;
   const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight, 
                                                  planeWidthSegments, planeHeightSegments);
+*/
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  const geometry = new THREE.BoxBufferGeometry(boxWidth, boxHeight, boxDepth);
 
-                                                 const loadManager = new THREE.LoadingManager();
+  const loadManager = new THREE.LoadingManager();
   const loader = new THREE.TextureLoader(loadManager);
 
   const materials = [
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')})
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
+    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
   ];
 
   const loadingElem = document.querySelector('#loading');
@@ -125,19 +135,6 @@ function main() {
     const progress = itemsLoaded / itemsTotal;
     progressBarElem.style.transform = `scaleX(${progress})`;
   };
-
-  class ColorGUIHelper {
-    constructor(object, prop) {
-      this.object = object;
-      this.prop = prop;
-    }
-    get value() {
-      return `#${this.object[this.prop].getHexString()}`;
-    }
-    set value(hexString) {
-      this.object[this.prop].set(hexString);
-    }
-  }
 
   function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
