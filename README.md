@@ -3,8 +3,8 @@
 ## Install
 
 * Clone the bivot repository.
-* Copy the folders `textures` and `third_party` from OneDrive - Documents - Bandicoot - Data - bivot into the
-  checked out folder `bivot`.
+* Copy the folders `textures` and `third_party` from **OneDrive - Documents - Bandicoot - Data - bivot** into
+  the checked out folder `bivot`.
 
 ## Usage
 
