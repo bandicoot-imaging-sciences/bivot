@@ -97,37 +97,29 @@ function main() {
     light.position.set(-1, 2, 4);
     scene.add(light);
   }
-/*
+
+  // iOS does not support WebGL2
+  // Textures need to be square for WebGL1
   const planeWidth = 1;
   const planeHeight = 1;
   const planeWidthSegments = 1;
   const planeHeightSegments = 1;
   const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight, 
                                                  planeWidthSegments, planeHeightSegments);
-*/
-  const boxWidth = 1;
-  const boxHeight = 1;
-  const boxDepth = 1;
-  const geometry = new THREE.BoxBufferGeometry(boxWidth, boxHeight, boxDepth);
 
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.TextureLoader(loadManager);
 
-  const materials = [
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-    new THREE.MeshBasicMaterial({map: loader.load('textures/zoo/perafade.png')}),
-  ];
+  // Textures need to be square powers of 2 for WebGL1
+  const texture = loader.load('textures/zoo/perafade_pad2k.png');
+  const material = new THREE.MeshBasicMaterial({map: texture});
 
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
 
   loadManager.onLoad = () => {
     loadingElem.style.display = 'none';
-    const plane = new THREE.Mesh(geometry, materials);
+    const plane = new THREE.Mesh(geometry, material);
     scene.add(plane);
     render();
   };
