@@ -89,18 +89,21 @@ function main() {
   const gui = new dat.GUI();
 
   const scene = new THREE.Scene();
+  
+  scene.background = new THREE.Color(0x222222);
 
-  {
-    const color = 0xFFFFFF;
-    const intensity = 1;
-    const light = new THREE.DirectionalLight(color, intensity);
-    light.position.set(-1, 2, 4);
-    scene.add(light);
-  }
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.DirectionalLight(color, intensity);
+  light.position.set(-1, 2, 4);
+  scene.add(light);
 
-  // iOS does not support WebGL2
-  // Textures need to be square for WebGL1
+  const matxs = 1928;
+  const matys = 1285;
+  const padxs = 2048;
+  const padys = padxs;
   const planeWidth = 1;
+  // const planeHeight = matys/matxs;
   const planeHeight = 1;
   const planeWidthSegments = 1;
   const planeHeightSegments = 1;
@@ -110,8 +113,10 @@ function main() {
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.TextureLoader(loadManager);
 
-  // Textures need to be square powers of 2 for WebGL1
   const texture = loader.load('textures/zoo/perafade_pad2k.png');
+  // iOS does not support WebGL2
+  // Textures need to be square powers of 2 for WebGL1
+  // texture.repeat.set(matxs/padxs, matxs/padys);
   const material = new THREE.MeshBasicMaterial({map: texture});
 
   const loadingElem = document.querySelector('#loading');

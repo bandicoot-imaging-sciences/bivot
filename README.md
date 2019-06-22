@@ -1,4 +1,4 @@
-# Bivot - material viewer
+# Bivot material viewer
 
 ## Install
 

@@ -37,14 +37,15 @@ for (path, padpath) in zip(paths, padpaths):
     imin = im.min()
     fmin = np.finfo(np.float16).min
     if imin <= fmin:
-        print('*** Warning: image test failed: min %g >= np.finfo(np.float16).min %g' % (imin, fmin))
+        print('*** Warning: image test failed: min %g >= np.finfo(np.float16).min %g (clipping)' % (imin, fmin))
     imax = im.max()
     fmax = np.finfo(np.float16).max
     if imax >= fmax:
-        print('*** Warning: image test failed: max %g <= np.finfo(np.float16).max %g' % (imax, fmax))
+        print('*** Warning: image test failed: max %g <= np.finfo(np.float16).max %g (clipping)' % (imax, fmax))
+    imclip = np.clip(im, fmin, fmax)
 
-    imf16 = im.astype(np.float16)
+    imf16 = imclip.astype(np.float16)
     imf16pad = np.pad(imf16, ((halfpady, halfpady),(halfpadx, halfpadx), (0, 0)), 
                 'constant', constant_values=0)
     print('Writing padded image:', padpath)
-    pyexr.write(padpath, imf16pad)
+    pyexr.write(padpath, imf16pad, precision=pyexr.HALF)
