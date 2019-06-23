@@ -70,6 +70,7 @@
 <script src="third_party/threejs/js/loaders/EXRLoader.js"></script>
 <script src="third_party/threejs/js/libs/dat.gui.min.js"></script>
 <script src="third_party/threejs/js/WebGL.js"></script>
+<script src="third_party/threejs/js/libs/stats.min.js"></script>
 <script>
 'use strict';
 
@@ -172,11 +173,15 @@ function main() {
     return needResize;
   }
 
+  let stats = new Stats();
+  document.body.appendChild(stats.dom);
+
   let renderRequested = false;
 
   function render() {
     renderRequested = undefined;
 
+    stats.begin();
     if (resizeRendererToDisplaySize(renderer)) {
       const canvas = renderer.domElement;
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
@@ -186,6 +191,7 @@ function main() {
     controls.update();
     renderer.toneMappingExposure = state.exposure/10000;
     renderer.render(scene, camera);
+    stats.end();
   }
   render();
 
