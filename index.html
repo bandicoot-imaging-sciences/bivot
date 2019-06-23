@@ -13,6 +13,10 @@
       Parts of this script were adapted from third party code. Refer to LICENSE-third_party.md for the
       relevant licenses.
 
+      Parts adapted from Threejs:
+      - EXR texture loading.
+      https://github.com/mrdoob/three.js/blob/dev/examples/webgl_loader_texture_exr.html
+
       Parts adapted from Threejsfundamentals:
       - Responsive layout
       - On demand rendering
@@ -63,16 +67,25 @@
   </body>
 <script src="third_party/threejs/three.min.js"></script>
 <script src="third_party/threejs/js/controls/OrbitControls.js"></script>
+<script src="third_party/threejs/js/loaders/EXRLoader.js"></script>
 <script src="third_party/threejs/js/libs/dat.gui.min.js"></script>
 <script src="third_party/threejs/js/WebGL.js"></script>
 <script>
 'use strict';
 
 function main() {
+  let state = {
+    exposure: 2.0
+  };
+
   const canvas = document.querySelector('#c');
   const renderer = new THREE.WebGLRenderer({canvas});
 
-  const fov = 75;
+  renderer.toneMapping = THREE.ReinhardToneMapping;
+  renderer.toneMappingExposure = state.exposure/10000;
+  renderer.gammaOutput = true;
+
+  const fov = 35;
   const aspect = 2;  // the canvas default
   const near = 0.1;
   const far = 5;
@@ -87,6 +100,8 @@ function main() {
   controls.update();
 
   const gui = new dat.GUI();
+  gui.add(state, 'exposure', 0, 4, 0.01).onChange(render);
+  gui.open();
 
   const scene = new THREE.Scene();
   
@@ -98,34 +113,46 @@ function main() {
   light.position.set(-1, 2, 4);
   scene.add(light);
 
-  const matxs = 1928;
-  const matys = 1285;
-  const padxs = 2048;
-  const padys = padxs;
+  // const matxs = 1928;
+  // const matys = 1285;
+  // const padxs = 2048;
+  // const padys = padxs;
   const planeWidth = 1;
   // const planeHeight = matys/matxs;
   const planeHeight = 1;
-  const planeWidthSegments = 1;
-  const planeHeightSegments = 1;
-  const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight, 
-                                                 planeWidthSegments, planeHeightSegments);
+  const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
 
   const loadManager = new THREE.LoadingManager();
-  const loader = new THREE.TextureLoader(loadManager);
+  const loader = new THREE.EXRLoader(loadManager);
+  let material = null;
 
-  const texture = loader.load('textures/zoo/perafade_pad2k.png');
-  // iOS does not support WebGL2
-  // Textures need to be square powers of 2 for WebGL1
-  // texture.repeat.set(matxs/padxs, matxs/padys);
-  const material = new THREE.MeshBasicMaterial({map: texture});
+  const texture = loader.load('textures/coffee-matte/brdf-diffuse_padf16.exr',
+    function (texture, textureData) {
+      // Run after each texture is loaded.
+      console.log('Loaded:', textureData);
+      console.log('Loaded:', texture);
+      // Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
+      // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
+      // filtering.
+      texture.minFilter = THREE.NearestFilter;
+      texture.magFilter = THREE.NearestFilter;
+      // Flip from chart space back into camera view space.
+      texture.flipY = true;
+      // iOS does not support WebGL2
+      // Textures need to be square powers of 2 for WebGL1
+      // texture.repeat.set(matxs/padxs, matxs/padys);
+      material = new THREE.MeshBasicMaterial({map: texture});
+    }
+  );
 
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
 
   loadManager.onLoad = () => {
+    // Run after all textures are loaded.
     loadingElem.style.display = 'none';
-    const plane = new THREE.Mesh(geometry, material);
-    scene.add(plane);
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
     render();
   };
 
@@ -158,6 +185,7 @@ function main() {
     }
 
     controls.update();
+    renderer.toneMappingExposure = state.exposure/10000;
     renderer.render(scene, camera);
   }
   render();

@@ -6,7 +6,8 @@ Pad EXR material textures to square power of 2.
 iOS only has WebGL1, not WebGL2. WebGL1 requires textures to be a square power of 2.
 
 This script also:
-- trims the texture pixel dimensions to an even number, and
+- trims the texture pixel dimensions to an even number,
+- clips the pixel value range to fit in float16 (if needed, with a warning), and
 - converts the EXR to float16.
 """
 import glob

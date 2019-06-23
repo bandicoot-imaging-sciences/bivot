@@ -1,6 +1,8 @@
 # Licenses for third party code adapted into Bivot.
 See references in source code for how each third party code was used.
 
+# TODO: Insert threejs license (used example code).
+
 # ThreeJSFundamentals license:
 ```
 # Copyright 2018, Google Inc.
