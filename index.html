@@ -83,7 +83,6 @@ function main() {
 
   renderer.toneMapping = THREE.ReinhardToneMapping;
   renderer.toneMappingExposure = state.exposure/10000;
-  renderer.gammaOutput = true;
 
   const fov = 35;
   const aspect = 2;  // the canvas default
@@ -100,7 +99,7 @@ function main() {
   controls.update();
 
   const gui = new dat.GUI();
-  gui.add(state, 'exposure', 0, 4, 0.01).onChange(render);
+  gui.add(state, 'exposure', 0, 20, 0.01).onChange(render);
   gui.open();
 
   const scene = new THREE.Scene();
