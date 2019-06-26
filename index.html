@@ -78,12 +78,14 @@ function main() {
   let state = {
     exposure: 2.0
   };
+  let exposureGain = 1/10000;
+  // let exposureGain = 1;
 
   const canvas = document.querySelector('#c');
   const renderer = new THREE.WebGLRenderer({canvas});
 
   renderer.toneMapping = THREE.ReinhardToneMapping;
-  renderer.toneMappingExposure = state.exposure/10000;
+  renderer.toneMappingExposure = exposureGain*state.exposure;
 
   const fov = 35;
   const aspect = 2;  // the canvas default
@@ -95,6 +97,8 @@ function main() {
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
+  // controls.userPanSpeed = 0.01;
   controls.rotateSpeed = 0.1;
   controls.target.set(0, 0, 0);
   controls.update();
@@ -124,26 +128,39 @@ function main() {
 
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.EXRLoader(loadManager);
-  let material = null;
 
-  const texture = loader.load('textures/coffee-matte/brdf-diffuse_padf16.exr',
-    function (texture, textureData) {
-      // Run after each texture is loaded.
-      console.log('Loaded:', textureData);
-      console.log('Loaded:', texture);
-      // Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
-      // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
-      // filtering.
-      texture.minFilter = THREE.NearestFilter;
-      texture.magFilter = THREE.NearestFilter;
-      // Flip from chart space back into camera view space.
-      texture.flipY = true;
-      // iOS does not support WebGL2
-      // Textures need to be square powers of 2 for WebGL1
-      // texture.repeat.set(matxs/padxs, matxs/padys);
-      material = new THREE.MeshBasicMaterial({map: texture});
-    }
-  );
+  let brdfTexturePaths = new Map([
+    ['diffuse', 'textures/coffee-matte/brdf-diffuse_padf16.exr'],
+    ['normals', 'textures/coffee-matte/brdf-normals_padf16.exr'],
+    ['roughness', 'textures/coffee-matte/brdf-roughness_padf16.exr'],
+    ['specular', 'textures/coffee-matte/brdf-specular_padf16.exr'],
+  ]);
+  let brdfMaterials = new Map();
+
+  for (let [name, path] of brdfTexturePaths) {
+    loader.load(path,
+      function (texture, textureData) {
+        // Run after each texture is loaded.
+        console.log('Loaded:', name, texture, textureData);
+
+        // FIXME: Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
+        // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
+        // filtering. This can possibly be overcome by loading the right extensions:
+        // this.ms_Renderer.context.getExtension( 'OES_texture_float' );
+        // this.ms_Renderer.context.getExtension( 'OES_texture_float_linear' );
+        // or the equivalent for half-float textures.
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+        texture.name = name;
+        // Flip from chart space back into camera view space.
+        texture.flipY = true;
+        // iOS does not support WebGL2
+        // Textures need to be square powers of 2 for WebGL1
+        // texture.repeat.set(matxs/padxs, matxs/padys);
+        brdfMaterials.set(name, new THREE.MeshBasicMaterial({map: texture}));
+      }
+    );
+  }
 
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
@@ -151,7 +168,7 @@ function main() {
   loadManager.onLoad = () => {
     // Run after all textures are loaded.
     loadingElem.style.display = 'none';
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, brdfMaterials.get('diffuse'));
     scene.add(mesh);
     render();
   };
@@ -190,7 +207,7 @@ function main() {
     }
 
     controls.update();
-    renderer.toneMappingExposure = state.exposure/10000;
+    renderer.toneMappingExposure = exposureGain*state.exposure;
     renderer.render(scene, camera);
     stats.end();
   }
