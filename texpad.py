@@ -49,4 +49,4 @@ for (path, padpath) in zip(paths, padpaths):
     imf16pad = np.pad(imf16, ((halfpady, halfpady),(halfpadx, halfpadx), (0, 0)), 
                 'constant', constant_values=0)
     print('Writing padded image:', padpath)
-    pyexr.write(padpath, imf16pad, precision=pyexr.HALF)
+    pyexr.write(padpath, imf16pad, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
