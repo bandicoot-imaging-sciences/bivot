@@ -15,10 +15,10 @@ import glob
 import numpy as np
 import pyexr
 
-(padxs, padys) = (4096, 4096)
+(padxs, padys) = (512, 512)
 paths = glob.glob('*.exr')
-paths = [pp for pp in paths if '_padf16' not in pp]
-padpaths = [pp.replace('.exr', '_padf16.exr') for pp in paths]
+paths = [pp for pp in paths if '_cropf16' not in pp and '_padf16' not in pp]
+padpaths = [pp.replace('.exr', '_cropf16.exr') for pp in paths]
 for (path, padpath) in zip(paths, padpaths):
     print('Reading image:', path)
     im = pyexr.read(path)
@@ -32,8 +32,8 @@ for (path, padpath) in zip(paths, padpaths):
     else:
         tys = ys - 1
     im = im[:tys, :txs, :]
-    halfpadx = (padxs - txs)//2
-    halfpady = (padxs - tys)//2
+    halfpadx = max((padxs - txs)//2, 0)
+    halfpady = max((padxs - tys)//2, 0)
 
     imin = im.min()
     fmin = np.finfo(np.float16).min
@@ -48,5 +48,14 @@ for (path, padpath) in zip(paths, padpaths):
     imf16 = imclip.astype(np.float16)
     imf16pad = np.pad(imf16, ((halfpady, halfpady),(halfpadx, halfpadx), (0, 0)), 
                 'constant', constant_values=0)
-    print('Writing padded image:', padpath)
-    pyexr.write(padpath, imf16pad, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
+    (pys, pxs, _) = imf16pad.shape
+    if (pxs > padxs or pys > padys):
+        x1 = (pxs - padxs)//2
+        x2 = (pxs - padxs)//2 + padxs
+        y1 = (pys - padys)//2
+        y2 = (pys - padys)//2 + padys
+        imf16crop = imf16pad[y1:y2, x1:x2, :]
+    else:
+        imf16crop = imf16pad
+    print('Writing cropped/padded image:', padpath)
+    pyexr.write(padpath, imf16crop, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
