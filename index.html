@@ -87,12 +87,15 @@ function main() {
   renderer.toneMapping = THREE.ReinhardToneMapping;
   renderer.toneMappingExposure = exposureGain*state.exposure;
 
-  const fov = 35;
+  // Physical distance units are in metres.
+  const focalLength = 0.085;
+  const sensorWidth = 0.036;
+  const fov = 2*Math.tan(sensorWidth/focalLength)*180/Math.PI;
   const aspect = 2;  // the canvas default
-  const near = 0.1;
-  const far = 5;
+  const near = 0.01;
+  const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.z = 2;
+  camera.position.set(0, 0, 0.1);
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -113,17 +116,21 @@ function main() {
 
   const color = 0xFFFFFF;
   const intensity = 1;
-  const light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(-1, 2, 4);
+  const light = new THREE.PointLight(color, intensity);
+  light.position.set(1, 0, 1);
   scene.add(light);
 
+  const dpi = 300;
+  const pixelsPerMetre = dpi/0.0254;
+  const textureWidthPixels = 512;
+  const textureHeightPixels = 512;
   // const matxs = 1928;
   // const matys = 1285;
   // const padxs = 2048;
   // const padys = padxs;
-  const planeWidth = 1;
   // const planeHeight = matys/matxs;
-  const planeHeight = 1;
+  const planeWidth = textureWidthPixels/pixelsPerMetre;
+  const planeHeight = textureHeightPixels/pixelsPerMetre;
   const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
 
   const loadManager = new THREE.LoadingManager();
