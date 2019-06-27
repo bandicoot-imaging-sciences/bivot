@@ -1,3 +1,24 @@
+// Copyright (C) Bandicoot Imaging Sciences 2019
+
+/*
+Parts of this script were adapted from third party code. Refer to LICENSE-third_party.md for the
+relevant licenses.
+
+Parts adapted from Threejs:
+- EXR texture loading.
+  https://github.com/mrdoob/three.js/blob/dev/examples/webgl_loader_texture_exr.html
+- Basic shader with lighting.
+  https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/SkinShader.js
+
+Parts adapted from Threejsfundamentals:
+- Responsive layout
+- On demand rendering
+- Initial HTML and JS structure
+- Texture loading progress bar.
+  https://github.com/greggman/threejsfundamentals/blob/master/threejs/threejs-render-on-demand-w-gui.html
+  https://github.com/greggman/threejsfundamentals/blob/master/threejs/threejs-textured-cube-wait-for-all-textures.html
+*/
+
 'use strict';
 
 function main() {
