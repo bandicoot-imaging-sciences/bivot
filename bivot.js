@@ -89,7 +89,7 @@ function main() {
     ['roughness', 'textures/coffee-matte/brdf-roughness_cropf16.exr'],
     ['specular', 'textures/coffee-matte/brdf-specular_cropf16.exr'],
   ]);
-  let brdfMaterials = new Map();
+  let brdfTextures = new Map();
 
   for (let [name, path] of brdfTexturePaths) {
     loader.load(path,
@@ -110,14 +110,14 @@ function main() {
         texture.flipY = true;
         // iOS does not support WebGL2
         // Textures need to be square powers of 2 for WebGL1
-        // texture.repeat.set(matxs/padxs, matxs/padys);
-        brdfMaterials.set(name, new THREE.MeshBasicMaterial({map: texture}));
+        // texture.repeat.set(matxs/padxs, matxs/padys);       
+        brdfTextures.set(name, texture);
       }
     );
   }
 
   let uniforms = THREE.UniformsUtils.merge([
-    THREE.UniformsLib[ "lights" ],
+    THREE.UniformsLib['lights'],
     {
       // Set textures to null here and assign later to avoid duplicating texture data.
       'tDiffuse': {value: null},
@@ -134,6 +134,7 @@ function main() {
     varying vec3 vViewPosition;
     ` + 
     THREE.ShaderChunk['common'] + 
+    THREE.ShaderChunk['bsdfs'] +
     THREE.ShaderChunk['lights_pars_begin'] + glsl`
     
     void main() {
@@ -161,11 +162,15 @@ function main() {
     varying vec3 vViewPosition;
     ` +
     THREE.ShaderChunk['common'] +
+    THREE.ShaderChunk['bsdfs'] +
     THREE.ShaderChunk['lights_pars_begin'] + glsl`
 
     void main() {
       vec4 diffuse = texture2D(tDiffuse, vUv);
-      gl_FragColor = diffuse;
+      vec3 normal = normalize(vNormal);
+      vec3 viewerDirection = normalize(vViewPosition);
+
+      gl_FragColor = 1000.0*diffuse;
     }
     `;
 
@@ -175,7 +180,12 @@ function main() {
   loadManager.onLoad = () => {
     // Run after all textures are loaded.
     loadingElem.style.display = 'none';
-    const mesh = new THREE.Mesh(geometry, brdfMaterials.get('diffuse'));
+    uniforms['tDiffuse'] = brdfTextures.get('diffuse');
+    uniforms['tNormals'] = brdfTextures.get('normals');
+    uniforms['tSpecular'] = brdfTextures.get('specular');
+    uniforms['tRoughness'] = brdfTextures.get('roughness');
+    let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
+    const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
     render();
   };
