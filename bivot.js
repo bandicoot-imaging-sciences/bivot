@@ -32,7 +32,6 @@ function main() {
   const renderer = new THREE.WebGLRenderer({canvas});
 
   renderer.toneMapping = THREE.ReinhardToneMapping;
-  renderer.toneMappingExposure = exposureGain*state.exposure;
 
   // Physical distance units are in metres.
   const focalLength = 0.085;
@@ -117,6 +116,7 @@ function main() {
   }
 
   let uniforms = THREE.UniformsUtils.merge([
+    THREE.UniformsLib['fog'],
     THREE.UniformsLib['lights'],
     {
       // Set textures to null here and assign later to avoid duplicating texture data.
@@ -124,6 +124,7 @@ function main() {
       'tNormals': {value: null},
       'tRoughness': {value: null},
       'tSpecular': {value: null},
+      'uExposure': {value: exposureGain*state.exposure},
     }
   ]);
 
@@ -132,11 +133,10 @@ function main() {
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-    ` + 
-    THREE.ShaderChunk['common'] + 
-    THREE.ShaderChunk['bsdfs'] +
-    THREE.ShaderChunk['lights_pars_begin'] + glsl`
-    
+    ` + '\n' +
+    THREE.ShaderChunk['common'] + '\n' +
+    THREE.ShaderChunk['fog_pars_vertex'] + '\n' +
+    glsl`
     void main() {
       vec4 mvPosition = modelViewMatrix*vec4(position, 1.0);
       vec4 worldPosition = modelMatrix*vec4(position, 1.0);
@@ -148,6 +148,9 @@ function main() {
       vUv = uv;
 
       gl_Position = projectionMatrix*mvPosition;
+      ` + '\n' +
+      THREE.ShaderChunk['fog_vertex'] + '\n' +
+      glsl`
     }
     `;
 
@@ -157,20 +160,29 @@ function main() {
     uniform sampler2D tRoughness;
     uniform sampler2D tSpecular;
 
+    uniform float uExposure;
+
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-    ` +
-    THREE.ShaderChunk['common'] +
-    THREE.ShaderChunk['bsdfs'] +
-    THREE.ShaderChunk['lights_pars_begin'] + glsl`
-
+    ` + '\n' +
+    THREE.ShaderChunk['common'] + '\n' +
+    THREE.ShaderChunk['bsdfs'] + '\n' +
+    THREE.ShaderChunk['packing'] + '\n' +
+    THREE.ShaderChunk['lights_pars_begin'] + '\n' +
+    THREE.ShaderChunk['fog_pars_fragment'] + '\n' +
+    THREE.ShaderChunk['bumpmap_pars_fragment'] + '\n' +
+    glsl`
     void main() {
       vec4 diffuse = texture2D(tDiffuse, vUv);
+      // diffuse = texture2D(tDiffuse, vec2(0.5, 0.5));
       vec3 normal = normalize(vNormal);
       vec3 viewerDirection = normalize(vViewPosition);
 
-      gl_FragColor = 1000.0*diffuse;
+      gl_FragColor = uExposure*diffuse;
+      ` + '\n' +
+      THREE.ShaderChunk['fog_fragment'] + '\n' +
+      glsl`
     }
     `;
 
@@ -180,11 +192,12 @@ function main() {
   loadManager.onLoad = () => {
     // Run after all textures are loaded.
     loadingElem.style.display = 'none';
-    uniforms['tDiffuse'] = brdfTextures.get('diffuse');
-    uniforms['tNormals'] = brdfTextures.get('normals');
-    uniforms['tSpecular'] = brdfTextures.get('specular');
-    uniforms['tRoughness'] = brdfTextures.get('roughness');
+    uniforms.tDiffuse.value = brdfTextures.get('diffuse');
+    uniforms.tNormals.value = brdfTextures.get('normals');
+    uniforms.tSpecular.value = brdfTextures.get('specular');
+    uniforms.tRoughness.value = brdfTextures.get('roughness');
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
+    material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
     render();
@@ -224,7 +237,7 @@ function main() {
     }
 
     controls.update();
-    renderer.toneMappingExposure = exposureGain*state.exposure;
+    uniforms.uExposure.value = exposureGain*state.exposure;
     renderer.render(scene, camera);
     stats.end();
   }
