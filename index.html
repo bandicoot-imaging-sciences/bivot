@@ -78,8 +78,8 @@ function main() {
   let state = {
     exposure: 2.0
   };
+  // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
-  // let exposureGain = 1;
 
   const canvas = document.querySelector('#c');
   const renderer = new THREE.WebGLRenderer({canvas});
@@ -168,6 +168,31 @@ function main() {
       }
     );
   }
+
+  let uniforms = THREE.UniformsUtils.merge([
+    THREE.UniformsLib[ "lights" ],
+    {
+      // Set textures to null here and assign later to avoid duplicating texture data.
+      'tDiffuse': {value: null},
+      'tNormals': {value: null},
+      'tRoughness': {value: null},
+      'tSpecular': {value: null},
+    }
+  ]);
+
+  const glsl = x => x;
+  const vertexShader = glsl`
+    `;
+
+  const fragmentShader = glsl`
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tNormals;
+    uniform sampler2D tRoughness;
+    uniform sampler2D tSpecular;
+    ` +
+    THREE.ShaderChunk['common'] +
+    THREE.ShaderChunk['lights_pars_begin'] + glsl`
+    `;
 
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
