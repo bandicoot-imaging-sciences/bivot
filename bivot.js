@@ -9,6 +9,7 @@ Parts adapted from Threejs:
   https://github.com/mrdoob/three.js/blob/dev/examples/webgl_loader_texture_exr.html
 - Initial shader structure including lighting.
   https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/SkinShader.js
+  https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/TerrainShader.js
 
 Parts adapted from Threejsfundamentals:
 - Responsive layout
@@ -31,6 +32,7 @@ function main() {
   const canvas = document.querySelector('#c');
   const renderer = new THREE.WebGLRenderer({canvas});
 
+  renderer.physicallyCorrectLights = true;
   renderer.toneMapping = THREE.ReinhardToneMapping;
 
   // Physical distance units are in metres.
@@ -62,7 +64,9 @@ function main() {
 
   const color = 0xFFFFFF;
   const intensity = 1;
-  const light = new THREE.PointLight(color, intensity);
+  const distanceLimit = 10;
+  const decay = 2;
+  const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
   light.position.set(1, 0, 1);
   scene.add(light);
 
@@ -173,13 +177,44 @@ function main() {
     THREE.ShaderChunk['fog_pars_fragment'] + '\n' +
     THREE.ShaderChunk['bumpmap_pars_fragment'] + '\n' +
     glsl`
+    float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
+      if ( decayExponent > 0.0 ) {
+        return pow(saturate(-lightDistance/cutoffDistance + 1.0), decayExponent);
+      }
+      return 1.0;
+    }
+
     void main() {
-      vec4 diffuse = texture2D(tDiffuse, vUv);
-      // diffuse = texture2D(tDiffuse, vec2(0.5, 0.5));
+      vec3 outgoingLight = vec3(0.0);
+      vec4 diffuseSurface = texture2D(tDiffuse, vUv);
       vec3 normal = normalize(vNormal);
       vec3 viewerDirection = normalize(vViewPosition);
+      
+      vec3 totalSpecularLight = vec3( 0.0 );
+      vec3 totalDiffuseLight = vec3( 0.0 );
+      const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
 
-      gl_FragColor = uExposure*diffuse;
+#if NUM_POINT_LIGHTS > 0
+      for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
+        vec3 lVector = pointLights[i].position + vViewPosition.xyz;
+
+        float attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
+
+        lVector = normalize(lVector);
+
+        float pointDiffuseWeightFull = max(dot(normal, lVector), 0.0);
+        float pointDiffuseWeightHalf = max(0.5*dot(normal, lVector) + 0.5, 0.0);
+        vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
+
+        // float pointSpecularWeight = KS_Skin_Specular(normal, lVector, viewerDirection, uRoughness, uSpecularBrightness);
+
+        totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
+        // totalSpecularLight += pointLights[i].color*specular*(pointSpecularWeight*specularStrength*attenuation);
+      }
+#endif
+
+      outgoingLight = uExposure*diffuseSurface.rgb*totalDiffuseLight;
+      gl_FragColor = linearToOutputTexel(vec4( outgoingLight, 1.0));
       ` + '\n' +
       THREE.ShaderChunk['fog_fragment'] + '\n' +
       glsl`
