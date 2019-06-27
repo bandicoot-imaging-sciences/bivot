@@ -7,7 +7,7 @@ relevant licenses.
 Parts adapted from Threejs:
 - EXR texture loading.
   https://github.com/mrdoob/three.js/blob/dev/examples/webgl_loader_texture_exr.html
-- Basic shader with lighting.
+- Initial shader structure including lighting.
   https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/SkinShader.js
 
 Parts adapted from Threejsfundamentals:
@@ -127,8 +127,27 @@ function main() {
     }
   ]);
 
-  const glsl = x => x;
+  const glsl = x => x; // No-op to trigger GLSL syntax highlighting in VS Code with glsl-literal extension.
   const vertexShader = glsl`
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    varying vec3 vViewPosition;
+    ` + 
+    THREE.ShaderChunk['common'] + 
+    THREE.ShaderChunk['lights_pars_begin'] + glsl`
+    
+    void main() {
+      vec4 mvPosition = modelViewMatrix*vec4(position, 1.0);
+      vec4 worldPosition = modelMatrix*vec4(position, 1.0);
+
+      vViewPosition = -mvPosition.xyz;
+
+      vNormal = normalize(normalMatrix*normal);
+
+      vUv = uv;
+
+      gl_Position = projectionMatrix*mvPosition;
+    }
     `;
 
   const fragmentShader = glsl`
@@ -136,9 +155,18 @@ function main() {
     uniform sampler2D tNormals;
     uniform sampler2D tRoughness;
     uniform sampler2D tSpecular;
+
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    varying vec3 vViewPosition;
     ` +
     THREE.ShaderChunk['common'] +
     THREE.ShaderChunk['lights_pars_begin'] + glsl`
+
+    void main() {
+      vec4 diffuse = texture2D(tDiffuse, vUv);
+      gl_FragColor = diffuse;
+    }
     `;
 
   const loadingElem = document.querySelector('#loading');
