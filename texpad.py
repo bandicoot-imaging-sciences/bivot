@@ -68,6 +68,13 @@ for (path, padpath) in zip(paths, padpaths):
         specpath = path
     if 'roughness' in path:
         roughness = imf16crop
+# Merging specular channels into a single image with 3 channels (third channel is zero).
+# EXRLoader only accepts 3-channel or 4-channel images.
+# TODO: Merge all channels into 2 x 4-channel images:
+# - RGB + Specular amplitude
+# - Normals (XYZ) + Specular roughness
+#   Or even just save 2D normals, and put those together with both specular channels (we can normalise the
+#   normals in the shader).
 (ys, xs, zs) = specular.shape
 imboth = np.zeros((ys, xs, 3))
 imboth[..., 0] = specular[..., 0]

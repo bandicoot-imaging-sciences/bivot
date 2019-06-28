@@ -24,7 +24,7 @@ Parts adapted from Threejsfundamentals:
 
 function main() {
   let state = {
-    exposure: 2.0
+    exposure: 1.0
   };
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -55,7 +55,7 @@ function main() {
   controls.update();
 
   const gui = new dat.GUI();
-  gui.add(state, 'exposure', 0, 20, 0.01).onChange(render);
+  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
   gui.open();
 
   const scene = new THREE.Scene();

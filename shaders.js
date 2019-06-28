@@ -16,9 +16,11 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-    ` + '\n' +
-    THREE.ShaderChunk['common'] + '\n' +
-    glsl`
+
+    #include <common>
+
+    ` + glsl`
+
     void main() {
       vec4 mvPosition = modelViewMatrix*vec4(position, 1.0);
       vec4 worldPosition = modelMatrix*vec4(position, 1.0);
@@ -36,7 +38,6 @@ let uniforms = THREE.UniformsUtils.merge([
   const fragmentShader = glsl`
     uniform sampler2D tDiffuse;
     uniform sampler2D tNormals;
-    uniform sampler2D tRoughness;
     uniform sampler2D tSpecular;
 
     uniform float uExposure;
@@ -44,13 +45,15 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-    ` + '\n' +
-    THREE.ShaderChunk['common'] + '\n' +
-    THREE.ShaderChunk['bsdfs'] + '\n' +
-    THREE.ShaderChunk['packing'] + '\n' +
-    THREE.ShaderChunk['lights_pars_begin'] + '\n' +
-    THREE.ShaderChunk['bumpmap_pars_fragment'] + '\n' +
-    glsl`
+
+    #include <common>
+    #include <bsdfs>
+    #include <packing>
+    #include <lights_pars_begin>
+    #include <bumpmap_pars_fragment>
+    
+    ` + glsl`
+
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
       if (decayExponent > 0.0) {
         // The common ShaderChunk includes: #define saturate(a) clamp( a, 0.0, 1.0 )
@@ -70,12 +73,13 @@ let uniforms = THREE.UniformsUtils.merge([
       vec3 outgoingLight = vec3(0.0);
 
       vec4 diffuseSurface = texture2D(tDiffuse, vUv);
-      vec4 normalSurface = texture2D(tNormals, vUv);
+      vec3 normalSurface = texture2D(tNormals, vUv).xyz;
       vec4 specularTexel = texture2D(tSpecular, vUv);
       float specularSurface = specularTexel.r;
       float roughnessSurface = specularTexel.g;
 
-      vec3 normal = normalize(vNormal);
+      vec3 macroNormal = normalize(vNormal);
+      vec3 mesoNormal = normalize(macroNormal + normalSurface);
       vec3 viewerDirection = normalize(vViewPosition);
       
       vec3 totalSpecularLight = vec3(0.0);
@@ -92,12 +96,13 @@ let uniforms = THREE.UniformsUtils.merge([
 
         lVector = normalize(lVector);
 
-        float pointDiffuseWeightFull = max(dot(normal, lVector), 0.0);
-        float pointDiffuseWeightHalf = max(0.5*dot(normal, lVector) + 0.5, 0.0);
-        vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
+        float pointDiffuseWeightFull = max(dot(mesoNormal, lVector), 0.0);
+        float pointDiffuseWeightHalf = max(0.5*dot(mesoNormal, lVector) + 0.5, 0.0);
+        // vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
+        // vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
+        vec3 pointDiffuseWeight = vec3(1.0);
 
-        // float pointSpecularWeight = KS_Skin_Specular(normal, lVector, viewerDirection, uRoughness, uSpecularBrightness);
-        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, c, normal, lVector, viewerDirection);
+        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, c, macroNormal, lVector, viewerDirection);
 
         totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
         totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
@@ -106,5 +111,6 @@ let uniforms = THREE.UniformsUtils.merge([
 
       outgoingLight = uExposure*(diffuseSurface.rgb*totalDiffuseLight + totalSpecularLight);
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
+      // gl_FragColor = vec4(mesoNormal, 1.0);
     }
     `;
