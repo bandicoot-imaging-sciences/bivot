@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # Copyright (C) Bandicoot Imaging Sciences 2019.
 """
-Pad EXR material textures to square power of 2.
+Pad or crop EXR material textures to square power of 2.
 
 iOS only has WebGL1, not WebGL2. WebGL1 requires textures to be a square power of 2.
 
 This script also:
 - trims the texture pixel dimensions to an even number,
-- clips the pixel value range to fit in float16 (if needed, with a warning), and
-- converts the EXR to float16.
+- clips the pixel value range to fit in float16 (if needed, with a warning),
+- converts the EXR to float16, and
+- combines the specular amplitude and roughness into a single 3-channel image (third channel is zero).
 """
 import glob
 
@@ -17,8 +18,11 @@ import pyexr
 
 (padxs, padys) = (512, 512)
 paths = glob.glob('*.exr')
-paths = [pp for pp in paths if '_cropf16' not in pp and '_padf16' not in pp]
-padpaths = [pp.replace('.exr', '_cropf16.exr') for pp in paths]
+suffix = '_cropf16'
+paths = [pp for pp in paths if suffix not in pp and '_padf16' not in pp]
+padpaths = [pp.replace('.exr', suffix + '.exr') for pp in paths]
+specular = None
+roughness = None
 for (path, padpath) in zip(paths, padpaths):
     print('Reading image:', path)
     im = pyexr.read(path)
@@ -59,3 +63,15 @@ for (path, padpath) in zip(paths, padpaths):
         imf16crop = imf16pad
     print('Writing cropped/padded image:', padpath)
     pyexr.write(padpath, imf16crop, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
+    if 'specular' in path:
+        specular = imf16crop
+        specpath = path
+    if 'roughness' in path:
+        roughness = imf16crop
+(ys, xs, zs) = specular.shape
+imboth = np.zeros((ys, xs, 3))
+imboth[..., 0] = specular[..., 0]
+imboth[..., 1] = roughness[..., 0]
+bothpath = specpath.replace('specular', 'specrough').replace('.exr', suffix + '.exr')
+print('Writing merged cropped/padded image:', bothpath)
+pyexr.write(bothpath, imboth, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)

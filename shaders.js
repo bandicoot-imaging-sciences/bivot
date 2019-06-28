@@ -6,9 +6,8 @@ let uniforms = THREE.UniformsUtils.merge([
       // Set textures to null here and assign later to avoid duplicating texture data.
       'tDiffuse': {value: null},
       'tNormals': {value: null},
-      'tRoughness': {value: null},
       'tSpecular': {value: null},
-      'uExposure': {value: exposureGain*state.exposure},
+      'uExposure': {value: 1.0},
     }
   ]);
 
@@ -53,21 +52,37 @@ let uniforms = THREE.UniformsUtils.merge([
     THREE.ShaderChunk['bumpmap_pars_fragment'] + '\n' +
     glsl`
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
-      if ( decayExponent > 0.0 ) {
+      if (decayExponent > 0.0) {
+        // The common ShaderChunk includes: #define saturate(a) clamp( a, 0.0, 1.0 )
         return pow(saturate(-lightDistance/cutoffDistance + 1.0), decayExponent);
       }
       return 1.0;
     }
 
+    float DisneySpecular(float specular, float roughness, float c, vec3 normal, vec3 light, vec3 view) {
+      vec3 halfVector = normalize(light + view);
+      float halfDot = dot(normal, halfVector);
+      float denom = pow((1.0 + (pow(roughness, 4.0) - 1.0)*pow(halfDot, 2.0)), 2.0);
+      return (specular*c)/denom;
+    }
+
     void main() {
       vec3 outgoingLight = vec3(0.0);
+
       vec4 diffuseSurface = texture2D(tDiffuse, vUv);
+      vec4 normalSurface = texture2D(tNormals, vUv);
+      vec4 specularTexel = texture2D(tSpecular, vUv);
+      float specularSurface = specularTexel.r;
+      float roughnessSurface = specularTexel.g;
+
       vec3 normal = normalize(vNormal);
       vec3 viewerDirection = normalize(vViewPosition);
       
-      vec3 totalSpecularLight = vec3( 0.0 );
-      vec3 totalDiffuseLight = vec3( 0.0 );
+      vec3 totalSpecularLight = vec3(0.0);
+      vec3 totalDiffuseLight = vec3(0.0);
       const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
+
+      const float c = 1.0;
 
 #if NUM_POINT_LIGHTS > 0
       for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
@@ -82,13 +97,14 @@ let uniforms = THREE.UniformsUtils.merge([
         vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
 
         // float pointSpecularWeight = KS_Skin_Specular(normal, lVector, viewerDirection, uRoughness, uSpecularBrightness);
+        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, c, normal, lVector, viewerDirection);
 
         totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
-        // totalSpecularLight += pointLights[i].color*specular*(pointSpecularWeight*specularStrength*attenuation);
+        totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
       }
 #endif
 
-      outgoingLight = uExposure*diffuseSurface.rgb*totalDiffuseLight;
-      gl_FragColor = linearToOutputTexel(vec4( outgoingLight, 1.0));
+      outgoingLight = uExposure*(diffuseSurface.rgb*totalDiffuseLight + totalSpecularLight);
+      gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
     }
     `;

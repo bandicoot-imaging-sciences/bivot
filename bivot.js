@@ -87,18 +87,16 @@ function main() {
   const loader = new THREE.EXRLoader(loadManager);
 
   let brdfTexturePaths = new Map([
-    ['diffuse', 'textures/coffee-matte/brdf-diffuse_cropf16.exr'],
-    ['normals', 'textures/coffee-matte/brdf-normals_cropf16.exr'],
-    ['roughness', 'textures/coffee-matte/brdf-roughness_cropf16.exr'],
-    ['specular', 'textures/coffee-matte/brdf-specular_cropf16.exr'],
+    ['diffuse', {path: 'textures/coffee-matte/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
+    ['normals', {path: 'textures/coffee-matte/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
+    ['specular', {path: 'textures/coffee-matte/brdf-specrough_cropf16.exr', format: THREE.RGBFormat}],
   ]);
   let brdfTextures = new Map();
 
-  for (let [name, path] of brdfTexturePaths) {
-    loader.load(path,
+  for (let [key, value] of brdfTexturePaths) {
+    loader.load(value.path,
       function (texture, textureData) {
         // Run after each texture is loaded.
-        console.log('Loaded:', name, texture, textureData);
 
         // FIXME: Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
         // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
@@ -108,13 +106,16 @@ function main() {
         // or the equivalent for half-float textures.
         texture.minFilter = THREE.NearestFilter;
         texture.magFilter = THREE.NearestFilter;
-        texture.name = name;
+        texture.name = key;
         // Flip from chart space back into camera view space.
         texture.flipY = true;
+        // EXRLoader sets the format incorrectly for single channel textures.
+        texture.format = value.format;
         // iOS does not support WebGL2
         // Textures need to be square powers of 2 for WebGL1
         // texture.repeat.set(matxs/padxs, matxs/padys);       
-        brdfTextures.set(name, texture);
+        console.log('Loaded:', key, texture, textureData);
+        brdfTextures.set(key, texture);
       }
     );
   }
@@ -128,7 +129,6 @@ function main() {
     uniforms.tDiffuse.value = brdfTextures.get('diffuse');
     uniforms.tNormals.value = brdfTextures.get('normals');
     uniforms.tSpecular.value = brdfTextures.get('specular');
-    uniforms.tRoughness.value = brdfTextures.get('roughness');
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
