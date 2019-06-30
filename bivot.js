@@ -130,6 +130,7 @@ function main() {
     uniforms.tNormals.value = brdfTextures.get('normals');
     uniforms.tSpecular.value = brdfTextures.get('specular');
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
+    material.defines = {USE_NORMALMAP: 1};
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);

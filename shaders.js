@@ -62,7 +62,11 @@ let uniforms = THREE.UniformsUtils.merge([
       return 1.0;
     }
 
-    float DisneySpecular(float specular, float roughness, float c, vec3 normal, vec3 light, vec3 view) {
+    float DisneySpecular(float specular, float roughness, vec3 normal, vec3 light, vec3 view) {
+      // float k = 1.0 - pow(roughness, 4.0);
+      // float c = (1.0/PI)*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
+      float c = 1.0;
+
       vec3 halfVector = normalize(light + view);
       float halfDot = dot(normal, halfVector);
       float denom = pow((1.0 + (pow(roughness, 4.0) - 1.0)*pow(halfDot, 2.0)), 2.0);
@@ -86,8 +90,6 @@ let uniforms = THREE.UniformsUtils.merge([
       vec3 totalDiffuseLight = vec3(0.0);
       const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
 
-      const float c = 1.0;
-
 #if NUM_POINT_LIGHTS > 0
       for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
         vec3 lVector = pointLights[i].position + vViewPosition.xyz;
@@ -102,7 +104,7 @@ let uniforms = THREE.UniformsUtils.merge([
         // vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
         vec3 pointDiffuseWeight = vec3(1.0);
 
-        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, c, macroNormal, lVector, viewerDirection);
+        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, macroNormal, lVector, viewerDirection);
 
         totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
         totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
