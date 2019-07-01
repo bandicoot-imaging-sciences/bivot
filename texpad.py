@@ -17,13 +17,16 @@ import numpy as np
 import pyexr
 
 (padxs, padys) = (512, 512)
-paths = glob.glob('*.exr')
+paths = {
+    'diffuse': 'brdf-diffuse.exr',
+    'normals': 'brdf-normals.exr',
+    'specular': 'brdf-specular.exr',
+    'roughness': 'brdf-roughness.exr',
+}
 suffix = '_cropf16'
-paths = [pp for pp in paths if suffix not in pp and '_padf16' not in pp]
-padpaths = [pp.replace('.exr', suffix + '.exr') for pp in paths]
-specular = None
-roughness = None
-for (path, padpath) in zip(paths, padpaths):
+adjpaths = dict([(tt, pp.replace('.exr', suffix + '.exr')) for (tt, pp) in paths.items()])
+adjusted = {}
+for (textype, path) in paths.items():
     print('Reading image:', path)
     im = pyexr.read(path)
     (ys, xs, zs) = im.shape
@@ -61,24 +64,35 @@ for (path, padpath) in zip(paths, padpaths):
         imf16crop = imf16pad[y1:y2, x1:x2, :]
     else:
         imf16crop = imf16pad
-    print('Writing cropped/padded image:', padpath)
-    pyexr.write(padpath, imf16crop, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
-    if 'specular' in path:
-        specular = imf16crop
-        specpath = path
-    if 'roughness' in path:
-        roughness = imf16crop
-# Merging specular channels into a single image with 3 channels (third channel is zero).
-# EXRLoader only accepts 3-channel or 4-channel images.
+    adjusted[textype] = imf16crop
+
 # TODO: Merge all channels into 2 x 4-channel images:
 # - RGB + Specular amplitude
 # - Normals (XYZ) + Specular roughness
 #   Or even just save 2D normals, and put those together with both specular channels (we can normalise the
 #   normals in the shader).
+
+# TODO: Encode in browser friendly format, e.g. PNG with RGBM16 encoding.
+
+exr_precision = pyexr.HALF
+exr_compression = pyexr.PIZ_COMPRESSION
+
+print('Writing diffuse image:', adjpaths['diffuse'])
+pyexr.write(adjpaths['diffuse'], adjusted['diffuse'], precision=exr_precision, compression=exr_compression)
+
+print('Writing normals image:', adjpaths['normals'])
+# Rescale normals from -1:1 range to the 0:1 range expected by Three.js shaders.
+normscaled = adjusted['normals']/2 + 0.5
+pyexr.write(adjpaths['normals'], normscaled, precision=exr_precision, compression=exr_compression)
+
+# Merging specular channels into a single image with 3 channels (third channel is zero).
+# EXRLoader only accepts 3-channel or 4-channel images.
+specular = adjusted['specular']
+roughness = adjusted['roughness']
 (ys, xs, zs) = specular.shape
-imboth = np.zeros((ys, xs, 3))
-imboth[..., 0] = specular[..., 0]
-imboth[..., 1] = roughness[..., 0]
-bothpath = specpath.replace('specular', 'specrough').replace('.exr', suffix + '.exr')
-print('Writing merged cropped/padded image:', bothpath)
-pyexr.write(bothpath, imboth, precision=pyexr.HALF, compression=pyexr.PIZ_COMPRESSION)
+specrough = np.zeros((ys, xs, 3))
+specrough[..., 0] = specular[..., 0]
+specrough[..., 1] = roughness[..., 0]
+path = adjpaths['specular'].replace('specular', 'specrough')
+print('Writing specular/roughness image:', path)
+pyexr.write(path, specrough, precision=exr_precision, compression=exr_compression)
