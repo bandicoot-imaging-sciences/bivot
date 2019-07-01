@@ -10,6 +10,9 @@ Parts adapted from Threejs:
 - Initial shader structure including lighting.
   https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/SkinShader.js
   https://github.com/mrdoob/three.js/blob/dev/examples/js/shaders/TerrainShader.js
+- Tangent-space normal map calculations.
+  https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderLib/meshphysical_vert.glsl.js
+  https://github.com/mrdoob/three.js/blob/dev/src/renderers/shaders/ShaderLib/meshphysical_frag.glsl.js
 
 Parts adapted from Threejsfundamentals:
 - Responsive layout
@@ -126,11 +129,14 @@ function main() {
   loadManager.onLoad = () => {
     // Run after all textures are loaded.
     loadingElem.style.display = 'none';
-    uniforms.tDiffuse.value = brdfTextures.get('diffuse');
-    uniforms.tNormals.value = brdfTextures.get('normals');
-    uniforms.tSpecular.value = brdfTextures.get('specular');
+    uniforms.diffuseMap.value = brdfTextures.get('diffuse');
+    uniforms.normalMap.value = brdfTextures.get('normals');
+    uniforms.specularMap.value = brdfTextures.get('specular');
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
-    material.defines = {USE_NORMALMAP: 1};
+    material.defines = {
+      USE_NORMALMAP: 1,
+      // USE_TANGENT: 1,
+    };
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);

@@ -1,48 +1,63 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
+'use strict';
 
 let uniforms = THREE.UniformsUtils.merge([
     THREE.UniformsLib['lights'],
     {
       // Set textures to null here and assign later to avoid duplicating texture data.
-      'tDiffuse': {value: null},
-      'tNormals': {value: null},
-      'tSpecular': {value: null},
+      'diffuseMap': {value: null},
+      'normalMap': {value: null}, // Three.js shader chunks assume normal map is called normalMap.
+      'specularMap': {value: null},
+      'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
       'uExposure': {value: 1.0},
     }
   ]);
 
-  const glsl = x => x; // No-op to trigger GLSL syntax highlighting in VS Code with glsl-literal extension.
+  const glsl = x => x.toString(); // No-op to trigger GLSL syntax highlighting in VS Code with glsl-literal extension.
   const vertexShader = glsl`
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-
-    #include <common>
-
-    ` + glsl`
+    varying vec3 vTangent;
+    varying vec3 vBitangent;
+    // Check if these are used.
+    // uniform mat3 uvTransform;
 
     void main() {
-      vec4 mvPosition = modelViewMatrix*vec4(position, 1.0);
       vec4 worldPosition = modelMatrix*vec4(position, 1.0);
 
-      vViewPosition = -mvPosition.xyz;
-
-      vNormal = normalize(normalMatrix*normal);
-
       vUv = uv;
+      // Alternatively this might be needed if we are scaling the texture:
+      // vUv = ( uvTransform * vec3( uv, 1 ) ).xy;
 
-      gl_Position = projectionMatrix*mvPosition;
+      #include <beginnormal_vertex>
+      #include <defaultnormal_vertex>
+
+      vNormal = normalize(transformedNormal);
+
+      #ifdef USE_TANGENT
+      vTangent = normalize(transformedTangent);
+      vBitangent = normalize(cross(vNormal, vTangent)*tangent.w);
+      #endif
+
+      #include <begin_vertex>
+      #include <project_vertex>
+    
+      vViewPosition = - mvPosition.xyz;  
     }
     `;
 
   const fragmentShader = glsl`
-    uniform sampler2D tDiffuse;
-    uniform sampler2D tNormals;
-    uniform sampler2D tSpecular;
+    uniform sampler2D diffuseMap;
+    // Defined in <normalmap_pars_fragment>
+    // uniform sampler2D normalMap;
+    uniform sampler2D specularMap;
 
     uniform float uExposure;
 
     varying vec3 vNormal;
+    varying vec3 vTangent;
+		varying vec3 vBitangent;
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
@@ -50,10 +65,8 @@ let uniforms = THREE.UniformsUtils.merge([
     #include <bsdfs>
     #include <packing>
     #include <lights_pars_begin>
-    #include <bumpmap_pars_fragment>
+    #include <normalmap_pars_fragment>
     
-    ` + glsl`
-
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
       if (decayExponent > 0.0) {
         // The common ShaderChunk includes: #define saturate(a) clamp( a, 0.0, 1.0 )
@@ -74,16 +87,19 @@ let uniforms = THREE.UniformsUtils.merge([
     }
 
     void main() {
+      #include <normal_fragment_begin>
+      #include <normal_fragment_maps>
+
       vec3 outgoingLight = vec3(0.0);
 
-      vec4 diffuseSurface = texture2D(tDiffuse, vUv);
-      vec3 normalSurface = texture2D(tNormals, vUv).xyz;
-      vec4 specularTexel = texture2D(tSpecular, vUv);
+      vec4 diffuseSurface = texture2D(diffuseMap, vUv);
+      vec3 normalSurface = texture2D(normalMap, vUv).xyz;
+      vec4 specularTexel = texture2D(specularMap, vUv);
       float specularSurface = specularTexel.r;
       float roughnessSurface = specularTexel.g;
 
       vec3 macroNormal = normalize(vNormal);
-      vec3 mesoNormal = normalize(macroNormal + normalSurface);
+      vec3 mesoNormal = normal;
       vec3 viewerDirection = normalize(vViewPosition);
       
       vec3 totalSpecularLight = vec3(0.0);
@@ -104,7 +120,7 @@ let uniforms = THREE.UniformsUtils.merge([
         // vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
         vec3 pointDiffuseWeight = vec3(1.0);
 
-        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, macroNormal, lVector, viewerDirection);
+        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, mesoNormal, lVector, viewerDirection);
 
         totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
         totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
