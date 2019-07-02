@@ -78,11 +78,11 @@ function main() {
   const gui = new dat.GUI();
   gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
-  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render);
-  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render);
-  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen();
-  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen();
-  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen();
+  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).name('light.x');
+  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).name('light.y');
+  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
+  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
+  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
   gui.open();
 
   const dpi = 300;
