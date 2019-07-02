@@ -40,13 +40,14 @@ function main() {
 
   // Physical distance units are in metres.
   const focalLength = 0.085;
-  const sensorWidth = 0.036;
-  const fov = 2*Math.tan(sensorWidth/focalLength)*180/Math.PI;
+  const sensorHeight = 0.024;
+  // Three.js defines the field of view angle as the vertical angle.
+  const fov = 2*Math.atan(sensorHeight/(2*focalLength))*180/Math.PI;
   const aspect = 2;  // the canvas default
   const near = 0.01;
   const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.set(0, 0, 0.1);
+  camera.position.set(0, 0, 0.9);
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -57,10 +58,6 @@ function main() {
   controls.target.set(0, 0, 0);
   controls.update();
 
-  const gui = new dat.GUI();
-  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
-  gui.open();
-
   const scene = new THREE.Scene();
   
   scene.background = new THREE.Color(0x222222);
@@ -68,15 +65,21 @@ function main() {
   const color = 0xFFFFFF;
   const intensity = 1;
   const distanceLimit = 10;
-  const decay = 2;
+  const decay = 1; // Set this to 2.0 for physical light distance falloff.
   const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
   light.position.set(1, 0, 1);
   scene.add(light);
 
+  const gui = new dat.GUI();
+  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
+  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render);
+  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render);
+  gui.open();
+
   const dpi = 300;
   const pixelsPerMetre = dpi/0.0254;
-  const textureWidthPixels = 512;
-  const textureHeightPixels = 512;
+  const textureWidthPixels = 1024;
+  const textureHeightPixels = 1024;
   // const matxs = 1928;
   // const matys = 1285;
   // const padxs = 2048;

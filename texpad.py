@@ -16,7 +16,8 @@ import glob
 import numpy as np
 import pyexr
 
-(padxs, padys) = (512, 512)
+# (padxs, padys) = (512, 512)
+(padxs, padys) = (1024, 1024)
 paths = {
     'diffuse': 'brdf-diffuse.exr',
     'normals': 'brdf-normals.exr',
