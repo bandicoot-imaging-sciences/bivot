@@ -116,9 +116,9 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointDiffuseWeightFull = max(dot(mesoNormal, lVector), 0.0);
         float pointDiffuseWeightHalf = max(0.5*dot(mesoNormal, lVector) + 0.5, 0.0);
-        // vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
+        vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
         // vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
-        vec3 pointDiffuseWeight = vec3(1.0);
+        // vec3 pointDiffuseWeight = vec3(1.0);
 
         float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, mesoNormal, lVector, viewerDirection);
 
