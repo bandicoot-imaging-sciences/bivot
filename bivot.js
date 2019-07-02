@@ -70,16 +70,25 @@ function main() {
   light.position.set(1, 0, 1);
   scene.add(light);
 
+  const ambientColour = 0xFFFFFF;
+  const ambientIntensity = 1.0;
+  const ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
+  scene.add(ambientLight);
+
   const gui = new dat.GUI();
   gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
+  gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
   gui.add(light.position, 'x', -1, 1, 0.01).onChange(render);
   gui.add(light.position, 'y', -1, 1, 0.01).onChange(render);
+  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen();
+  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen();
+  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen();
   gui.open();
 
   const dpi = 300;
   const pixelsPerMetre = dpi/0.0254;
-  const textureWidthPixels = 1024;
-  const textureHeightPixels = 1024;
+  const textureWidthPixels = 2048;
+  const textureHeightPixels = 2048;
   // const matxs = 1928;
   // const matys = 1285;
   // const padxs = 2048;

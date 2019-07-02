@@ -127,7 +127,7 @@ let uniforms = THREE.UniformsUtils.merge([
       }
 #endif
 
-      outgoingLight = uExposure*(diffuseSurface.rgb*totalDiffuseLight + totalSpecularLight);
+      outgoingLight = uExposure*(diffuseSurface.rgb*(totalDiffuseLight + ambientLightColor) + totalSpecularLight);
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
       // gl_FragColor = vec4(mesoNormal, 1.0);
     }
