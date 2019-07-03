@@ -65,7 +65,7 @@ function main() {
   const color = 0xFFFFFF;
   const intensity = 1;
   const distanceLimit = 10;
-  const decay = 1; // Set this to 2.0 for physical light distance falloff.
+  const decay = 2; // Set this to 2.0 for physical light distance falloff.
   const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
   light.position.set(1, 0, 1);
   scene.add(light);

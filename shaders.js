@@ -76,6 +76,8 @@ let uniforms = THREE.UniformsUtils.merge([
     }
 
     float DisneySpecular(float specular, float roughness, vec3 normal, vec3 light, vec3 view) {
+      // TODO: Add episilon to fragile denominators.
+      // TODO: Try dividing by c.
       // float k = 1.0 - pow(roughness, 4.0);
       // float c = (1.0/PI)*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
       float c = 1.0;
@@ -116,8 +118,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointDiffuseWeightFull = max(dot(mesoNormal, lVector), 0.0);
         float pointDiffuseWeightHalf = max(0.5*dot(mesoNormal, lVector) + 0.5, 0.0);
-        vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
-        // vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
+        // vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
+        vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
         // vec3 pointDiffuseWeight = vec3(1.0);
 
         float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, mesoNormal, lVector, viewerDirection);
