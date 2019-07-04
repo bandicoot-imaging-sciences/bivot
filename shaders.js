@@ -78,14 +78,14 @@ let uniforms = THREE.UniformsUtils.merge([
     float DisneySpecular(float specular, float roughness, vec3 normal, vec3 light, vec3 view) {
       // TODO: Add episilon to fragile denominators.
       // TODO: Try dividing by c.
-      // float k = 1.0 - pow(roughness, 4.0);
-      // float c = (1.0/PI)*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
-      float c = 1.0;
+      float k = 1.0 - pow(roughness, 4.0);
+      float c = (1.0/PI)*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
+      // float c = 1.0;
 
       vec3 halfVector = normalize(light + view);
       float halfDot = dot(normal, halfVector);
       float denom = pow((1.0 + (pow(roughness, 4.0) - 1.0)*pow(halfDot, 2.0)), 2.0);
-      return (specular*c)/denom;
+      return (specular)/(c*denom);
     }
 
     void main() {
@@ -131,6 +131,5 @@ let uniforms = THREE.UniformsUtils.merge([
 
       outgoingLight = uExposure*(diffuseSurface.rgb*(totalDiffuseLight + ambientLightColor) + totalSpecularLight);
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
-      // gl_FragColor = vec4(mesoNormal, 1.0);
     }
     `;

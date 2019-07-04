@@ -101,10 +101,13 @@ function main() {
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.EXRLoader(loadManager);
 
+  // let brdfTextureFolder = 'coffee-matte';
+  // let brdfTextureFolder = 'kimono-matte';
+  let brdfTextureFolder = 'soiree';
   let brdfTexturePaths = new Map([
-    ['diffuse', {path: 'textures/coffee-matte/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
-    ['normals', {path: 'textures/coffee-matte/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
-    ['specular', {path: 'textures/coffee-matte/brdf-specrough_cropf16.exr', format: THREE.RGBFormat}],
+    ['diffuse', {path: 'textures/' + brdfTextureFolder + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
+    ['normals', {path: 'textures/' + brdfTextureFolder + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
+    ['specular', {path: 'textures/' + brdfTextureFolder + '/brdf-specrough_cropf16.exr', format: THREE.RGBFormat}],
   ]);
   let brdfTextures = new Map();
 
