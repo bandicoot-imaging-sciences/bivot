@@ -27,7 +27,10 @@ Parts adapted from Threejsfundamentals:
 
 function main() {
   let state = {
-    exposure: 1.0
+    exposure: 1.0,
+    diffuse: 1.0,
+    specular: 1.0,
+    roughness: 1.0,
   };
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -77,6 +80,9 @@ function main() {
 
   const gui = new dat.GUI();
   gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
+  gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
+  gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
+  gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
   gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).name('light.x');
   gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).name('light.y');
@@ -101,9 +107,9 @@ function main() {
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.EXRLoader(loadManager);
 
-  // let brdfTextureFolder = 'coffee-matte';
+  let brdfTextureFolder = 'coffee-matte';
   // let brdfTextureFolder = 'kimono-matte';
-  let brdfTextureFolder = 'soiree';
+  // let brdfTextureFolder = 'soiree';
   let brdfTexturePaths = new Map([
     ['diffuse', {path: 'textures/' + brdfTextureFolder + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
     ['normals', {path: 'textures/' + brdfTextureFolder + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
@@ -193,6 +199,9 @@ function main() {
 
     controls.update();
     uniforms.uExposure.value = exposureGain*state.exposure;
+    uniforms.uDiffuse.value = state.diffuse;
+    uniforms.uSpecular.value = state.specular;
+    uniforms.uRoughness.value = state.roughness;
     renderer.render(scene, camera);
     stats.end();
   }

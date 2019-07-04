@@ -10,6 +10,9 @@ let uniforms = THREE.UniformsUtils.merge([
       'specularMap': {value: null},
       'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
       'uExposure': {value: 1.0},
+      'uDiffuse': {value: 1.0},
+      'uSpecular': {value: 1.0},
+      'uRoughness': {value: 1.0},
     }
   ]);
 
@@ -54,6 +57,9 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform sampler2D specularMap;
 
     uniform float uExposure;
+    uniform float uDiffuse;
+    uniform float uSpecular;
+    uniform float uRoughness;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -122,14 +128,16 @@ let uniforms = THREE.UniformsUtils.merge([
         vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
         // vec3 pointDiffuseWeight = vec3(1.0);
 
-        float pointSpecularWeight = DisneySpecular(specularSurface, roughnessSurface, mesoNormal, lVector, viewerDirection);
+        float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
+          mesoNormal, lVector, viewerDirection);
 
         totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
         totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
       }
 #endif
 
-      outgoingLight = uExposure*(diffuseSurface.rgb*(totalDiffuseLight + ambientLightColor) + totalSpecularLight);
+      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor) 
+                                 + totalSpecularLight);
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
     }
     `;
