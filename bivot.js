@@ -107,8 +107,8 @@ function main() {
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.EXRLoader(loadManager);
 
-  let brdfTextureFolder = 'coffee-matte';
-  // let brdfTextureFolder = 'kimono-matte';
+  // let brdfTextureFolder = 'coffee-matte';
+  let brdfTextureFolder = 'kimono-matte';
   // let brdfTextureFolder = 'soiree';
   let brdfTexturePaths = new Map([
     ['diffuse', {path: 'textures/' + brdfTextureFolder + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],

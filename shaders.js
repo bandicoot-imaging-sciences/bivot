@@ -124,6 +124,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointDiffuseWeightFull = max(dot(mesoNormal, lVector), 0.0);
         float pointDiffuseWeightHalf = max(0.5*dot(mesoNormal, lVector) + 0.5, 0.0);
+        // It seems like this mix operation would produce a colour shift? But in practice the output doesn't
+        // look colour shifted.
         // vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
         vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
         // vec3 pointDiffuseWeight = vec3(1.0);
