@@ -13,6 +13,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uDiffuse': {value: 1.0},
       'uSpecular': {value: 1.0},
       'uRoughness': {value: 1.0},
+      'uTint': {value: true},
     }
   ]);
 
@@ -60,6 +61,7 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
+    uniform bool uTint;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -106,8 +108,12 @@ let uniforms = THREE.UniformsUtils.merge([
       vec4 specularTexel = texture2D(specularMap, vUv);
       float specularSurface = specularTexel.r;
       float roughnessSurface = specularTexel.g;
-      float tintSurface = specularTexel.b;
-      // float tintSurface = 0.0;
+      float tintSurface = 0.0;
+      if (uTint) {
+        tintSurface = specularTexel.b;
+      } else {
+        tintSurface = 0.0;
+      }
 
       float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
 

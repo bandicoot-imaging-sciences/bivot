@@ -31,6 +31,7 @@ function main() {
     diffuse: 1.0,
     specular: 1.0,
     roughness: 1.0,
+    tint: true,
   };
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -83,6 +84,7 @@ function main() {
   gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
   gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
   gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
+  gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
   gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).name('light.x');
   gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).name('light.y');
@@ -205,6 +207,7 @@ function main() {
     uniforms.uDiffuse.value = state.diffuse;
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
+    uniforms.uTint.value = state.tint;
     renderer.render(scene, camera);
     stats.end();
   }
