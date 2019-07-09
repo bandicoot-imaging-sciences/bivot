@@ -119,8 +119,10 @@ function main() {
   const planeHeight = textureHeightPixels/pixelsPerMetre;
   const geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
 
-  const loadManager = new THREE.LoadingManager();
-  const loader = new THREE.EXRLoader(loadManager);
+  let loadManager = null;
+  let loader = null;
+  const loadingElem = document.querySelector('#loading');
+  const progressBarElem = loadingElem.querySelector('.progressbar');
 
   let brdfTextures = null;
 
@@ -134,6 +136,12 @@ function main() {
     ]);
     brdfTextures = new Map();
 
+    loadManager = new THREE.LoadingManager();
+    loadManager.onLoad = onLoad;
+    loadManager.onProgress = onProgress;
+    loader = new THREE.EXRLoader(loadManager);
+    onProgress('', 0, 1);
+  
     for (let [key, value] of brdfTexturePaths) {
       loader.load(value.path,
         function (texture, textureData) {
@@ -164,10 +172,7 @@ function main() {
 
   loadScan();
 
-  const loadingElem = document.querySelector('#loading');
-  const progressBarElem = loadingElem.querySelector('.progressbar');
-
-  loadManager.onLoad = () => {
+  function onLoad() {
     // Run after all textures are loaded.
     loadingElem.style.display = 'none';
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
@@ -184,8 +189,9 @@ function main() {
     render();
   };
 
-  loadManager.onProgress = (urlOfLastItemLoaded, itemsLoaded, itemsTotal) => {
+  function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
     const progress = itemsLoaded / itemsTotal;
+    loadingElem.style.display = '';
     progressBarElem.style.transform = `scaleX(${progress})`;
   };
 
