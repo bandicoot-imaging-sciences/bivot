@@ -96,7 +96,7 @@ tint = adjusted['tint']
 specall = np.zeros((ys, xs, 3))
 specall[..., 0] = specular[..., 0]
 specall[..., 1] = roughness[..., 0]
-specall[..., 1] = tint[..., 0]
+specall[..., 2] = tint[..., 0]
 path = adjpaths['specular'].replace('specular', 'specall')
 print('Writing specular (amplitude, roughness, tint) image:', path)
 pyexr.write(path, specall, precision=exr_precision, compression=exr_compression)
