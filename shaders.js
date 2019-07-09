@@ -14,6 +14,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uSpecular': {value: 1.0},
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
+      'uBrdfVersion': {value: 2},
     }
   ]);
 
@@ -62,6 +63,7 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uSpecular;
     uniform float uRoughness;
     uniform bool uTint;
+    uniform int uBrdfVersion;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -69,7 +71,7 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
-    const float s = 65535.0*0.01;
+    float s = 1.0;
 
     #include <common>
     #include <bsdfs>
@@ -109,12 +111,13 @@ let uniforms = THREE.UniformsUtils.merge([
       float specularSurface = specularTexel.r;
       float roughnessSurface = specularTexel.g;
       float tintSurface = 0.0;
-      if (uTint) {
+      if (uTint && uBrdfVersion == 2) {
         tintSurface = specularTexel.b;
-      } else {
-        tintSurface = 0.0;
       }
-
+      if (uBrdfVersion == 2) {
+        s = 65535.0*0.01;
+      }
+  
       float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
 
       vec3 macroNormal = normalize(vNormal);

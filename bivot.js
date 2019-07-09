@@ -32,6 +32,7 @@ function main() {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    brdfVersion: 2,
   };
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -113,7 +114,7 @@ function main() {
   // let brdfTextureFolder = 'coffee-matte';
   // let brdfTextureFolder = 'kimono-matte';
   // let brdfTextureFolder = 'soiree';
-  let brdfVersion = 2;
+  state.brdfVersion = 2;
   let brdfTextureFolder = 'kimono-matte-v2';
   let brdfTexturePaths = new Map([
     ['diffuse', {path: 'textures/' + brdfTextureFolder + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
@@ -208,6 +209,7 @@ function main() {
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
     uniforms.uTint.value = state.tint;
+    uniforms.uBrdfVersion.value = state.brdfVersion;
     renderer.render(scene, camera);
     stats.end();
   }
