@@ -32,6 +32,10 @@ function main() {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    scan: 'kimono-matte-v2',
+    // scan: 'coffee-matte',
+    // scan: 'kimono-matte',
+    // scan: 'soiree',
     brdfVersion: 2,
   };
   // Texture intensities in camera count scale (e.g. 14 bit).
@@ -80,7 +84,15 @@ function main() {
   const ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
   scene.add(ambientLight);
 
+  let scans = new Map([
+    ['coffee-matte', {version: 1}],
+    ['kimono-matte', {version: 1}],
+    ['soiree', {version: 1}],
+    ['kimono-matte-v2', {version: 2}],
+  ]);
+  
   const gui = new dat.GUI();
+  gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
   gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
   gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
   gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
@@ -110,47 +122,47 @@ function main() {
   const loadManager = new THREE.LoadingManager();
   const loader = new THREE.EXRLoader(loadManager);
 
-  // state.brdfVersion = 1;
-  // let brdfTextureFolder = 'coffee-matte';
-  // let brdfTextureFolder = 'kimono-matte';
-  // let brdfTextureFolder = 'soiree';
-  
-  state.brdfVersion = 2;
-  let brdfTextureFolder = 'kimono-matte-v2';
+  let brdfTextures = null;
 
-  let brdfTexturePaths = new Map([
-    ['diffuse', {path: 'textures/' + brdfTextureFolder + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
-    ['normals', {path: 'textures/' + brdfTextureFolder + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
-    ['specular', {path: 'textures/' + brdfTextureFolder + '/brdf-specall_cropf16.exr', format: THREE.RGBFormat}],
-  ]);
-  let brdfTextures = new Map();
+  function loadScan() {
+    state.brdfVersion = scans.get(state.scan).version;
 
-  for (let [key, value] of brdfTexturePaths) {
-    loader.load(value.path,
-      function (texture, textureData) {
-        // Run after each texture is loaded.
+    let brdfTexturePaths = new Map([
+      ['diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
+      ['normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
+      ['specular', {path: 'textures/' + state.scan + '/brdf-specall_cropf16.exr', format: THREE.RGBFormat}],
+    ]);
+    brdfTextures = new Map();
 
-        // FIXME: Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
-        // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
-        // filtering. This can possibly be overcome by loading the right extensions:
-        // this.ms_Renderer.context.getExtension( 'OES_texture_float' );
-        // this.ms_Renderer.context.getExtension( 'OES_texture_float_linear' );
-        // or the equivalent for half-float textures.
-        texture.minFilter = THREE.NearestFilter;
-        texture.magFilter = THREE.NearestFilter;
-        texture.name = key;
-        // Flip from chart space back into camera view space.
-        texture.flipY = true;
-        // EXRLoader sets the format incorrectly for single channel textures.
-        texture.format = value.format;
-        // iOS does not support WebGL2
-        // Textures need to be square powers of 2 for WebGL1
-        // texture.repeat.set(matxs/padxs, matxs/padys);       
-        console.log('Loaded:', key, texture, textureData);
-        brdfTextures.set(key, texture);
-      }
-    );
+    for (let [key, value] of brdfTexturePaths) {
+      loader.load(value.path,
+        function (texture, textureData) {
+          // Run after each texture is loaded.
+
+          // FIXME: Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
+          // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
+          // filtering. This can possibly be overcome by loading the right extensions:
+          // this.ms_Renderer.context.getExtension( 'OES_texture_float' );
+          // this.ms_Renderer.context.getExtension( 'OES_texture_float_linear' );
+          // or the equivalent for half-float textures.
+          texture.minFilter = THREE.NearestFilter;
+          texture.magFilter = THREE.NearestFilter;
+          texture.name = key;
+          // Flip from chart space back into camera view space.
+          texture.flipY = true;
+          // EXRLoader sets the format incorrectly for single channel textures.
+          texture.format = value.format;
+          // iOS does not support WebGL2
+          // Textures need to be square powers of 2 for WebGL1
+          // texture.repeat.set(matxs/padxs, matxs/padys);       
+          console.log('Loaded:', key, texture, textureData);
+          brdfTextures.set(key, texture);
+        }
+      );
+    }
   }
+
+  loadScan();
 
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
