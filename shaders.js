@@ -109,6 +109,8 @@ let uniforms = THREE.UniformsUtils.merge([
       float tintSurface = specularTexel.b;
       // float tintSurface = 0.0;
 
+      float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
+
       vec3 macroNormal = normalize(vNormal);
       vec3 mesoNormal = normal;
       vec3 viewerDirection = normalize(vViewPosition);
@@ -138,7 +140,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
         totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
         totalSpecularLight += attenuation*pointSpecularWeight
-                              *(diffuseSurface.rgb*tintSurface + pointLights[i].color*(1.0 - tintSurface));
+                              *((diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface
+                                + pointLights[i].color*(1.0 - tintSurface));
       }
 #endif
 
