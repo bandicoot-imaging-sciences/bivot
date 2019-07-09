@@ -67,6 +67,8 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
+    const float s = 65535.0*0.01;
+
     #include <common>
     #include <bsdfs>
     #include <packing>
@@ -83,9 +85,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
     float DisneySpecular(float specular, float roughness, vec3 normal, vec3 light, vec3 view) {
       // TODO: Add episilon to fragile denominators.
-      // TODO: Try dividing by c.
       float k = 1.0 - pow(roughness, 4.0);
-      float c = (1.0/PI)*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
+      float c = (1.0/(s*PI))*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
       // float c = 1.0;
 
       vec3 halfVector = normalize(light + view);
@@ -105,6 +106,8 @@ let uniforms = THREE.UniformsUtils.merge([
       vec4 specularTexel = texture2D(specularMap, vUv);
       float specularSurface = specularTexel.r;
       float roughnessSurface = specularTexel.g;
+      float tintSurface = specularTexel.b;
+      // float tintSurface = 0.0;
 
       vec3 macroNormal = normalize(vNormal);
       vec3 mesoNormal = normal;
@@ -133,8 +136,9 @@ let uniforms = THREE.UniformsUtils.merge([
         float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
           mesoNormal, lVector, viewerDirection);
 
-        totalDiffuseLight += pointLights[i].color*(pointDiffuseWeight*attenuation);
-        totalSpecularLight += pointLights[i].color*(pointSpecularWeight*attenuation);
+        totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
+        totalSpecularLight += attenuation*pointSpecularWeight
+                              *(diffuseSurface.rgb*tintSurface + pointLights[i].color*(1.0 - tintSurface));
       }
 #endif
 
