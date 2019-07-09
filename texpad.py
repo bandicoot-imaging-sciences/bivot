@@ -23,6 +23,7 @@ paths = {
     'normals': 'brdf-normals.exr',
     'specular': 'brdf-specular.exr',
     'roughness': 'brdf-roughness.exr',
+    'tint': 'brdf-tint.exr',
 }
 suffix = '_cropf16'
 adjpaths = dict([(tt, pp.replace('.exr', suffix + '.exr')) for (tt, pp) in paths.items()])
@@ -68,10 +69,10 @@ for (textype, path) in paths.items():
     adjusted[textype] = imf16crop
 
 # TODO: Merge all channels into 2 x 4-channel images:
-# - RGB + Specular amplitude
-# - Normals (XYZ) + Specular roughness
-#   Or even just save 2D normals, and put those together with both specular channels (we can normalise the
-#   normals in the shader).
+# - RGB + Specular tint
+# - Normals (XY) + Specular amplitude + Specular roughness
+#   Assuming the XYZ normals are components of a unit vector, we can calculate the Z component from the XY
+#   components in the shader.
 
 # TODO: Encode in browser friendly format, e.g. PNG with RGBM16 encoding.
 
@@ -86,14 +87,16 @@ print('Writing normals image:', adjpaths['normals'])
 normscaled = adjusted['normals']/2 + 0.5
 pyexr.write(adjpaths['normals'], normscaled, precision=exr_precision, compression=exr_compression)
 
-# Merging specular channels into a single image with 3 channels (third channel is zero).
+# Merging specular channels into a single image with 3 channels.
 # EXRLoader only accepts 3-channel or 4-channel images.
 specular = adjusted['specular']
 roughness = adjusted['roughness']
+tint = adjusted['tint']
 (ys, xs, zs) = specular.shape
-specrough = np.zeros((ys, xs, 3))
-specrough[..., 0] = specular[..., 0]
-specrough[..., 1] = roughness[..., 0]
-path = adjpaths['specular'].replace('specular', 'specrough')
-print('Writing specular/roughness image:', path)
-pyexr.write(path, specrough, precision=exr_precision, compression=exr_compression)
+specall = np.zeros((ys, xs, 3))
+specall[..., 0] = specular[..., 0]
+specall[..., 1] = roughness[..., 0]
+specall[..., 1] = tint[..., 0]
+path = adjpaths['specular'].replace('specular', 'specall')
+print('Writing specular (amplitude, roughness, tint) image:', path)
+pyexr.write(path, specall, precision=exr_precision, compression=exr_compression)
