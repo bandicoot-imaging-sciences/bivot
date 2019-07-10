@@ -86,9 +86,11 @@ function main() {
 
   let scans = new Map([
     ['coffee-matte', {version: 1}],
+    ['coffee-matte-v2', {version: 2}],
     ['kimono-matte', {version: 1}],
-    ['soiree', {version: 1}],
     ['kimono-matte-v2', {version: 2}],
+    ['soiree', {version: 1}],
+    ['soiree-v2', {version: 2}],
   ]);
   
   const gui = new dat.GUI();
