@@ -134,7 +134,7 @@ function main() {
     let brdfTexturePaths = new Map([
       ['diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
       ['normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
-      ['specular', {path: 'textures/' + state.scan + '/brdf-specall_cropf16.exr', format: THREE.RGBFormat}],
+      ['specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat}],
     ]);
     brdfTextures = new Map();
 
