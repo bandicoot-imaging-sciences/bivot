@@ -21,9 +21,7 @@ import pyexr
 paths = {
     'diffuse': 'brdf-diffuse.exr',
     'normals': 'brdf-normals.exr',
-    'specular': 'brdf-specular.exr',
-    'roughness': 'brdf-roughness.exr',
-    'tint': 'brdf-tint.exr',
+    'specular': 'brdf-specular-srt.exr',
 }
 suffix = '_cropf16'
 adjpaths = dict([(tt, pp.replace('.exr', suffix + '.exr')) for (tt, pp) in paths.items()])
@@ -87,16 +85,5 @@ print('Writing normals image:', adjpaths['normals'])
 normscaled = adjusted['normals']/2 + 0.5
 pyexr.write(adjpaths['normals'], normscaled, precision=exr_precision, compression=exr_compression)
 
-# Merging specular channels into a single image with 3 channels.
-# EXRLoader only accepts 3-channel or 4-channel images.
-specular = adjusted['specular']
-roughness = adjusted['roughness']
-tint = adjusted['tint']
-(ys, xs, zs) = specular.shape
-specall = np.zeros((ys, xs, 3))
-specall[..., 0] = specular[..., 0]
-specall[..., 1] = roughness[..., 0]
-specall[..., 2] = tint[..., 0]
-path = adjpaths['specular'].replace('specular', 'specall')
-print('Writing specular (amplitude, roughness, tint) image:', path)
-pyexr.write(path, specall, precision=exr_precision, compression=exr_compression)
+print('Writing specular (amplitude, roughness, tint) image:', adjpaths['specular'])
+pyexr.write(adjpaths['specular'], adjusted['specular'], precision=exr_precision, compression=exr_compression)
