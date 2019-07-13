@@ -60,15 +60,32 @@ function main() {
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = 0.15;
   // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
   // controls.userPanSpeed = 0.01;
-  controls.rotateSpeed = 0.1;
+  controls.rotateSpeed = 0.15;
   controls.target.set(0, 0, 0);
   controls.update();
 
+  document.addEventListener('mousemove', onDocumentMouseMove, false);
+  function onDocumentMouseMove(event) {
+    event.preventDefault();
+    let x = (event.clientX / window.innerWidth) * 2 - 1;
+    let y = -(event.clientY / window.innerHeight) * 2 + 1;
+    const x2y2 = x * x + y * y;
+    if (x2y2 > 1) {
+      const n = Math.sqrt(x2y2);
+      x /= n;
+      y /= n;
+    }
+    const z = Math.sqrt(1.001 - x * x - y * y);
+    light.position.set(x, y, z);
+    controls.update();
+    requestRenderIfNotRequested();
+  }
+
   const scene = new THREE.Scene();
-  
+
   scene.background = new THREE.Color(0x222222);
 
   const color = 0xFFFFFF;
@@ -76,7 +93,7 @@ function main() {
   const distanceLimit = 10;
   const decay = 2; // Set this to 2.0 for physical light distance falloff.
   const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
-  light.position.set(1, 0, 1);
+  light.position.set(0, 0, 1);
   scene.add(light);
 
   const ambientColour = 0xFFFFFF;
@@ -92,7 +109,7 @@ function main() {
     ['soiree', {version: 1}],
     ['soiree-v2', {version: 2}],
   ]);
-  
+
   const gui = new dat.GUI();
   gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
   gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
@@ -101,8 +118,9 @@ function main() {
   gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
   gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
-  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).name('light.x');
-  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).name('light.y');
+  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
+  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
+  gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
@@ -143,7 +161,7 @@ function main() {
     loadManager.onProgress = onProgress;
     loader = new THREE.EXRLoader(loadManager);
     onProgress('', 0, 1);
-  
+
     for (let [key, value] of brdfTexturePaths) {
       loader.load(value.path,
         function (texture, textureData) {
@@ -164,7 +182,7 @@ function main() {
           texture.format = value.format;
           // iOS does not support WebGL2
           // Textures need to be square powers of 2 for WebGL1
-          // texture.repeat.set(matxs/padxs, matxs/padys);       
+          // texture.repeat.set(matxs/padxs, matxs/padys);
           console.log('Loaded:', key, texture, textureData);
           brdfTextures.set(key, texture);
         }
