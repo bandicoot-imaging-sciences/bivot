@@ -32,12 +32,11 @@ function main() {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    mouseLight: true,
     scan: 'kimono-matte-v2',
-    // scan: 'coffee-matte',
-    // scan: 'kimono-matte',
-    // scan: 'soiree',
     brdfVersion: 2,
   };
+  let sceneLoaded = false;
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
 
@@ -67,7 +66,19 @@ function main() {
   controls.target.set(0, 0, 0);
   controls.update();
 
-  document.addEventListener('mousemove', onDocumentMouseMove, false);
+
+  function updateMouseLight() {
+    if (state.mouseLight) {
+      document.addEventListener('mousemove', onDocumentMouseMove, false);
+    } else {
+      document.removeEventListener('mousemove', onDocumentMouseMove, false);
+      light.position.set(0, 0, 1);
+    }
+    if (sceneLoaded) {
+      render();
+    }
+  }
+
   function onDocumentMouseMove(event) {
     event.preventDefault();
     let x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -95,6 +106,7 @@ function main() {
   const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
   light.position.set(0, 0, 1);
   scene.add(light);
+  updateMouseLight();
 
   const ambientColour = 0xFFFFFF;
   const ambientIntensity = 1.0;
@@ -118,6 +130,7 @@ function main() {
   gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
   gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
+  gui.add(state, 'mouseLight').onChange(updateMouseLight);
   gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
   gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
   gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
@@ -206,6 +219,7 @@ function main() {
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+    sceneLoaded = true;
     render();
   };
 
