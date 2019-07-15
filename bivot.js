@@ -114,8 +114,11 @@ function main() {
   scene.add(ambientLight);
 
   let scans = new Map([
+    ['chopping-board-v2', {version: 2}],
     ['coffee-matte', {version: 1}],
     ['coffee-matte-v2', {version: 2}],
+    ['gold-edge-v2', {version: 2}],
+    ['gold-zelle-v2', {version: 2}],
     ['kimono-matte', {version: 1}],
     ['kimono-matte-v2', {version: 2}],
     ['soiree', {version: 1}],
