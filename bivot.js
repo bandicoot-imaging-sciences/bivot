@@ -121,6 +121,7 @@ function main() {
     ['gold-zelle-v2', {version: 2}],
     ['kimono-matte', {version: 1}],
     ['kimono-matte-v2', {version: 2}],
+    ['shimmy-v2', {version: 2}],
     ['soiree', {version: 1}],
     ['soiree-v2', {version: 2}],
   ]);
