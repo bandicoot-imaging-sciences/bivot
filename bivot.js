@@ -114,6 +114,7 @@ function main() {
   scene.add(ambientLight);
 
   let scans = new Map([
+    ['bamboo-board-v2', {version: 2}],
     ['charcoal-tile-v2', {version: 2}],
     ['chopping-board-v2', {version: 2}],
     ['coffee-matte', {version: 1}],
@@ -125,6 +126,7 @@ function main() {
     ['shimmy-v2', {version: 2}],
     ['soiree', {version: 1}],
     ['soiree-v2', {version: 2}],
+    ['tan-wallet-v2', {version: 2}],
   ]);
 
   const gui = new dat.GUI();
