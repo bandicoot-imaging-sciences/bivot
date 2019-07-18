@@ -32,11 +32,14 @@ function main() {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
-    mouseLight: true,
+    lightMotion: 'mouse',
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
   };
+
   let sceneLoaded = false;
+  let light = null;
+ 
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
 
@@ -66,16 +69,40 @@ function main() {
   controls.target.set(0, 0, 0);
   controls.update();
 
+  let gyroDetected = false;
+  let lightMotionModes = [
+    'gyro',
+    'mouse',
+    'sliders',
+  ]
 
-  function updateMouseLight() {
-    if (state.mouseLight) {
-      document.addEventListener('mousemove', onDocumentMouseMove, false);
-    } else {
-      document.removeEventListener('mousemove', onDocumentMouseMove, false);
-      light.position.set(0, 0, 1);
+  // FIXME: devicemotion event has been deprecated for privacy reasons.
+  // A work around is to enable it in iOS Settings > Safari (off by default).
+  // The web page also has to be served over https.
+  function detectGyro(event) {
+    if (event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma) {
+      gyroDetected = true;
+      window.removeEventListener('devicemotion', detectGyro, false);
+      state.lightMotion = 'gyro';
+      updateLightMotion();
     }
-    if (sceneLoaded) {
-      render();
+  }
+  window.addEventListener('devicemotion', detectGyro, false);
+
+  function updateLightMotion() {
+    if (state.lightMotion == 'mouse') {
+      document.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      document.addEventListener('mousemove', onDocumentMouseMove, false);
+    } else if (state.lightMotion == 'gyro') {
+        document.addEventListener('deviceorientation', onDeviceOrientation, false);
+        document.removeEventListener('mousemove', onDocumentMouseMove, false);
+    } else {
+      console.assert(state.lightMotion == 'sliders');
+      document.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      document.removeEventListener('mousemove', onDocumentMouseMove, false);
+      if (light) {
+        light.position.set(0, 0, 1);
+      }
     }
   }
 
@@ -90,9 +117,20 @@ function main() {
       y /= n;
     }
     const z = Math.sqrt(1.001 - x * x - y * y);
-    light.position.set(x, y, z);
-    controls.update();
-    requestRenderIfNotRequested();
+    if (light) {
+      light.position.set(x, y, z);
+      requestRenderIfNotRequested();
+    }
+  }
+
+  function onDeviceOrientation(event) {
+    let x = Math.asin(event.beta);
+    let y = Math.asin(event.gamma);
+    const z = Math.sqrt(1.001 - x * x - y * y);
+    if (light) {
+      light.position.set(x, y, z);
+      requestRenderIfNotRequested();
+    }
   }
 
   const scene = new THREE.Scene();
@@ -103,10 +141,10 @@ function main() {
   const intensity = 1;
   const distanceLimit = 10;
   const decay = 2; // Set this to 2.0 for physical light distance falloff.
-  const light = new THREE.PointLight(color, intensity, distanceLimit, decay);
+  light = new THREE.PointLight(color, intensity, distanceLimit, decay);
   light.position.set(0, 0, 1);
   scene.add(light);
-  updateMouseLight();
+  updateLightMotion();
 
   const ambientColour = 0xFFFFFF;
   const ambientIntensity = 1.0;
@@ -135,14 +173,14 @@ function main() {
   gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
   gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
-  gui.add(state, 'mouseLight').onChange(updateMouseLight);
+  gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
   gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
   gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
   gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
-  gui.close();
+  // gui.close();
 
   const dpi = 300;
   const pixelsPerMetre = dpi/0.0254;
@@ -253,24 +291,26 @@ function main() {
   let renderRequested = false;
 
   function render() {
-    renderRequested = undefined;
+    if (sceneLoaded) {
+      renderRequested = undefined;
 
-    stats.begin();
-    if (resizeRendererToDisplaySize(renderer)) {
-      const canvas = renderer.domElement;
-      camera.aspect = canvas.clientWidth / canvas.clientHeight;
-      camera.updateProjectionMatrix();
+      stats.begin();
+      if (resizeRendererToDisplaySize(renderer)) {
+        const canvas = renderer.domElement;
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+      }
+
+      controls.update();
+      uniforms.uExposure.value = exposureGain*state.exposure;
+      uniforms.uDiffuse.value = state.diffuse;
+      uniforms.uSpecular.value = state.specular;
+      uniforms.uRoughness.value = state.roughness;
+      uniforms.uTint.value = state.tint;
+      uniforms.uBrdfVersion.value = state.brdfVersion;
+      renderer.render(scene, camera);
+      stats.end();
     }
-
-    controls.update();
-    uniforms.uExposure.value = exposureGain*state.exposure;
-    uniforms.uDiffuse.value = state.diffuse;
-    uniforms.uSpecular.value = state.specular;
-    uniforms.uRoughness.value = state.roughness;
-    uniforms.uTint.value = state.tint;
-    uniforms.uBrdfVersion.value = state.brdfVersion;
-    renderer.render(scene, camera);
-    stats.end();
   }
   render();
 
