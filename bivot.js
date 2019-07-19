@@ -182,7 +182,7 @@ function main() {
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
-  // gui.close();
+  gui.close();
 
   const dpi = 300;
   const pixelsPerMetre = dpi/0.0254;
