@@ -91,14 +91,14 @@ function main() {
 
   function updateLightMotion() {
     if (state.lightMotion == 'mouse') {
-      document.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       document.addEventListener('mousemove', onDocumentMouseMove, false);
     } else if (state.lightMotion == 'gyro') {
-        document.addEventListener('deviceorientation', onDeviceOrientation, false);
+      window.addEventListener('deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
     } else {
       console.assert(state.lightMotion == 'sliders');
-      document.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       if (light) {
         light.position.set(0, 0, 1);
@@ -124,8 +124,8 @@ function main() {
   }
 
   function onDeviceOrientation(event) {
-    let x = Math.asin(event.beta);
-    let y = Math.asin(event.gamma);
+    let x = Math.asin(THREE.Math.degToRad(event.beta));
+    let y = Math.asin(THREE.Math.degToRad(event.gamma));
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (light) {
       light.position.set(x, y, z);
