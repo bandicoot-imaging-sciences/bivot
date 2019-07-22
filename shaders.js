@@ -2,7 +2,7 @@
 'use strict';
 
 let uniforms = THREE.UniformsUtils.merge([
-    THREE.UniformsLib['lights'],
+    THREE.UniformsLib.lights,
     {
       // Set textures to null here and assign later to avoid duplicating texture data.
       'diffuseMap': {value: null},
@@ -23,10 +23,6 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
-    varying vec3 vTangent;
-    varying vec3 vBitangent;
-    // Check if these are used.
-    // uniform mat3 uvTransform;
 
     void main() {
       vec4 worldPosition = modelMatrix*vec4(position, 1.0);
@@ -39,11 +35,6 @@ let uniforms = THREE.UniformsUtils.merge([
       #include <defaultnormal_vertex>
 
       vNormal = normalize(transformedNormal);
-
-      #ifdef USE_TANGENT
-      vTangent = normalize(transformedTangent);
-      vBitangent = normalize(cross(vNormal, vTangent)*tangent.w);
-      #endif
 
       #include <begin_vertex>
       #include <project_vertex>
