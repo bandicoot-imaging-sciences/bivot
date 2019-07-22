@@ -33,7 +33,7 @@ function main() {
     roughness: 1.0,
     tint: true,
     lightMotion: 'mouse',
-    scan: 'kimono-matte-v2',
+    scan: 'charcoal-tile-v2',
     brdfVersion: 2,
   };
 
@@ -92,13 +92,16 @@ function main() {
   function updateLightMotion() {
     if (state.lightMotion == 'mouse') {
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.addEventListener('mousemove', onDocumentMouseMove, false);
     } else if (state.lightMotion == 'gyro') {
       window.addEventListener('deviceorientation', onDeviceOrientation, false);
+      window.addEventListener('orientationchange', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
     } else {
       console.assert(state.lightMotion == 'sliders');
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
+      window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       if (light) {
         light.position.set(0, 0, 1);
@@ -124,8 +127,29 @@ function main() {
   }
 
   function onDeviceOrientation(event) {
-    let x = Math.asin(THREE.Math.degToRad(event.beta));
-    let y = Math.asin(THREE.Math.degToRad(event.gamma));
+    // iOS and Andriod have different APIs for detecting screen orienation. This function works on iOS.
+    let orient = window.orientation || 0;
+    let xRotation; // Rotation around X axis.
+    let yRotation; // Rotation around Y axis.
+    if (orient == 0 || orient == 180) {
+      // Portrait
+      xRotation = event.beta;
+      yRotation = event.gamma;
+    } else {
+      // Landscape
+      xRotation = event.gamma;
+      yRotation = event.beta;
+    }
+    if (orient == 0) {
+      yRotation = -yRotation;
+    } else if (orient == 90) {
+      xRotation = -xRotation;
+      yRotation = -yRotation;
+    } else if (orient == 180) {
+      xRotation = -xRotation;
+    }
+    let x = Math.asin(THREE.Math.degToRad(yRotation));
+    let y = Math.asin(THREE.Math.degToRad(xRotation));
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (light) {
       light.position.set(x, y, z);
