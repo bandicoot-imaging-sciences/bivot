@@ -33,7 +33,7 @@ function main() {
     roughness: 1.0,
     tint: true,
     lightMotion: 'mouse',
-    scan: 'charcoal-tile-v2',
+    scan: 'kimono-matte-v2',
     brdfVersion: 2,
   };
 
@@ -208,6 +208,23 @@ function main() {
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
   gui.close();
 
+  // In theory, the extension OES_texture_float_linear should enable mip-mapping for floating point textures.
+  // However, even though these extensions load OK, when I set texture.magFilter to LinearMipMapLinearFilter I
+  // get a blank texture and WebGL console errors complaining that the texture is not renderable. Tested on
+  // Chrome for Windows and Safari for iOS 12.3.1.
+
+  /*
+  if (! renderer.extensions.get('OES_texture_float')) {
+    alert('OES_texture_float not supported');
+    throw 'missing webgl extension';
+  }
+
+  if (! renderer.extensions.get('OES_texture_float_linear')) {
+    alert('OES_texture_float_linear not supported');
+    throw 'missing webgl extension';
+  }
+  */
+
   const dpi = 300;
   const pixelsPerMetre = dpi/0.0254;
   const textureWidthPixels = 2048;
@@ -249,13 +266,18 @@ function main() {
         function (texture, textureData) {
           // Run after each texture is loaded.
 
-          // FIXME: Mip map filtering doesn't seem to work for EXR textures. WebGL complains: RENDER WARNING: texture
-          // bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture
-          // filtering. This can possibly be overcome by loading the right extensions:
-          // this.ms_Renderer.context.getExtension( 'OES_texture_float' );
-          // this.ms_Renderer.context.getExtension( 'OES_texture_float_linear' );
-          // or the equivalent for half-float textures.
-          texture.minFilter = THREE.NearestFilter;
+          // Both LinearFilter and NearestFilter work on Chrome for Windows and Safari for iOS 12.3.1. In
+          // principle this should reduce shimmer caused by anti-aliasing, but in practice the difference is
+          // quite subtle.
+          texture.minFilter = THREE.LinearFilter;
+          // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
+          // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
+          // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
+          // the right extensions:
+          // OES_texture_float
+          // OES_texture_float_linear
+          // or the equivalent for half-float textures. However, when I tried this I got a blank render and
+          // console errors (see notes on extension loading above).
           texture.magFilter = THREE.NearestFilter;
           texture.name = key;
           // Flip from chart space back into camera view space.
