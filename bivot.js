@@ -105,6 +105,7 @@ function main() {
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       if (light) {
         light.position.set(0, 0, 1);
+        render();
       }
     }
   }
@@ -184,9 +185,12 @@ function main() {
     ['coffee-matte-v2', {version: 2}],
     ['gold-edge-v2', {version: 2}],
     ['gold-zelle-v2', {version: 2}],
+    ['jeans', {version: 2}],
+    ['kimono-attach', {version: 2}],
     ['kimono-matte', {version: 1}],
     ['kimono-matte-v2', {version: 2}],
     ['shimmy-v2', {version: 2}],
+    ['stool-attach', {version: 2}],
     ['soiree', {version: 1}],
     ['soiree-v2', {version: 2}],
     ['tan-wallet-v2', {version: 2}],
