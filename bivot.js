@@ -167,17 +167,35 @@ function main() {
   scene.background = new THREE.Color(0x222222);
 
   function updateLightingGrid() {
+    // FIXME: Ideally we should adjust exisiting lights to match new state, rather than just deleting them all
+    // and starting again. Although if it's fast to reconstruct the whole lighting state, that's actually
+    // safer from a state machine point of view.
     if (lights) {
       scene.remove(lights);
     }
     const color = 0xFFFFFF;
-    const intensity = 1;
+    const totalIntensity = 1;
+    const lightIntensity = totalIntensity/(state.lightNumber**2);
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
-    let light = new THREE.PointLight(color, intensity, distanceLimit, decay);
-    light.position.copy(state.lightPosition);
     lights = new THREE.Group();
-    lights.add(light);
+    // We assume state.lightNumber is an odd integer.
+    let mid = state.lightNumber/2 - 0.5;
+    for (let i = 0; i < state.lightNumber; i++) {
+      for (let j = 0; j < state.lightNumber; j++) {
+        // Create a grid of lights in XY plane.
+        let offset = new THREE.Vector3(
+          (i - mid)*state.lightSpacing,
+          (j - mid)*state.lightSpacing,
+          0
+        );
+        let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+        light.position.copy(state.lightPosition);
+        light.position.add(offset);
+        console.log(light.position);
+        lights.add(light);
+      }
+    }
     scene.add(lights);
     requestRenderIfNotRequested();
   }
@@ -218,6 +236,8 @@ function main() {
   gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
   gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
   gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
+  gui.add(state, 'lightNumber', 1, 9, 1).onChange(updateLightingGrid);
+  gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
