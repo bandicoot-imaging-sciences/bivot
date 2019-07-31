@@ -28,17 +28,21 @@ Parts adapted from Threejsfundamentals:
 function main() {
   let state = {
     exposure: 1.0,
+    focalLength: 0.085,
     diffuse: 1.0,
     specular: 1.0,
     roughness: 1.0,
     tint: true,
     lightMotion: 'mouse',
+    lightPosition: {x: 0, y: 0, z: 1},
+    lightNumber: 1,
+    lightSpacing: 0.5,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
   };
 
   let sceneLoaded = false;
-  let light = null;
+  let lights = null;
  
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -50,10 +54,9 @@ function main() {
   renderer.toneMapping = THREE.ReinhardToneMapping;
 
   // Physical distance units are in metres.
-  const focalLength = 0.085;
   const sensorHeight = 0.024;
   // Three.js defines the field of view angle as the vertical angle.
-  const fov = 2*Math.atan(sensorHeight/(2*focalLength))*180/Math.PI;
+  const fov = 2*Math.atan(sensorHeight/(2*state.focalLength))*180/Math.PI;
   const aspect = 2;  // the canvas default
   const near = 0.01;
   const far = 10;
@@ -103,8 +106,9 @@ function main() {
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
-      if (light) {
-        light.position.set(0, 0, 1);
+      if (lights) {
+        state.lightPosition = {x: 0, y: 0, z: 1};
+        updateLightingGrid();
       }
     }
   }
@@ -120,8 +124,9 @@ function main() {
       y /= n;
     }
     const z = Math.sqrt(1.001 - x * x - y * y);
-    if (light) {
-      light.position.set(x, y, z);
+    if (lights) {
+      state.lightPosition = {x, y, z};
+      updateLightingGrid();
       requestRenderIfNotRequested();
     }
   }
@@ -151,8 +156,9 @@ function main() {
     let x = Math.asin(THREE.Math.degToRad(yRotation));
     let y = Math.asin(THREE.Math.degToRad(xRotation));
     const z = Math.sqrt(1.001 - x * x - y * y);
-    if (light) {
-      light.position.set(x, y, z);
+    if (lights) {
+      state.lightPosition = {x, y, z};
+      updateLightingGrid();
       requestRenderIfNotRequested();
     }
   }
@@ -161,14 +167,17 @@ function main() {
 
   scene.background = new THREE.Color(0x222222);
 
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const distanceLimit = 10;
-  const decay = 2; // Set this to 2.0 for physical light distance falloff.
-  light = new THREE.PointLight(color, intensity, distanceLimit, decay);
-  light.position.set(0, 0, 1);
-  scene.add(light);
-  updateLightMotion();
+  function updateLightingGrid() {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const distanceLimit = 10;
+    const decay = 2; // Set this to 2.0 for physical light distance falloff.
+    light = new THREE.PointLight(color, intensity, distanceLimit, decay);
+    light.position.set(state.lightPosition.x, state.lightPosition.y, state.lightPosition.z);
+    scene.add(light);
+    // FIXME: Race condition.
+    updateLightMotion();
+  }
 
   const ambientColour = 0xFFFFFF;
   const ambientIntensity = 1.0;
@@ -201,9 +210,9 @@ function main() {
   gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
   gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
-  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
-  gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
+  gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light.x');
+  gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light.y');
+  gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light.z');
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
