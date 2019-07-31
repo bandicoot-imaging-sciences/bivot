@@ -38,8 +38,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
       #include <begin_vertex>
       #include <project_vertex>
-    
-      vViewPosition = - mvPosition.xyz;  
+
+      vViewPosition = - mvPosition.xyz;
     }
     `;
 
@@ -69,7 +69,7 @@ let uniforms = THREE.UniformsUtils.merge([
     #include <packing>
     #include <lights_pars_begin>
     #include <normalmap_pars_fragment>
-    
+
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
       if (decayExponent > 0.0) {
         // The common ShaderChunk includes: #define saturate(a) clamp( a, 0.0, 1.0 )
@@ -108,13 +108,13 @@ let uniforms = THREE.UniformsUtils.merge([
       if (uBrdfVersion == 2) {
         s = 65535.0*0.01;
       }
-  
+
       float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
 
       vec3 macroNormal = normalize(vNormal);
       vec3 mesoNormal = normal;
       vec3 viewerDirection = normalize(vViewPosition);
-      
+
       vec3 totalSpecularLight = vec3(0.0);
       vec3 totalDiffuseLight = vec3(0.0);
       const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
@@ -137,15 +137,16 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
           mesoNormal, lVector, viewerDirection);
+        pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
 
         totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
         totalSpecularLight += attenuation*pointSpecularWeight
                               *((diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface
-                                + pointLights[i].color*(1.0 - tintSurface));
+                                + (1.0 - tintSurface));
       }
 #endif
 
-      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor) 
+      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor)
                                  + totalSpecularLight);
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
     }
