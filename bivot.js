@@ -178,6 +178,8 @@ function main() {
 
   let scans = new Map([
     ['bamboo-board-v2', {version: 2}],
+    ['bamboo-softbox', {version: 2}],
+    ['blue-plate', {version: 2}],
     ['charcoal-tile-v2', {version: 2}],
     ['chopping-board-v2', {version: 2}],
     ['chopping-attach-flash-v2', {version: 2}],
@@ -189,6 +191,7 @@ function main() {
     ['kimono-attach', {version: 2}],
     ['kimono-matte', {version: 1}],
     ['kimono-matte-v2', {version: 2}],
+    ['kimono-softbox', {version: 2}],
     ['shimmy-v2', {version: 2}],
     ['stool-attach', {version: 2}],
     ['soiree', {version: 1}],
