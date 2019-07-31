@@ -34,7 +34,7 @@ function main() {
     roughness: 1.0,
     tint: true,
     lightMotion: 'mouse',
-    lightPosition: {x: 0, y: 0, z: 1},
+    lightPosition: new THREE.Vector3(0, 0, 1),
     lightNumber: 1,
     lightSpacing: 0.5,
     scan: 'kimono-matte-v2',
@@ -42,6 +42,7 @@ function main() {
   };
 
   let sceneLoaded = false;
+  let renderRequested = false;
   let lights = null;
  
   // Texture intensities in camera count scale (e.g. 14 bit).
@@ -107,7 +108,7 @@ function main() {
       window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       if (lights) {
-        state.lightPosition = {x: 0, y: 0, z: 1};
+        state.lightPosition.set(0, 0, 1);
         updateLightingGrid();
       }
     }
@@ -125,9 +126,8 @@ function main() {
     }
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (lights) {
-      state.lightPosition = {x, y, z};
+      state.lightPosition.set(x, y, z);
       updateLightingGrid();
-      requestRenderIfNotRequested();
     }
   }
 
@@ -157,9 +157,8 @@ function main() {
     let y = Math.asin(THREE.Math.degToRad(xRotation));
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (lights) {
-      state.lightPosition = {x, y, z};
+      state.lightPosition.set(x, y, z);
       updateLightingGrid();
-      requestRenderIfNotRequested();
     }
   }
 
@@ -168,16 +167,22 @@ function main() {
   scene.background = new THREE.Color(0x222222);
 
   function updateLightingGrid() {
+    if (lights) {
+      scene.remove(lights);
+    }
     const color = 0xFFFFFF;
     const intensity = 1;
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
-    light = new THREE.PointLight(color, intensity, distanceLimit, decay);
-    light.position.set(state.lightPosition.x, state.lightPosition.y, state.lightPosition.z);
-    scene.add(light);
-    // FIXME: Race condition.
-    updateLightMotion();
+    let light = new THREE.PointLight(color, intensity, distanceLimit, decay);
+    light.position.copy(state.lightPosition);
+    lights = new THREE.Group();
+    lights.add(light);
+    scene.add(lights);
+    requestRenderIfNotRequested();
   }
+  updateLightingGrid();
+  updateLightMotion();
 
   const ambientColour = 0xFFFFFF;
   const ambientIntensity = 1.0;
@@ -210,9 +215,9 @@ function main() {
   gui.add(state, 'tint').onChange(render);
   gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
   gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-  gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light.x');
-  gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light.y');
-  gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light.z');
+  gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
+  gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
+  gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
   gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
   gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
   gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
@@ -345,8 +350,6 @@ function main() {
   let stats = new Stats();
   stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
   document.body.appendChild(stats.dom);
-
-  let renderRequested = false;
 
   function render() {
     if (sceneLoaded) {
