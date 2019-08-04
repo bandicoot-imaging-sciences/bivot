@@ -44,7 +44,7 @@ function main() {
   let sceneLoaded = false;
   let renderRequested = false;
   let lights = null;
- 
+
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
 
@@ -302,9 +302,10 @@ function main() {
           // Run after each texture is loaded.
 
           // Both LinearFilter and NearestFilter work on Chrome for Windows and Safari for iOS 12.3.1. In
-          // principle this should reduce shimmer caused by anti-aliasing, but in practice the difference is
-          // quite subtle.
-          texture.minFilter = THREE.LinearFilter;
+          // principle, for most surfaces, LinearFilter should reduce shimmer caused by anti-aliasing.
+          // However, for some surfaces with high-frequency normals or specular detials, LinearFilter causes
+          // cause moire artifacts, so NearestFilter is used.
+          texture.minFilter = THREE.NearestFilter;
           // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
           // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
           // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
