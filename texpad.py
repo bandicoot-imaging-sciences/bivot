@@ -16,74 +16,141 @@ import glob
 import numpy as np
 import pyexr
 
-# (padxs, padys) = (512, 512)
-(padxs, padys) = (2048, 2048)
-paths = {
-    'diffuse': 'brdf-diffuse.exr',
-    'normals': 'brdf-normals.exr',
-    'specular': 'brdf-specular-srt.exr',
-}
-suffix = '_cropf16'
-adjpaths = dict([(tt, pp.replace('.exr', suffix + '.exr')) for (tt, pp) in paths.items()])
-adjusted = {}
-for (textype, path) in paths.items():
-    print('Reading image:', path)
-    im = pyexr.read(path)
+def clip_warn(im, clip_min, clip_max):
+    """Clip an image's values using the given minimum and maximum values.
+    A warning is produced on the console if any clipping was performed.
+    Non-numerical values (nan) are set to 1.0, also with a warning.
+
+    Args:
+        im          The image to clip channel values.
+
+        clip_min    The minimum channel value to clip to.
+
+        clip_max    The maximum channel value to clip to.
+
+    Returns:
+        The clipped image.
+    """
+    (im_min, im_max) = (im.min(), im.max())
+    print('  Value range')
+    print('    Input: ', im_min, im_max)
+
+    nans = np.isnan(im)
+    num_nans = np.count_nonzero(nans)
+    if num_nans > 0:
+        print('      *** Warning: input image contains %g nan values (setting to 1.0)' % num_nans)
+        im[nans] = 1.0
+
+    if im_min < clip_min:
+        print('      *** Warning: input image %g < minimum %g (clipping)' % (im_min, clip_min))
+    if im_max > clip_max:
+        print('      *** Warning: input image %g > maximum %g (clipping)' % (im_max, clip_max))
+
+    im = np.clip(im, clip_min, clip_max)
+
+    print('    Output:', im.min(), im.max())
+    return im
+
+
+def pad_crop(im, target_x, target_y):
+    """Given an input image and target size, produce an image with the given
+    X and Y size using padding or cropping (no scaling or resampling).
+
+    If the image has odd number of pixels in X or Y, the final pixel in that dimension
+    will be dropped.
+
+    Padding and cropping is applied symmetrically to each side, in each of the X and Y dimensions.
+
+    Args:
+        im          The input image as a 3D numpy array (X, Y, chans).
+
+        target_x    The target X size of the image in pixels.
+
+        target_y    The target Y size of the image in pixels.
+
+    Returns:
+        The cropped and/or padded image.
+    """
     (ys, xs, zs) = im.shape
+    print('  Dimensions')
+    print('    Input: ', im.shape)
+
+    (txs, tys) = (xs, ys)
     if xs % 2 == 1:
-        txs = xs - 1
-    else:
         txs = xs - 1
     if ys % 2 == 1:
         tys = ys - 1
-    else:
-        tys = ys - 1
     im = im[:tys, :txs, :]
-    halfpadx = max((padxs - txs)//2, 0)
-    halfpady = max((padxs - tys)//2, 0)
 
-    imin = im.min()
-    fmin = np.finfo(np.float16).min
-    if imin <= fmin:
-        print('*** Warning: image test failed: min %g >= np.finfo(np.float16).min %g (clipping)' % (imin, fmin))
-    imax = im.max()
-    fmax = np.finfo(np.float16).max
-    if imax >= fmax:
-        print('*** Warning: image test failed: max %g <= np.finfo(np.float16).max %g (clipping)' % (imax, fmax))
-    imclip = np.clip(im, fmin, fmax)
+    half_x = max((target_x - txs) // 2, 0)
+    half_y = max((target_y - tys) // 2, 0)
+    padded_im = np.pad(im, ((half_y, half_y), (half_x, half_x), (0, 0)), mode='constant', constant_values=0)
 
-    imf16 = imclip.astype(np.float16)
-    imf16pad = np.pad(imf16, ((halfpady, halfpady),(halfpadx, halfpadx), (0, 0)), 
-                'constant', constant_values=0)
-    (pys, pxs, _) = imf16pad.shape
-    if (pxs > padxs or pys > padys):
-        x1 = (pxs - padxs)//2
-        x2 = (pxs - padxs)//2 + padxs
-        y1 = (pys - padys)//2
-        y2 = (pys - padys)//2 + padys
-        imf16crop = imf16pad[y1:y2, x1:x2, :]
+    (pys, pxs, _) = padded_im.shape
+    if pxs > target_x or pys > target_y:
+        x1 = (pxs - target_x) // 2
+        x2 = (pxs - target_x) // 2 + target_x
+        y1 = (pys - target_y) // 2
+        y2 = (pys - target_y) // 2 + target_y
+        cropped_im = padded_im[y1:y2, x1:x2, :]
     else:
-        imf16crop = imf16pad
-    adjusted[textype] = imf16crop
+        cropped_im = padded_im
 
-# TODO: Merge all channels into 2 x 4-channel images:
-# - RGB + Specular tint
-# - Normals (XY) + Specular amplitude + Specular roughness
-#   Assuming the XYZ normals are components of a unit vector, we can calculate the Z component from the XY
-#   components in the shader.
+    print('    Output:', cropped_im.shape)
+    return cropped_im
 
-# TODO: Encode in browser friendly format, e.g. PNG with RGBM16 encoding.
 
-exr_precision = pyexr.HALF
-exr_compression = pyexr.PIZ_COMPRESSION
+def write_im_exr_f16(im, path, suffix='_cropf16'):
+    """Write an image to a 16-bit floating point EXR file.
 
-print('Writing diffuse image:', adjpaths['diffuse'])
-pyexr.write(adjpaths['diffuse'], adjusted['diffuse'], precision=exr_precision, compression=exr_compression)
+    Args:
+        im          The image to write, as a numpy array.
 
-print('Writing normals image:', adjpaths['normals'])
-# Rescale normals from -1:1 range to the 0:1 range expected by Three.js shaders.
-normscaled = adjusted['normals']/2 + 0.5
-pyexr.write(adjpaths['normals'], normscaled, precision=exr_precision, compression=exr_compression)
+        path        The path of the image when it was read from file.
 
-print('Writing specular (amplitude, roughness, tint) image:', adjpaths['specular'])
-pyexr.write(adjpaths['specular'], adjusted['specular'], precision=exr_precision, compression=exr_compression)
+        suffix      The suffix to add to the input filename when writing the file.
+                    (Default: '_cropf16')
+    """
+    out_name = path.replace('.exr', suffix + '.exr')
+    print('  Writing image: ' + out_name)
+
+    exr_precision = pyexr.HALF
+    exr_compression = pyexr.PIZ_COMPRESSION
+
+    pyexr.write(out_name, im, precision=exr_precision, compression=exr_compression)
+
+
+if __name__ == "__main__":
+    paths = {
+        'diffuse': 'brdf-diffuse.exr',
+        'normals': 'brdf-normals.exr',
+        'specular': 'brdf-specular-srt.exr',
+    }
+
+    for (textype, path) in paths.items():
+        print('Reading image:', path)
+        im = pyexr.read(path)
+
+        # Clip and convert to the specified range (float16)
+        im_clipped = clip_warn(im, np.finfo(np.float16).min, np.finfo(np.float16).max).astype(np.float16)
+
+        # Pad and/or crop to power of 2 dimensions
+        (padxs, padys) = (2048, 2048)
+        im_cropped = pad_crop(im_clipped, padxs, padys)
+
+        # Rescale normals from -1:1 range to the 0:1 range expected by Three.js shaders.
+        if textype == 'normals':
+            im_cropped = im_cropped / 2 + 0.5
+
+        # Write the image to file
+        write_im_exr_f16(im_cropped, path)
+
+
+    # TODO: Merge all channels into 2 x 4-channel images:
+    # - RGB + Specular tint
+    # - Normals (XY) + Specular amplitude + Specular roughness
+    #   Assuming the XYZ normals are components of a unit vector, we can calculate the Z component from the XY
+    #   components in the shader.
+
+    # TODO: Encode in browser friendly format, e.g. PNG with RGBM16 encoding.
+
