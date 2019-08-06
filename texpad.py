@@ -15,6 +15,8 @@ import glob
 
 import numpy as np
 import pyexr
+import imageio
+# import png  # Used for 16-bit PNG writing (currently disabled)
 
 def clip_warn(im, clip_min, clip_max):
     """Clip an image's values using the given minimum and maximum values.
@@ -104,7 +106,7 @@ def write_im_exr_f16(im, path, suffix='_cropf16'):
     """Write an image to a 16-bit floating point EXR file.
 
     Args:
-        im          The image to write, as a numpy array.
+        im          The image to write, as a floating point numpy array.
 
         path        The path of the image when it was read from file.
 
@@ -120,6 +122,50 @@ def write_im_exr_f16(im, path, suffix='_cropf16'):
     pyexr.write(out_name, im, precision=exr_precision, compression=exr_compression)
 
 
+def write_im_dual_png8(im, path, suffix='_cropu8'):
+    """Write an image to a pair of high byte and low byte 8-bit PNGs
+
+    Args:
+        im          The image to write, as a uint16 numpy array.
+
+        path        The path of the image when it was read from file.
+
+        suffix      The suffix to add to the input filename when writing the file.
+                    (Default: '_cropf16')
+    """
+    out_name_lo = path.replace('.exr', suffix + '_lo.png')
+    out_name_hi = path.replace('.exr', suffix + '_hi.png')
+
+    im_hi, im_lo = np.divmod(im, 256)
+
+    print('  Writing image: ' + out_name_lo)
+    imageio.imwrite(out_name_lo, im_lo.astype(np.uint8))
+
+    print('  Writing image: ' + out_name_hi)
+    imageio.imwrite(out_name_hi, im_hi.astype(np.uint8))
+
+
+
+def write_im_png16(im, path, suffix='_cropu16'):
+    """Write an image to a 16-bit PNG.
+
+    Args:
+        im          The image to write, as a uint16 numpy array.
+
+        path        The path of the image when it was read from file.
+
+        suffix      The suffix to add to the input filename when writing the file.
+                    (Default: '_cropf16')
+    """
+    out_name = path.replace('.exr', suffix + '.png')
+
+    print('  Writing image: ' + out_name)
+    with open(out_name, 'wb') as f:
+        writer = png.Writer(width=im.shape[1], height=im.shape[0], bitdepth=16, greyscale=False)
+        im_rows = im.reshape((-1, im.shape[1] * im.shape[2])).astype(np.uint16)
+        writer.write(f, im_rows.tolist())
+
+
 if __name__ == "__main__":
     paths = {
         'diffuse': 'brdf-diffuse.exr',
@@ -127,23 +173,48 @@ if __name__ == "__main__":
         'specular': 'brdf-specular-srt.exr',
     }
 
+    #
+    # If True, dump floating point EXR textures.
+    # If False, dump integer PNG textures.
+    #
+    dump_float = True
+
+    if dump_float:
+        clip_min = np.finfo(np.float16).min
+        clip_max = np.finfo(np.float16).max
+        data_type = np.float16
+    else:
+        clip_min = 0
+        clip_max = 65535
+        data_type = np.uint16
+
     for (textype, path) in paths.items():
         print('Reading image:', path)
         im = pyexr.read(path)
 
-        # Clip and convert to the specified range (float16)
-        im_clipped = clip_warn(im, np.finfo(np.float16).min, np.finfo(np.float16).max).astype(np.float16)
+        if textype == 'normals':
+            # Rescale normals from -1:1 range to 0->64k range.
+            im = im / 2 + 0.5
+            im *= 65535
+        elif textype == 'specular':
+            # Scale from 0->1 range to 0->64k range.
+            im *= 65535
+
+        # Clip to the specified range and convert to the specified data type
+        im_clipped = clip_warn(im, clip_min, clip_max)
 
         # Pad and/or crop to power of 2 dimensions
         (padxs, padys) = (2048, 2048)
         im_cropped = pad_crop(im_clipped, padxs, padys)
 
-        # Rescale normals from -1:1 range to the 0:1 range expected by Three.js shaders.
-        if textype == 'normals':
-            im_cropped = im_cropped / 2 + 0.5
-
-        # Write the image to file
-        write_im_exr_f16(im_cropped, path)
+        if dump_float:
+            # Dump 16-bit float EXRs
+            write_im_exr_f16(im_cropped, path)
+        else:
+            # Dump dual 8-bit PNGs
+            write_im_dual_png8(im_cropped.astype(data_type), path)
+            # Dump 16-bit PNGs (currently unused)
+            #write_im_png16(im_cropped.astype(data_type), path)
 
 
     # TODO: Merge all channels into 2 x 4-channel images:
