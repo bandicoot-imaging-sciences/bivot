@@ -15,6 +15,11 @@ let uniforms = THREE.UniformsUtils.merge([
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
       'uBrdfVersion': {value: 2},
+      'uLoadExr': {value: false},
+      'uDual8Bit': {value: false},
+      'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
+      'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
+      'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
     }
   ]);
 
@@ -38,8 +43,8 @@ let uniforms = THREE.UniformsUtils.merge([
 
       #include <begin_vertex>
       #include <project_vertex>
-    
-      vViewPosition = - mvPosition.xyz;  
+
+      vViewPosition = - mvPosition.xyz;
     }
     `;
 
@@ -49,16 +54,22 @@ let uniforms = THREE.UniformsUtils.merge([
     // uniform sampler2D normalMap;
     uniform sampler2D specularMap;
 
+    uniform sampler2D diffuseMapLow;
+    uniform sampler2D normalMapLow;
+    uniform sampler2D specularMapLow;
+
     uniform float uExposure;
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
     uniform bool uTint;
     uniform int uBrdfVersion;
+    uniform bool uDual8Bit;
+    uniform bool uLoadExr;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
-		varying vec3 vBitangent;
+    varying vec3 vBitangent;
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
@@ -69,7 +80,7 @@ let uniforms = THREE.UniformsUtils.merge([
     #include <packing>
     #include <lights_pars_begin>
     #include <normalmap_pars_fragment>
-    
+
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
       if (decayExponent > 0.0) {
         // The common ShaderChunk includes: #define saturate(a) clamp( a, 0.0, 1.0 )
@@ -99,7 +110,21 @@ let uniforms = THREE.UniformsUtils.merge([
       vec4 diffuseSurface = texture2D(diffuseMap, vUv);
       vec3 normalSurface = texture2D(normalMap, vUv).xyz;
       vec4 specularTexel = texture2D(specularMap, vUv);
+
+      if (uDual8Bit) {
+        vec4 diffuseSurfaceLow = texture2D(diffuseMapLow, vUv) / 256.0;
+        vec3 normalSurfaceLow = texture2D(normalMapLow, vUv).xyz / 256.0;
+        vec4 specularTexelLow = texture2D(specularMapLow, vUv) / 256.0;
+
+        diffuseSurface = diffuseSurface + diffuseSurfaceLow;
+        normalSurface = normalSurface + normalSurfaceLow;
+        specularTexel = specularTexel + specularTexelLow;
+      }
+
       float specularSurface = specularTexel.r;
+      if (!uLoadExr) {
+        diffuseSurface *= 65535.0;
+      }
       float roughnessSurface = specularTexel.g;
       float tintSurface = 0.0;
       if (uTint && uBrdfVersion == 2) {
@@ -108,13 +133,13 @@ let uniforms = THREE.UniformsUtils.merge([
       if (uBrdfVersion == 2) {
         s = 65535.0*0.01;
       }
-  
+
       float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
 
       vec3 macroNormal = normalize(vNormal);
       vec3 mesoNormal = normal;
       vec3 viewerDirection = normalize(vViewPosition);
-      
+
       vec3 totalSpecularLight = vec3(0.0);
       vec3 totalDiffuseLight = vec3(0.0);
       const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
@@ -145,8 +170,9 @@ let uniforms = THREE.UniformsUtils.merge([
       }
 #endif
 
-      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor) 
+      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor)
                                  + totalSpecularLight);
+
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
     }
     `;

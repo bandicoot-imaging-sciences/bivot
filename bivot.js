@@ -35,6 +35,8 @@ function main() {
     lightMotion: 'mouse',
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
+    uLoadExr: true,
+    uDual8Bit: false,
   };
 
   let sceneLoaded = false;
@@ -253,20 +255,19 @@ function main() {
 
   let brdfTextures = null;
 
-  function loadScan() {
+  function loadScansImpl(brdfTexturePaths) {
     state.brdfVersion = scans.get(state.scan).version;
 
-    let brdfTexturePaths = new Map([
-      ['diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
-      ['normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
-      ['specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat}],
-    ]);
     brdfTextures = new Map();
 
     loadManager = new THREE.LoadingManager();
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
-    loader = new THREE.EXRLoader(loadManager);
+    if (state.uLoadExr) {
+      loader = new THREE.EXRLoader(loadManager);
+    } else{
+      loader = new THREE.TextureLoader(loadManager);
+    }
     onProgress('', 0, 1);
 
     for (let [key, value] of brdfTexturePaths) {
@@ -289,8 +290,8 @@ function main() {
           // console errors (see notes on extension loading above).
           texture.magFilter = THREE.NearestFilter;
           texture.name = key;
-          // Flip from chart space back into camera view space.
-          texture.flipY = true;
+          // Flip from chart space back into camera view space.  Only needed when loading EXR.
+          texture.flipY = state.uLoadExr;
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
@@ -303,6 +304,29 @@ function main() {
     }
   }
 
+  function loadScan() {
+    let paths = new Map();
+
+    if (state.uLoadExr) {
+      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
+    }
+    else
+    {
+      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
+      if (state.uDual8Bit) {
+        paths.set('diffuse_low', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('normals_low', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('specular_low', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
+      }
+    }
+
+    loadScansImpl(paths);
+  }
+
   loadScan();
 
   function onLoad() {
@@ -311,6 +335,11 @@ function main() {
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
     uniforms.normalMap.value = brdfTextures.get('normals');
     uniforms.specularMap.value = brdfTextures.get('specular');
+    if (state.uDual8Bit) {
+      uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
+      uniforms.normalMapLow.value = brdfTextures.get('normals_low');
+      uniforms.specularMapLow.value = brdfTextures.get('specular_low');
+    }
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
     material.defines = {
       USE_NORMALMAP: 1,
@@ -365,6 +394,8 @@ function main() {
       uniforms.uRoughness.value = state.roughness;
       uniforms.uTint.value = state.tint;
       uniforms.uBrdfVersion.value = state.brdfVersion;
+      uniforms.uLoadExr.value = state.uLoadExr;
+      uniforms.uDual8Bit.value = state.uDual8Bit;
       renderer.render(scene, camera);
       stats.end();
     }
