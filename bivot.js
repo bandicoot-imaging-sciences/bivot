@@ -35,10 +35,10 @@ function main() {
     lightMotion: 'mouse',
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
-    LoadExr: false,
+    LoadExr: true,
     Dual8Bit: false,
     ShowInterface: true,
-    MouseControls: true,
+    MouseCamControls: true,
     InitCamPosZ: 0.9,
   };
 
@@ -66,7 +66,7 @@ function main() {
   camera.position.set(0, 0, state.InitCamPosZ);
 
   let controls = null;
-  if (state.MouseControls) {
+  if (state.MouseCamControls) {
     controls = new THREE.OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.15;
@@ -396,7 +396,7 @@ function main() {
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
       }
-      if (state.MouseControls) {
+      if (state.MouseCamControls) {
         controls.update();
       }
 
@@ -421,7 +421,7 @@ function main() {
     }
   }
 
-  if (state.MouseControls) {
+  if (state.MouseCamControls) {
     controls.addEventListener('change', requestRenderIfNotRequested);
   }
   window.addEventListener('resize', requestRenderIfNotRequested);
