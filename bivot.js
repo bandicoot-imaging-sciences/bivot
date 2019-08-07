@@ -35,13 +35,15 @@ function main() {
     lightMotion: 'mouse',
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
-    LoadExr: true,
-    Dual8Bit: false,
-    ShowInterface: true,
-    MouseCamControlsZoom: true,
-    MouseCamControlsRotate: true,
-    MouseCamControlsPan: true,
-    InitCamPosZ: 0.9,
+    loadExr: true,
+    dual8Bit: false,
+    showInterface: true,
+    mouseCamControlsZoom: true,
+    mouseCamControlsRotate: true,
+    mouseCamControlsPan: true,
+    initCamPosZ: 0.9,
+    camTiltWithMousePos: -0.0,  // Factor to tilt camera based on mouse position
+    lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
   };
 
   let sceneLoaded = false;
@@ -65,7 +67,7 @@ function main() {
   const near = 0.01;
   const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.set(0, 0, state.InitCamPosZ);
+  camera.position.set(0, 0, state.initCamPosZ);
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -75,9 +77,9 @@ function main() {
   controls.rotateSpeed = 0.15;
   controls.target.set(0, 0, 0);
   controls.update();
-  controls.enableZoom = state.MouseCamControlsZoom;
-  controls.enableRotate = state.MouseCamControlsRotate;
-  controls.enablePan = state.MouseCamControlsPan;
+  controls.enableZoom = state.mouseCamControlsZoom;
+  controls.enableRotate = state.mouseCamControlsRotate;
+  controls.enablePan = state.mouseCamControlsPan;
 
   let gyroDetected = false;
   let lightMotionModes = [
@@ -121,6 +123,7 @@ function main() {
   }
 
   function onDocumentMouseMove(event) {
+    // Move light source based on mouse position
     event.preventDefault();
     let x = (event.clientX / window.innerWidth) * 2 - 1;
     let y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -130,10 +133,29 @@ function main() {
       x /= n;
       y /= n;
     }
+    x *= state.lightTiltWithMousePos;
+    y *= state.lightTiltWithMousePos;
+
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (light) {
       light.position.set(x, y, z);
       requestRenderIfNotRequested();
+    }
+
+    if (state.camTiltWithMousePos != 0) {
+      // Move camera based on mouse position
+      let cam_x = -x * state.camTiltWithMousePos;
+      let cam_y = -y * state.camTiltWithMousePos;
+      let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
+
+      // Scale by existing camera distance
+      const c = camera.position;
+      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+      cam_x *= cam_dist;
+      cam_y *= cam_dist;
+      cam_z *= cam_dist;
+
+      camera.position.set(cam_x, cam_y, cam_z);
     }
   }
 
@@ -209,7 +231,7 @@ function main() {
     ['tan-wallet-v2', {version: 2}],
   ]);
 
-  if (state.ShowInterface) {
+  if (state.showInterface) {
     const gui = new dat.GUI();
     gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
     gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
@@ -273,7 +295,7 @@ function main() {
     loadManager = new THREE.LoadingManager();
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
-    if (state.LoadExr) {
+    if (state.loadExr) {
       loader = new THREE.EXRLoader(loadManager);
     } else{
       loader = new THREE.TextureLoader(loadManager);
@@ -301,7 +323,7 @@ function main() {
           texture.magFilter = THREE.NearestFilter;
           texture.name = key;
           // Flip from chart space back into camera view space.  Only needed when loading EXR.
-          texture.flipY = state.LoadExr;
+          texture.flipY = state.loadExr;
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
@@ -317,7 +339,7 @@ function main() {
   function loadScan() {
     let paths = new Map();
 
-    if (state.LoadExr) {
+    if (state.loadExr) {
       paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
       paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
       paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
@@ -327,7 +349,7 @@ function main() {
       paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
       paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
       paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
-      if (state.Dual8Bit) {
+      if (state.dual8Bit) {
         paths.set('diffuse_low', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('normals_low', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('specular_low', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
@@ -345,7 +367,7 @@ function main() {
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
     uniforms.normalMap.value = brdfTextures.get('normals');
     uniforms.specularMap.value = brdfTextures.get('specular');
-    if (state.Dual8Bit) {
+    if (state.dual8Bit) {
       uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
       uniforms.normalMapLow.value = brdfTextures.get('normals_low');
       uniforms.specularMapLow.value = brdfTextures.get('specular_low');
@@ -381,7 +403,7 @@ function main() {
   }
 
   let stats = new Stats();
-  if (state.ShowInterface) {
+  if (state.showInterface) {
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
   }
@@ -407,8 +429,8 @@ function main() {
       uniforms.uRoughness.value = state.roughness;
       uniforms.uTint.value = state.tint;
       uniforms.uBrdfVersion.value = state.brdfVersion;
-      uniforms.uLoadExr.value = state.LoadExr;
-      uniforms.uDual8Bit.value = state.Dual8Bit;
+      uniforms.uLoadExr.value = state.loadExr;
+      uniforms.uDual8Bit.value = state.dual8Bit;
       renderer.render(scene, camera);
       stats.end();
     }
