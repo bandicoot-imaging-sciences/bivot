@@ -39,6 +39,15 @@ function main() {
     lightSpacing: 0.5,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
+    loadExr: true,
+    dual8Bit: false,
+    showInterface: true,
+    mouseCamControlsZoom: true,
+    mouseCamControlsRotate: true,
+    mouseCamControlsPan: true,
+    initCamPosZ: 0.9,
+    camTiltWithMousePos: -0.0,  // Factor to tilt camera based on mouse position
+    lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
   };
 
   let sceneLoaded = false;
@@ -62,7 +71,7 @@ function main() {
   const near = 0.01;
   const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.set(0, 0, 0.9);
+  camera.position.set(0, 0, state.initCamPosZ);
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -72,6 +81,9 @@ function main() {
   controls.rotateSpeed = 0.15;
   controls.target.set(0, 0, 0);
   controls.update();
+  controls.enableZoom = state.mouseCamControlsZoom;
+  controls.enableRotate = state.mouseCamControlsRotate;
+  controls.enablePan = state.mouseCamControlsPan;
 
   let gyroDetected = false;
   let lightMotionModes = [
@@ -115,6 +127,7 @@ function main() {
   }
 
   function onDocumentMouseMove(event) {
+    // Move light source based on mouse position
     event.preventDefault();
     let x = (event.clientX / window.innerWidth) * 2 - 1;
     let y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -124,10 +137,29 @@ function main() {
       x /= n;
       y /= n;
     }
+    x *= state.lightTiltWithMousePos;
+    y *= state.lightTiltWithMousePos;
+
     const z = Math.sqrt(1.001 - x * x - y * y);
     if (lights) {
       state.lightPosition.set(x, y, z);
       updateLightingGrid();
+    }
+
+    if (state.camTiltWithMousePos != 0) {
+      // Move camera based on mouse position
+      let cam_x = -x * state.camTiltWithMousePos;
+      let cam_y = -y * state.camTiltWithMousePos;
+      let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
+
+      // Scale by existing camera distance
+      const c = camera.position;
+      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+      cam_x *= cam_dist;
+      cam_y *= cam_dist;
+      cam_z *= cam_dist;
+
+      camera.position.set(cam_x, cam_y, cam_z);
     }
   }
 
@@ -231,25 +263,27 @@ function main() {
     ['tan-wallet-v2', {version: 2}],
   ]);
 
-  const gui = new dat.GUI();
-  gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
-  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'tint').onChange(render);
-  gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
-  gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-  gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
-  gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
-  gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
-  gui.add(state, 'lightNumber', 1, 9, 1).onChange(updateLightingGrid);
-  gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
-  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
-  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
-  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
-  gui.close();
-
+  if (state.showInterface) {
+    const gui = new dat.GUI();
+    gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
+    gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'tint').onChange(render);
+    gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
+    gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
+    gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
+    gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
+    gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
+    gui.add(state, 'lightNumber', 1, 9, 1).onChange(updateLightingGrid);
+    gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
+    gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
+    gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
+    gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
+    gui.close();
+  }
+  
   // In theory, the extension OES_texture_float_linear should enable mip-mapping for floating point textures.
   // However, even though these extensions load OK, when I set texture.magFilter to LinearMipMapLinearFilter I
   // get a blank texture and WebGL console errors complaining that the texture is not renderable. Tested on
@@ -287,20 +321,19 @@ function main() {
 
   let brdfTextures = null;
 
-  function loadScan() {
+  function loadScansImpl(brdfTexturePaths) {
     state.brdfVersion = scans.get(state.scan).version;
 
-    let brdfTexturePaths = new Map([
-      ['diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat}],
-      ['normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat}],
-      ['specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat}],
-    ]);
     brdfTextures = new Map();
 
     loadManager = new THREE.LoadingManager();
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
-    loader = new THREE.EXRLoader(loadManager);
+    if (state.loadExr) {
+      loader = new THREE.EXRLoader(loadManager);
+    } else{
+      loader = new THREE.TextureLoader(loadManager);
+    }
     onProgress('', 0, 1);
 
     for (let [key, value] of brdfTexturePaths) {
@@ -323,8 +356,8 @@ function main() {
           // console errors (see notes on extension loading above).
           texture.magFilter = THREE.NearestFilter;
           texture.name = key;
-          // Flip from chart space back into camera view space.
-          texture.flipY = true;
+          // Flip from chart space back into camera view space.  Only needed when loading EXR.
+          texture.flipY = state.loadExr;
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
@@ -337,6 +370,29 @@ function main() {
     }
   }
 
+  function loadScan() {
+    let paths = new Map();
+
+    if (state.loadExr) {
+      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
+    }
+    else
+    {
+      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
+      if (state.dual8Bit) {
+        paths.set('diffuse_low', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('normals_low', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('specular_low', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
+      }
+    }
+
+    loadScansImpl(paths);
+  }
+
   loadScan();
 
   function onLoad() {
@@ -345,6 +401,11 @@ function main() {
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
     uniforms.normalMap.value = brdfTextures.get('normals');
     uniforms.specularMap.value = brdfTextures.get('specular');
+    if (state.dual8Bit) {
+      uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
+      uniforms.normalMapLow.value = brdfTextures.get('normals_low');
+      uniforms.specularMapLow.value = brdfTextures.get('specular_low');
+    }
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
     material.defines = {
       USE_NORMALMAP: 1,
@@ -376,8 +437,10 @@ function main() {
   }
 
   let stats = new Stats();
-  stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
-  document.body.appendChild(stats.dom);
+  if (state.showInterface) {
+    stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
+    document.body.appendChild(stats.dom);
+  }
 
   function render() {
     if (sceneLoaded) {
@@ -391,12 +454,15 @@ function main() {
       }
 
       controls.update();
+
       uniforms.uExposure.value = exposureGain*state.exposure;
       uniforms.uDiffuse.value = state.diffuse;
       uniforms.uSpecular.value = state.specular;
       uniforms.uRoughness.value = state.roughness;
       uniforms.uTint.value = state.tint;
       uniforms.uBrdfVersion.value = state.brdfVersion;
+      uniforms.uLoadExr.value = state.loadExr;
+      uniforms.uDual8Bit.value = state.dual8Bit;
       renderer.render(scene, camera);
       stats.end();
     }
