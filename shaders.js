@@ -15,6 +15,11 @@ let uniforms = THREE.UniformsUtils.merge([
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
       'uBrdfVersion': {value: 2},
+      'uLoadExr': {value: false},
+      'uDual8Bit': {value: false},
+      'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
+      'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
+      'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
     }
   ]);
 
@@ -49,16 +54,22 @@ let uniforms = THREE.UniformsUtils.merge([
     // uniform sampler2D normalMap;
     uniform sampler2D specularMap;
 
+    uniform sampler2D diffuseMapLow;
+    uniform sampler2D normalMapLow;
+    uniform sampler2D specularMapLow;
+
     uniform float uExposure;
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
     uniform bool uTint;
     uniform int uBrdfVersion;
+    uniform bool uDual8Bit;
+    uniform bool uLoadExr;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
-		varying vec3 vBitangent;
+    varying vec3 vBitangent;
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
@@ -99,7 +110,21 @@ let uniforms = THREE.UniformsUtils.merge([
       vec4 diffuseSurface = texture2D(diffuseMap, vUv);
       vec3 normalSurface = texture2D(normalMap, vUv).xyz;
       vec4 specularTexel = texture2D(specularMap, vUv);
+
+      if (uDual8Bit) {
+        vec4 diffuseSurfaceLow = texture2D(diffuseMapLow, vUv) / 256.0;
+        vec3 normalSurfaceLow = texture2D(normalMapLow, vUv).xyz / 256.0;
+        vec4 specularTexelLow = texture2D(specularMapLow, vUv) / 256.0;
+
+        diffuseSurface = diffuseSurface + diffuseSurfaceLow;
+        normalSurface = normalSurface + normalSurfaceLow;
+        specularTexel = specularTexel + specularTexelLow;
+      }
+
       float specularSurface = specularTexel.r;
+      if (!uLoadExr) {
+        diffuseSurface *= 65535.0;
+      }
       float roughnessSurface = specularTexel.g;
       float tintSurface = 0.0;
       if (uTint && uBrdfVersion == 2) {
@@ -137,6 +162,7 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
           mesoNormal, lVector, viewerDirection);
+        // FIXME: This assumes the light colour is white or grey.
         pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
 
         totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
@@ -148,6 +174,7 @@ let uniforms = THREE.UniformsUtils.merge([
 
       outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor)
                                  + totalSpecularLight);
+
       gl_FragColor = linearToOutputTexel(vec4(outgoingLight, 1.0));
     }
     `;
