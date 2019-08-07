@@ -51,6 +51,8 @@ function main() {
     mouseCamControlsRotate: true,
     mouseCamControlsPan: true,
     initCamZ: 0.9,
+    minCamZ: 0.4,
+    maxCamZ: 2.0,
     camTiltWithMousePos: -0.0,  // Factor to tilt camera based on mouse position
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
   };
@@ -226,6 +228,9 @@ function main() {
     controls.enableZoom = config.mouseCamControlsZoom;
     controls.enableRotate = config.mouseCamControlsRotate;
     controls.enablePan = config.mouseCamControlsPan;
+    controls.minDistance = config.minCamZ;
+    controls.maxDistance = config.maxCamZ;
+
     controls.addEventListener('change', requestRender);
   }
 

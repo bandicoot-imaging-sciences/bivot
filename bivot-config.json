@@ -8,6 +8,8 @@
     "camTiltWithMousePos": -0.0,
     "lightTiltWithMousePos": 1.0,
     "initCamZ": 0.9,
+    "minCamZ": 0.4,
+    "maxCamZ": 2.0,
     "initialState":
     {
         "exposure": 1.0,
