@@ -1,0 +1,26 @@
+{
+    "loadExr": true,
+    "dual8Bit": false,
+    "showInterface": true,
+    "mouseCamControlsZoom": true,
+    "mouseCamControlsRotate": true,
+    "mouseCamControlsPan": true,
+    "camTiltWithMousePos": -0.0,
+    "lightTiltWithMousePos": 1.0,
+    "initCamZ": 0.9,
+    "initialState":
+    {
+        "exposure": 1.0,
+        "focalLength": 85,
+        "diffuse": 1.0,
+        "specular": 1.0,
+        "roughness": 1.0,
+        "tint": true,
+        "lightMotion": "mouse",
+        "lightPosition": [0, 0, 1],
+        "lightNumber": 1,
+        "lightSpacing": 0.5,
+        "scan": "kimono-matte-v2",
+        "brdfVersion": 2
+    }
+}
