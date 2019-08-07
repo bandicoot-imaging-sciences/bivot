@@ -173,6 +173,7 @@ function main() {
     if (lights) {
       scene.remove(lights);
     }
+    // Our custom shader assumes the light colour is grey or white.
     const color = 0xFFFFFF;
     const totalIntensity = 1;
     const lightIntensity = totalIntensity/(state.lightNumber**2);
@@ -192,7 +193,7 @@ function main() {
         let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
         light.position.copy(state.lightPosition);
         light.position.add(offset);
-        console.log(light.position);
+        // console.log(light.position);
         lights.add(light);
       }
     }
@@ -345,6 +346,7 @@ function main() {
     };
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotateZ(-Math.PI/2);
     scene.add(mesh);
     sceneLoaded = true;
     render();
