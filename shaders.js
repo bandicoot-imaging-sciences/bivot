@@ -162,11 +162,13 @@ let uniforms = THREE.UniformsUtils.merge([
 
         float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
           mesoNormal, lVector, viewerDirection);
+        // FIXME: This assumes the light colour is white or grey.
+        pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
 
         totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
         totalSpecularLight += attenuation*pointSpecularWeight
                               *((diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface
-                                + pointLights[i].color*(1.0 - tintSurface));
+                                + (1.0 - tintSurface));
       }
 #endif
 

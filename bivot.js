@@ -28,11 +28,15 @@ Parts adapted from Threejsfundamentals:
 function main() {
   let state = {
     exposure: 1.0,
+    focalLength: 0.085,
     diffuse: 1.0,
     specular: 1.0,
     roughness: 1.0,
     tint: true,
     lightMotion: 'mouse',
+    lightPosition: new THREE.Vector3(0, 0, 1),
+    lightNumber: 1,
+    lightSpacing: 0.5,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
     loadExr: true,
@@ -47,7 +51,8 @@ function main() {
   };
 
   let sceneLoaded = false;
-  let light = null;
+  let renderRequested = false;
+  let lights = null;
 
   // Texture intensities in camera count scale (e.g. 14 bit).
   let exposureGain = 1/10000;
@@ -59,10 +64,9 @@ function main() {
   renderer.toneMapping = THREE.ReinhardToneMapping;
 
   // Physical distance units are in metres.
-  const focalLength = 0.085;
   const sensorHeight = 0.024;
   // Three.js defines the field of view angle as the vertical angle.
-  const fov = 2*Math.atan(sensorHeight/(2*focalLength))*180/Math.PI;
+  const fov = 2*Math.atan(sensorHeight/(2*state.focalLength))*180/Math.PI;
   const aspect = 2;  // the canvas default
   const near = 0.01;
   const far = 10;
@@ -115,9 +119,9 @@ function main() {
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
-      if (light) {
-        light.position.set(0, 0, 1);
-        render();
+      if (lights) {
+        state.lightPosition.set(0, 0, 1);
+        updateLightingGrid();
       }
     }
   }
@@ -137,9 +141,9 @@ function main() {
     y *= state.lightTiltWithMousePos;
 
     const z = Math.sqrt(1.001 - x * x - y * y);
-    if (light) {
-      light.position.set(x, y, z);
-      requestRenderIfNotRequested();
+    if (lights) {
+      state.lightPosition.set(x, y, z);
+      updateLightingGrid();
     }
 
     if (state.camTiltWithMousePos != 0) {
@@ -184,9 +188,9 @@ function main() {
     let x = Math.asin(THREE.Math.degToRad(yRotation));
     let y = Math.asin(THREE.Math.degToRad(xRotation));
     const z = Math.sqrt(1.001 - x * x - y * y);
-    if (light) {
-      light.position.set(x, y, z);
-      requestRenderIfNotRequested();
+    if (lights) {
+      state.lightPosition.set(x, y, z);
+      updateLightingGrid();
     }
   }
 
@@ -194,13 +198,41 @@ function main() {
 
   scene.background = new THREE.Color(0x222222);
 
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const distanceLimit = 10;
-  const decay = 2; // Set this to 2.0 for physical light distance falloff.
-  light = new THREE.PointLight(color, intensity, distanceLimit, decay);
-  light.position.set(0, 0, 1);
-  scene.add(light);
+  function updateLightingGrid() {
+    // FIXME: Ideally we should adjust exisiting lights to match new state, rather than just deleting them all
+    // and starting again. Although if it's fast to reconstruct the whole lighting state, that's actually
+    // safer from a state machine point of view.
+    if (lights) {
+      scene.remove(lights);
+    }
+    // Our custom shader assumes the light colour is grey or white.
+    const color = 0xFFFFFF;
+    const totalIntensity = 1;
+    const lightIntensity = totalIntensity/(state.lightNumber**2);
+    const distanceLimit = 10;
+    const decay = 2; // Set this to 2.0 for physical light distance falloff.
+    lights = new THREE.Group();
+    // We assume state.lightNumber is an odd integer.
+    let mid = state.lightNumber/2 - 0.5;
+    for (let i = 0; i < state.lightNumber; i++) {
+      for (let j = 0; j < state.lightNumber; j++) {
+        // Create a grid of lights in XY plane.
+        let offset = new THREE.Vector3(
+          (i - mid)*state.lightSpacing,
+          (j - mid)*state.lightSpacing,
+          0
+        );
+        let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+        light.position.copy(state.lightPosition);
+        light.position.add(offset);
+        // console.log(light.position);
+        lights.add(light);
+      }
+    }
+    scene.add(lights);
+    requestRenderIfNotRequested();
+  }
+  updateLightingGrid();
   updateLightMotion();
 
   const ambientColour = 0xFFFFFF;
@@ -241,15 +273,17 @@ function main() {
     gui.add(state, 'tint').onChange(render);
     gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-    gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
-    gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
-    gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
+    gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
+    gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
+    gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
+    gui.add(state, 'lightNumber', 1, 9, 1).onChange(updateLightingGrid);
+    gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
     gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
     gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
     gui.close();
   }
-
+  
   // In theory, the extension OES_texture_float_linear should enable mip-mapping for floating point textures.
   // However, even though these extensions load OK, when I set texture.magFilter to LinearMipMapLinearFilter I
   // get a blank texture and WebGL console errors complaining that the texture is not renderable. Tested on
@@ -407,8 +441,6 @@ function main() {
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
   }
-
-  let renderRequested = false;
 
   function render() {
     if (sceneLoaded) {
