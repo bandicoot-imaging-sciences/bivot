@@ -28,7 +28,7 @@ Parts adapted from Threejsfundamentals:
 function main() {
   let state = {
     exposure: 1.0,
-    focalLength: 0.085,
+    focalLength: 85,
     diffuse: 1.0,
     specular: 1.0,
     roughness: 1.0,
@@ -54,15 +54,27 @@ function main() {
   renderer.physicallyCorrectLights = true;
   renderer.toneMapping = THREE.ReinhardToneMapping;
 
-  // Physical distance units are in metres.
+  function fieldOfView(focalLength, sensorHeight) {
+    // Focal length is in mm for easier GUI control.
+    // Three.js defines the field of view angle as the vertical angle.
+    return 2*Math.atan(sensorHeight/(2*focalLength/1000))*180/Math.PI;
+  }
+
+  // Physical distance units are in metres, unless otherwise stated.
   const sensorHeight = 0.024;
-  // Three.js defines the field of view angle as the vertical angle.
-  const fov = 2*Math.atan(sensorHeight/(2*state.focalLength))*180/Math.PI;
+  let fov = fieldOfView(state.focalLength, sensorHeight);
   const aspect = 2;  // the canvas default
   const near = 0.01;
   const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 0, 0.9);
+
+  function updateFOV() {
+    fov = fieldOfView(state.focalLength, sensorHeight);
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+    requestRender();
+  }
 
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -192,12 +204,11 @@ function main() {
         let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
         light.position.copy(state.lightPosition);
         light.position.add(offset);
-        console.log(light.position);
         lights.add(light);
       }
     }
     scene.add(lights);
-    requestRenderIfNotRequested();
+    requestRender();
   }
   updateLightingGrid();
   updateLightMotion();
@@ -226,21 +237,22 @@ function main() {
 
   const gui = new dat.GUI();
   gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
-  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'tint').onChange(render);
-  gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
+  gui.add(state, 'exposure', 0, 5, 0.01).onChange(requestRender);
+  gui.add(state, 'diffuse', 0, 5, 0.01).onChange(requestRender);
+  gui.add(state, 'specular', 0, 5, 0.01).onChange(requestRender);
+  gui.add(state, 'roughness', 0, 5, 0.01).onChange(requestRender);
+  gui.add(state, 'tint').onChange(requestRender);
+  gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(requestRender).name('ambient');
   gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
   gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
   gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
   gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
-  gui.add(state, 'lightNumber', 1, 9, 1).onChange(updateLightingGrid);
+  gui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
   gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
-  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
-  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
-  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
+  gui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
+  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
+  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
+  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
   gui.close();
 
   // In theory, the extension OES_texture_float_linear should enable mip-mapping for floating point textures.
@@ -346,7 +358,7 @@ function main() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
     sceneLoaded = true;
-    render();
+    requestRender();
   };
 
   function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
@@ -372,38 +384,36 @@ function main() {
   document.body.appendChild(stats.dom);
 
   function render() {
-    if (sceneLoaded) {
-      renderRequested = undefined;
+    renderRequested = undefined;
 
-      stats.begin();
-      if (resizeRendererToDisplaySize(renderer)) {
-        const canvas = renderer.domElement;
-        camera.aspect = canvas.clientWidth / canvas.clientHeight;
-        camera.updateProjectionMatrix();
-      }
-
-      controls.update();
-      uniforms.uExposure.value = exposureGain*state.exposure;
-      uniforms.uDiffuse.value = state.diffuse;
-      uniforms.uSpecular.value = state.specular;
-      uniforms.uRoughness.value = state.roughness;
-      uniforms.uTint.value = state.tint;
-      uniforms.uBrdfVersion.value = state.brdfVersion;
-      renderer.render(scene, camera);
-      stats.end();
+    stats.begin();
+    if (resizeRendererToDisplaySize(renderer)) {
+      const canvas = renderer.domElement;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
     }
-  }
-  render();
 
-  function requestRenderIfNotRequested() {
-    if (!renderRequested) {
+    controls.update();
+    uniforms.uExposure.value = exposureGain*state.exposure;
+    uniforms.uDiffuse.value = state.diffuse;
+    uniforms.uSpecular.value = state.specular;
+    uniforms.uRoughness.value = state.roughness;
+    uniforms.uTint.value = state.tint;
+    uniforms.uBrdfVersion.value = state.brdfVersion;
+    renderer.render(scene, camera);
+    stats.end();
+  }
+
+  // Request a render frame, only if a request is not already pending.
+  function requestRender() {
+    if (sceneLoaded && !renderRequested) {
       renderRequested = true;
       requestAnimationFrame(render);
     }
   }
 
-  controls.addEventListener('change', requestRenderIfNotRequested);
-  window.addEventListener('resize', requestRenderIfNotRequested);
+  controls.addEventListener('change', requestRender);
+  window.addEventListener('resize', requestRender);
 }
 
 if ( WEBGL.isWebGLAvailable() === false ) {
