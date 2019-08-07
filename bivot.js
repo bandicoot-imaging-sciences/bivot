@@ -346,7 +346,6 @@ function main() {
     };
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.rotateZ(-Math.PI/2);
     scene.add(mesh);
     sceneLoaded = true;
     render();
