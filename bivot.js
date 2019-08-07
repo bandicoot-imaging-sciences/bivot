@@ -35,8 +35,11 @@ function main() {
     lightMotion: 'mouse',
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
-    uLoadExr: true,
-    uDual8Bit: false,
+    LoadExr: false,
+    Dual8Bit: false,
+    ShowInterface: true,
+    MouseControls: true,
+    InitCamPosZ: 0.9,
   };
 
   let sceneLoaded = false;
@@ -60,16 +63,19 @@ function main() {
   const near = 0.01;
   const far = 10;
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.set(0, 0, 0.9);
+  camera.position.set(0, 0, state.InitCamPosZ);
 
-  const controls = new THREE.OrbitControls(camera, canvas);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.15;
-  // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
-  // controls.userPanSpeed = 0.01;
-  controls.rotateSpeed = 0.15;
-  controls.target.set(0, 0, 0);
-  controls.update();
+  let controls = null;
+  if (state.MouseControls) {
+    controls = new THREE.OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.15;
+    // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
+    // controls.userPanSpeed = 0.01;
+    controls.rotateSpeed = 0.15;
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
 
   let gyroDetected = false;
   let lightMotionModes = [
@@ -201,22 +207,24 @@ function main() {
     ['tan-wallet-v2', {version: 2}],
   ]);
 
-  const gui = new dat.GUI();
-  gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
-  gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
-  gui.add(state, 'tint').onChange(render);
-  gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
-  gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-  gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
-  gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
-  gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
-  gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
-  gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
-  gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
-  gui.close();
+  if (state.ShowInterface) {
+    const gui = new dat.GUI();
+    gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
+    gui.add(state, 'exposure', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'diffuse', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'specular', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'roughness', 0, 5, 0.01).onChange(render);
+    gui.add(state, 'tint').onChange(render);
+    gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(render).name('ambient');
+    gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
+    gui.add(light.position, 'x', -1, 1, 0.01).onChange(render).listen().name('light.x');
+    gui.add(light.position, 'y', -1, 1, 0.01).onChange(render).listen().name('light.y');
+    gui.add(light.position, 'z', 0.1, 3, 0.01).onChange(render).listen().name('light.z');
+    gui.add(camera.position, 'x', -1, 1, 0.01).onChange(render).listen().name('camera.x');
+    gui.add(camera.position, 'y', -1, 1, 0.01).onChange(render).listen().name('camera.y');
+    gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(render).listen().name('camera.z');
+    gui.close();
+  }
 
   // In theory, the extension OES_texture_float_linear should enable mip-mapping for floating point textures.
   // However, even though these extensions load OK, when I set texture.magFilter to LinearMipMapLinearFilter I
@@ -263,7 +271,7 @@ function main() {
     loadManager = new THREE.LoadingManager();
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
-    if (state.uLoadExr) {
+    if (state.LoadExr) {
       loader = new THREE.EXRLoader(loadManager);
     } else{
       loader = new THREE.TextureLoader(loadManager);
@@ -291,7 +299,7 @@ function main() {
           texture.magFilter = THREE.NearestFilter;
           texture.name = key;
           // Flip from chart space back into camera view space.  Only needed when loading EXR.
-          texture.flipY = state.uLoadExr;
+          texture.flipY = state.LoadExr;
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
@@ -307,7 +315,7 @@ function main() {
   function loadScan() {
     let paths = new Map();
 
-    if (state.uLoadExr) {
+    if (state.LoadExr) {
       paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
       paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
       paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
@@ -317,7 +325,7 @@ function main() {
       paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
       paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
       paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
-      if (state.uDual8Bit) {
+      if (state.Dual8Bit) {
         paths.set('diffuse_low', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('normals_low', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('specular_low', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
@@ -335,7 +343,7 @@ function main() {
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
     uniforms.normalMap.value = brdfTextures.get('normals');
     uniforms.specularMap.value = brdfTextures.get('specular');
-    if (state.uDual8Bit) {
+    if (state.Dual8Bit) {
       uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
       uniforms.normalMapLow.value = brdfTextures.get('normals_low');
       uniforms.specularMapLow.value = brdfTextures.get('specular_low');
@@ -371,8 +379,10 @@ function main() {
   }
 
   let stats = new Stats();
-  stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
-  document.body.appendChild(stats.dom);
+  if (state.ShowInterface) {
+    stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
+    document.body.appendChild(stats.dom);
+  }
 
   let renderRequested = false;
 
@@ -386,16 +396,18 @@ function main() {
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
       }
+      if (state.MouseControls) {
+        controls.update();
+      }
 
-      controls.update();
       uniforms.uExposure.value = exposureGain*state.exposure;
       uniforms.uDiffuse.value = state.diffuse;
       uniforms.uSpecular.value = state.specular;
       uniforms.uRoughness.value = state.roughness;
       uniforms.uTint.value = state.tint;
       uniforms.uBrdfVersion.value = state.brdfVersion;
-      uniforms.uLoadExr.value = state.uLoadExr;
-      uniforms.uDual8Bit.value = state.uDual8Bit;
+      uniforms.uLoadExr.value = state.LoadExr;
+      uniforms.uDual8Bit.value = state.Dual8Bit;
       renderer.render(scene, camera);
       stats.end();
     }
@@ -409,7 +421,9 @@ function main() {
     }
   }
 
-  controls.addEventListener('change', requestRenderIfNotRequested);
+  if (state.MouseControls) {
+    controls.addEventListener('change', requestRenderIfNotRequested);
+  }
   window.addEventListener('resize', requestRenderIfNotRequested);
 }
 
