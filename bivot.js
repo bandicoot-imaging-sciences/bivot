@@ -38,7 +38,9 @@ function main() {
     LoadExr: true,
     Dual8Bit: false,
     ShowInterface: true,
-    MouseCamControls: true,
+    MouseCamControlsZoom: true,
+    MouseCamControlsRotate: true,
+    MouseCamControlsPan: true,
     InitCamPosZ: 0.9,
   };
 
@@ -65,17 +67,17 @@ function main() {
   const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 0, state.InitCamPosZ);
 
-  let controls = null;
-  if (state.MouseCamControls) {
-    controls = new THREE.OrbitControls(camera, canvas);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.15;
-    // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
-    // controls.userPanSpeed = 0.01;
-    controls.rotateSpeed = 0.15;
-    controls.target.set(0, 0, 0);
-    controls.update();
-  }
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.15;
+  // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
+  // controls.userPanSpeed = 0.01;
+  controls.rotateSpeed = 0.15;
+  controls.target.set(0, 0, 0);
+  controls.update();
+  controls.enableZoom = state.MouseCamControlsZoom;
+  controls.enableRotate = state.MouseCamControlsRotate;
+  controls.enablePan = state.MouseCamControlsPan;
 
   let gyroDetected = false;
   let lightMotionModes = [
@@ -396,9 +398,8 @@ function main() {
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
       }
-      if (state.MouseCamControls) {
-        controls.update();
-      }
+
+      controls.update();
 
       uniforms.uExposure.value = exposureGain*state.exposure;
       uniforms.uDiffuse.value = state.diffuse;
@@ -421,9 +422,7 @@ function main() {
     }
   }
 
-  if (state.MouseCamControls) {
-    controls.addEventListener('change', requestRenderIfNotRequested);
-  }
+  controls.addEventListener('change', requestRenderIfNotRequested);
   window.addEventListener('resize', requestRenderIfNotRequested);
 }
 
