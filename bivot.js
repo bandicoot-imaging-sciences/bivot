@@ -308,9 +308,18 @@ function main() {
     }
   }
 
+  // Reset light position and camera tilt if the mouse moves out.
   function onDocumentMouseOut(event) {
-    state.lightPosition.set(0, 0, 1);
-    updateLightingGrid();
+    if (lights) {
+      state.lightPosition.set(0, 0, 1);
+      updateLightingGrid();
+    }
+
+    if (config.camTiltWithMousePos != 0) {
+      const c = camera.position;
+      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+      camera.position.set(0, 0, cam_dist);
+    }
   }
 
   function onDeviceOrientation(event) {
