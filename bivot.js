@@ -251,18 +251,15 @@ function main() {
   function updateLightMotion() {
     if (state.lightMotion == 'mouse') {
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
-      window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.addEventListener('mousemove', onDocumentMouseMove, false);
       document.addEventListener('mouseout', onDocumentMouseOut, false);
     } else if (state.lightMotion == 'gyro') {
       window.addEventListener('deviceorientation', onDeviceOrientation, false);
-      window.addEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       document.removeEventListener('mouseout', onDocumentMouseOut, false);
     } else {
       console.assert(state.lightMotion == 'sliders');
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
-      window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
       document.removeEventListener('mouseout', onDocumentMouseOut, false);
       if (lights) {
@@ -270,6 +267,22 @@ function main() {
         updateLightingGrid();
       }
     }
+  }
+
+  function updateCameraPosition(x, y) {
+      // Move camera based on supplied position
+      let cam_x = x * config.camTiltWithMousePos;
+      let cam_y = y * config.camTiltWithMousePos;
+      let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
+
+      // Scale by existing camera distance
+      const c = camera.position;
+      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+      cam_x *= cam_dist;
+      cam_y *= cam_dist;
+      cam_z *= cam_dist;
+
+      camera.position.set(cam_x, cam_y, cam_z);
   }
 
   function onDocumentMouseMove(event) {
@@ -294,18 +307,7 @@ function main() {
 
     if (config.camTiltWithMousePos != 0) {
       // Move camera based on mouse position
-      let cam_x = -x * config.camTiltWithMousePos;
-      let cam_y = -y * config.camTiltWithMousePos;
-      let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
-
-      // Scale by existing camera distance
-      const c = camera.position;
-      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
-      cam_x *= cam_dist;
-      cam_y *= cam_dist;
-      cam_z *= cam_dist;
-
-      camera.position.set(cam_x, cam_y, cam_z);
+      updateCameraPosition(-x, -y);
     }
   }
 
@@ -324,7 +326,6 @@ function main() {
   }
 
   function onDeviceOrientation(event) {
-    // iOS and Andriod have different APIs for detecting screen orienation. This function works on iOS.
     let orient = window.orientation || 0;
     let xRotation; // Rotation around X axis.
     let yRotation; // Rotation around Y axis.
@@ -351,6 +352,12 @@ function main() {
     if (lights) {
       state.lightPosition.set(x, y, z);
       updateLightingGrid();
+    }
+
+    if (camera && config.camTiltWithMousePos != 0.0) {
+      // Move camera based on device tilt
+      // It feels better with 4x more sensitivity to device tilt compared with mouse motion.
+      updateCameraPosition(4*x, 4*y);
     }
   }
 
