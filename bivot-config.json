@@ -10,6 +10,7 @@
     "initCamZ": 0.9,
     "minCamZ": 0.4,
     "maxCamZ": 2.0,
+    "minLinearFilter": true,
     "initialState":
     {
         "exposure": 1.0,
