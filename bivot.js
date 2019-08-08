@@ -147,6 +147,9 @@ function main() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
+    state.lightPosition.set(0, 0, 1);
+    updateLightingGrid();
+
     requestRender();
   };
 
@@ -292,7 +295,7 @@ function main() {
       updateLightingGrid();
     }
 
-    if (config.camTiltWithMousePos != 0) {
+    if (config.camTiltWithMousePos != 0.0) {
       // Move camera based on mouse position
       let cam_x = -x * config.camTiltWithMousePos;
       let cam_y = -y * config.camTiltWithMousePos;
@@ -316,7 +319,7 @@ function main() {
       updateLightingGrid();
     }
 
-    if (config.camTiltWithMousePos != 0) {
+    if (config.camTiltWithMousePos != 0.0) {
       const c = camera.position;
       const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
       camera.position.set(0, 0, cam_dist);
