@@ -122,6 +122,30 @@ def write_im_exr_f16(im, path, suffix='_cropf16'):
     pyexr.write(out_name, im, precision=exr_precision, compression=exr_compression)
 
 
+def write_im_dual_jpg8(im, path, suffix='_cropu8'):
+    """Write an image to a pair of high byte and low byte 8-bit JPGs
+
+    Args:
+        im          The image to write, as a uint16 numpy array.
+
+        path        The path of the image when it was read from file.
+
+        suffix      The suffix to add to the input filename when writing the file.
+                    (Default: '_cropf16')
+    """
+    out_name_lo = path.replace('.exr', suffix + '_lo.jpg')
+    out_name_hi = path.replace('.exr', suffix + '_hi.jpg')
+
+    im_hi, im_lo = np.divmod(im, 256)
+    q = 100
+
+    print('  Writing image: ' + out_name_lo)
+    imageio.imwrite(out_name_lo, im_lo.astype(np.uint8), quality=q)
+
+    print('  Writing image: ' + out_name_hi)
+    imageio.imwrite(out_name_hi, im_hi.astype(np.uint8), quality=q)
+
+
 def write_im_dual_png8(im, path, suffix='_cropu8'):
     """Write an image to a pair of high byte and low byte 8-bit PNGs
 
@@ -143,7 +167,6 @@ def write_im_dual_png8(im, path, suffix='_cropu8'):
 
     print('  Writing image: ' + out_name_hi)
     imageio.imwrite(out_name_hi, im_hi.astype(np.uint8))
-
 
 
 def write_im_png16(im, path, suffix='_cropu16'):
@@ -193,12 +216,15 @@ if __name__ == "__main__":
         im = pyexr.read(path)
 
         if textype == 'normals':
-            # Rescale normals from -1:1 range to 0->64k range.
+            # Rescale normals from -1:1 range to 0->1 range.
             im = im / 2 + 0.5
-            im *= 65535
+            if not dump_float:
+                # Scale from 0->1 range to 0->64k range.
+                im *= 65535
         elif textype == 'specular':
-            # Scale from 0->1 range to 0->64k range.
-            im *= 65535
+            if not dump_float:
+                # Scale from 0->1 range to 0->64k range.
+                im *= 65535
 
         # Clip to the specified range and convert to the specified data type
         im_clipped = clip_warn(im, clip_min, clip_max)
