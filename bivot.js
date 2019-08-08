@@ -116,11 +116,12 @@ function main() {
       addControlPanel();
     }
     loadScan();
+
+    // Add listeners after finishing config and initialisation
+    window.addEventListener('devicemotion', detectGyro, false);
+    window.addEventListener('resize', requestRender);
   });
 
-  // Add listeners after finishing config and initialisation
-  window.addEventListener('devicemotion', detectGyro, false);
-  window.addEventListener('resize', requestRender);
 
 
   // ========== End mainline; functions follow ==========
@@ -251,15 +252,18 @@ function main() {
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.addEventListener('mousemove', onDocumentMouseMove, false);
+      document.addEventListener('mouseout', onDocumentMouseOut, false);
     } else if (state.lightMotion == 'gyro') {
       window.addEventListener('deviceorientation', onDeviceOrientation, false);
       window.addEventListener('orientationchange', onDeviceOrientation, false);
-        document.removeEventListener('mousemove', onDocumentMouseMove, false);
+      document.removeEventListener('mousemove', onDocumentMouseMove, false);
+      document.removeEventListener('mouseout', onDocumentMouseOut, false);
     } else {
       console.assert(state.lightMotion == 'sliders');
       window.removeEventListener('deviceorientation', onDeviceOrientation, false);
       window.removeEventListener('orientationchange', onDeviceOrientation, false);
       document.removeEventListener('mousemove', onDocumentMouseMove, false);
+      document.removeEventListener('mouseout', onDocumentMouseOut, false);
       if (lights) {
         state.lightPosition.set(0, 0, 1);
         updateLightingGrid();
@@ -302,6 +306,11 @@ function main() {
 
       camera.position.set(cam_x, cam_y, cam_z);
     }
+  }
+
+  function onDocumentMouseOut(event) {
+    state.lightPosition.set(0, 0, 1);
+    updateLightingGrid();
   }
 
   function onDeviceOrientation(event) {
