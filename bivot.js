@@ -54,8 +54,11 @@ function main() {
     minCamZ: 0.4,
     maxCamZ: 2.0,
     minLinearFilter: true,
-    camTiltWithMousePos: -0.0,  // Factor to tilt camera based on mouse position
+    // The following factors must have an absolute value <= 1.0.
+    camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position
+    camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
+    lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
   };
 
   let scans = new Map([
@@ -158,6 +161,10 @@ function main() {
           console.log('Loaded bivot-config.json');
           config = JSON.parse(data);
           state = config.initialState;
+          console.assert(Math.abs(config.camTiltWithDeviceOrient) <= 1.0);
+          console.assert(Math.abs(config.camTiltWithMousePos) <= 1.0);
+          console.assert(Math.abs(config.lightTiltWithDeviceOrient) <= 1.0);
+          console.assert(Math.abs(config.lightTiltWithMousePos) <= 1.0);
           // Make lightPosition a THREE.Vector3 rather than an array
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3(lightPos.x, lightPos.y, lightPos.z);
@@ -269,20 +276,66 @@ function main() {
     }
   }
 
+  function updateLightingGrid() {
+    // FIXME: Ideally we should adjust exisiting lights to match new state, rather than just deleting them all
+    // and starting again. Although if it's fast to reconstruct the whole lighting state, that's actually
+    // safer from a state machine point of view.
+    if (lights) {
+      scene.remove(lights);
+    }
+    // Our custom shader assumes the light colour is grey or white.
+    const color = 0xFFFFFF;
+    const totalIntensity = 1;
+    const lightIntensity = totalIntensity/(state.lightNumber**2 + 1);
+    const distanceLimit = 10;
+    const decay = 2; // Set this to 2.0 for physical light distance falloff.
+    lights = new THREE.Group();
+    // We assume state.lightNumber is an odd integer.
+    let mid = state.lightNumber/2 - 0.5;
+    for (let i = 0; i < state.lightNumber; i++) {
+      for (let j = 0; j < state.lightNumber; j++) {
+        // Create a grid of lights in XY plane.
+        let offset = new THREE.Vector3(
+          (i - mid)*state.lightSpacing,
+          (j - mid)*state.lightSpacing,
+          0
+        );
+        let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+        light.position.copy(state.lightPosition);
+        light.position.add(offset);
+        // console.log(light.position);
+        lights.add(light);
+      }
+    }
+    // Test an extra light at 45 deg elevation.
+    /*
+    let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+    light.position.set(-0.5, 0.0, 0.5);
+    lights.add(light);
+    */
+
+    scene.add(lights);
+    requestRender();
+  }
+
   function updateCameraPosition(x, y) {
-      // Move camera based on supplied position
-      let cam_x = x * config.camTiltWithMousePos;
-      let cam_y = y * config.camTiltWithMousePos;
-      let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
+    // Move camera based on supplied transverse position within a unit circle
+    console.assert(Math.abs(x) <= 1.0);
+    console.assert(Math.abs(y) <= 1.0);
+    let cam_x = x;
+    let cam_y = y;
+    let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
 
-      // Scale by existing camera distance
-      const c = camera.position;
-      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
-      cam_x *= cam_dist;
-      cam_y *= cam_dist;
-      cam_z *= cam_dist;
+    // Scale by existing camera distance
+    const c = camera.position;
+    const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
+    cam_x *= cam_dist;
+    cam_y *= cam_dist;
+    cam_z *= cam_dist;
 
+    if (!(isNaN(cam_x) || isNaN(cam_y) || isNaN(cam_z))) {
       camera.position.set(cam_x, cam_y, cam_z);
+    }
   }
 
   function onDocumentMouseMove(event) {
@@ -290,24 +343,26 @@ function main() {
     event.preventDefault();
     let x = (event.clientX / window.innerWidth) * 2 - 1;
     let y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Normalise vectors longer than 1 to lie on unit circle
     const x2y2 = x * x + y * y;
     if (x2y2 > 1) {
       const n = Math.sqrt(x2y2);
       x /= n;
       y /= n;
     }
-    x *= config.lightTiltWithMousePos;
-    y *= config.lightTiltWithMousePos;
 
-    const z = Math.sqrt(1.001 - x * x - y * y);
     if (lights) {
-      state.lightPosition.set(x, y, z);
+      const light_x = config.lightTiltWithMousePos*x;
+      const light_y = config.lightTiltWithMousePos*y;
+      const light_z = Math.sqrt(1.001 - x * x - y * y);
+      state.lightPosition.set(light_x, light_y, light_z);
       updateLightingGrid();
     }
 
-    if (config.camTiltWithMousePos != 0) {
+    if (camera && config.camTiltWithMousePos != 0) {
       // Move camera based on mouse position
-      updateCameraPosition(-x, -y);
+      updateCameraPosition(config.camTiltWithMousePos*x, config.camTiltWithMousePos*y);
     }
   }
 
@@ -318,7 +373,7 @@ function main() {
       updateLightingGrid();
     }
 
-    if (config.camTiltWithMousePos != 0) {
+    if (camera && config.camTiltWithMousePos != 0) {
       const c = camera.position;
       const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
       camera.position.set(0, 0, cam_dist);
@@ -348,16 +403,20 @@ function main() {
     }
     let x = Math.asin(THREE.Math.degToRad(yRotation));
     let y = Math.asin(THREE.Math.degToRad(xRotation));
-    const z = Math.sqrt(1.001 - x * x - y * y);
-    if (lights) {
-      state.lightPosition.set(x, y, z);
+    if (lights && config.lightTiltWithDeviceOrient != 0.0) {
+      let light_x = config.lightTiltWithDeviceOrient*x;
+      let light_y = config.lightTiltWithDeviceOrient*y;
+      const light_z = Math.sqrt(1.001 - x * x - y * y);
+      console.assert(!isNaN(light_z));
+      state.lightPosition.set(light_x, light_y, light_z);
       updateLightingGrid();
     }
 
     if (camera && config.camTiltWithMousePos != 0.0) {
       // Move camera based on device tilt
       // It feels better with 4x more sensitivity to device tilt compared with mouse motion.
-      updateCameraPosition(4*x, 4*y);
+      // It also seems more natural to tilt the camera in the opposite direction wih device tilt.
+      updateCameraPosition(config.camTiltWithDeviceOrient*x, config.camTiltWithDeviceOrient*y);
     }
   }
 
@@ -397,41 +456,6 @@ function main() {
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
-  }
-
-  function updateLightingGrid() {
-    // FIXME: Ideally we should adjust exisiting lights to match new state, rather than just deleting them all
-    // and starting again. Although if it's fast to reconstruct the whole lighting state, that's actually
-    // safer from a state machine point of view.
-    if (lights) {
-      scene.remove(lights);
-    }
-    // Our custom shader assumes the light colour is grey or white.
-    const color = 0xFFFFFF;
-    const totalIntensity = 1;
-    const lightIntensity = totalIntensity/(state.lightNumber**2);
-    const distanceLimit = 10;
-    const decay = 2; // Set this to 2.0 for physical light distance falloff.
-    lights = new THREE.Group();
-    // We assume state.lightNumber is an odd integer.
-    let mid = state.lightNumber/2 - 0.5;
-    for (let i = 0; i < state.lightNumber; i++) {
-      for (let j = 0; j < state.lightNumber; j++) {
-        // Create a grid of lights in XY plane.
-        let offset = new THREE.Vector3(
-          (i - mid)*state.lightSpacing,
-          (j - mid)*state.lightSpacing,
-          0
-        );
-        let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-        light.position.copy(state.lightPosition);
-        light.position.add(offset);
-        // console.log(light.position);
-        lights.add(light);
-      }
-    }
-    scene.add(lights);
-    requestRender();
   }
 
   function loadScansImpl(brdfTexturePaths, loadManager) {
