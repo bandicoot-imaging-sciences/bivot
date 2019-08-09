@@ -244,6 +244,10 @@ function main() {
     controls.enablePan = config.mouseCamControlsPan;
     controls.minDistance = config.minCamZ;
     controls.maxDistance = config.maxCamZ;
+    controls.minPolarAngle = 0.1;
+    controls.maxPolarAngle = Math.PI - 0.1;
+    controls.minAzimuthAngle = -Math.PI/2 + 0.1;
+    controls.maxAzimuthAngle = +Math.PI/2 - 0.1;
 
     controls.addEventListener('change', requestRender);
   }
