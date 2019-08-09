@@ -96,6 +96,7 @@ function main() {
   let ambientLight = null;
   let exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
   let gyroDetected = false;
+  let touchDetected = false;
   let lightMotionModes = [
     'gyro',
     'mouse',
@@ -124,6 +125,7 @@ function main() {
     // Add listeners after finishing config and initialisation
     window.addEventListener('devicemotion', detectGyro, false);
     window.addEventListener('resize', requestRender);
+    window.addEventListener('touchstart', detectTouch, false);
   });
 
 
@@ -232,10 +234,9 @@ function main() {
     controls = new THREE.OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.15;
-    // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
     controls.panSpeed = 0.1;
     controls.rotateSpeed = 0.15;
-    controls.zoomSpeed = 0.5;
+    controls.zoomSpeed = 1.0;
     controls.target.set(0, 0, 0);
     controls.update();
     controls.enableZoom = config.mouseCamControlsZoom;
@@ -257,6 +258,12 @@ function main() {
       state.lightMotion = 'gyro';
       updateLightMotion();
     }
+  }
+
+  function detectTouch(event) {
+    touchDetected = true;
+    controls.zoomSpeed *= 0.25;
+    window.removeEventListener('touchstart', detectTouch, false);
   }
 
   function updateLightMotion() {
