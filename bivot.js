@@ -233,8 +233,9 @@ function main() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.15;
     // FIXME: Panning speed is too touchy. The statement below didn't seem to have any effect.
-    // controls.userPanSpeed = 0.01;
+    controls.panSpeed = 0.1;
     controls.rotateSpeed = 0.15;
+    controls.zoomSpeed = 0.5;
     controls.target.set(0, 0, 0);
     controls.update();
     controls.enableZoom = config.mouseCamControlsZoom;
