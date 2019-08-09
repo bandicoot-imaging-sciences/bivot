@@ -53,7 +53,7 @@ function main() {
     initCamZ: 0.9,
     minCamZ: 0.4,
     maxCamZ: 2.0,
-    minLinearFilter: true,
+    linearFilter: true,
     camTiltWithMousePos: -0.0,  // Factor to tilt camera based on mouse position
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
   };
@@ -467,12 +467,13 @@ function main() {
           // principle, for most surfaces, LinearFilter should reduce shimmer caused by anti-aliasing.
           // However, for some surfaces with high-frequency normals or specular detials, LinearFilter causes
           // cause moire artifacts, so NearestFilter is used.
-          if (config.minLinearFilter) {
+          if (config.linearFilter) {
             texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
           } else {
             texture.minFilter = THREE.NearestFilter;
+            texture.magFilter = THREE.NearestFilter;
           }
-
           // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
           // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
           // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
@@ -481,7 +482,6 @@ function main() {
           // OES_texture_float_linear
           // or the equivalent for half-float textures. However, when I tried this I got a blank render and
           // console errors (see notes on extension loading above).
-          texture.magFilter = THREE.NearestFilter;
 
           texture.name = key;
           // Flip from chart space back into camera view space.  Only needed when loading EXR.
