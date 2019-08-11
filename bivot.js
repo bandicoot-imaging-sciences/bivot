@@ -39,6 +39,7 @@ function main() {
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightNumber: 1,
     lightSpacing: 0.5,
+    light45: false,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
   };
@@ -86,6 +87,7 @@ function main() {
 
   let renderRequested = false;
   let lights = null;
+  let lights45 = null;
   let renderer = null;
   let geometry = null;
   let scene = new THREE.Scene();
@@ -308,10 +310,17 @@ function main() {
     if (lights) {
       scene.remove(lights);
     }
+    if (lights45) {
+      scene.remove(lights45);
+    }
     // Our custom shader assumes the light colour is grey or white.
     const color = 0xFFFFFF;
     const totalIntensity = 1;
-    const lightIntensity = totalIntensity/(state.lightNumber**2);
+    let totalLights = state.lightNumber**2;
+    if (state.light45) {
+      totalLights *= 2;
+    }
+    const lightIntensity = totalIntensity/(totalLights);
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
 
@@ -342,12 +351,18 @@ function main() {
     rotationAxis.crossVectors(upVectorNorm, lightVectorNorm);
     let rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
     lights.rotateOnAxis(rotationAxis, rotationAngle);
-    // Test an extra light at 45 deg elevation.
-    // let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-    // light.position.set(0.0, -0.5, 0.5);
-    // lights.add(light);
-
     scene.add(lights);
+    
+    if (state.light45) {
+      // Add an extra light at 45 deg elevation for natural viewing on phone or tablet.
+      lights45 = lights.clone();
+      let xAxis = new THREE.Vector3(1, 0, 0);
+      lights45.rotateOnAxis(xAxis, Math.PI/4);
+      scene.add(lights45);
+    } else {
+      lights45 = null;
+    }
+
     requestRender();
   }
 
@@ -469,6 +484,7 @@ function main() {
     gui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
     gui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
     gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
+    gui.add(state, 'light45').onChange(updateLightingGrid);
     gui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
     gui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     gui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');

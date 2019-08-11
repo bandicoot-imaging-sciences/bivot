@@ -25,6 +25,7 @@
         "lightPosition": [0, 0, 1],
         "lightNumber": 1,
         "lightSpacing": 0.5,
+        "light45": false,
         "scan": "kimono-matte-v2",
         "brdfVersion": 2
     }
