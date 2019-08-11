@@ -114,7 +114,7 @@ function main() {
     // After loading (or failing to load) the config, begin the initialisation sequence.
     initialiseRenderer();
     initialiseGeometry();
-    initialiseScene();
+    initialiseLighting();
     initialiseCamera();
     initialiseControls();
     if (config.showInterface) {
@@ -152,9 +152,6 @@ function main() {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    state.lightPosition.set(0, 0, 1);
-    updateLightingGrid();
-
     requestRender();
   };
 
@@ -172,7 +169,8 @@ function main() {
           console.assert(Math.abs(config.lightTiltWithMousePos) <= 1.0);
           // Make lightPosition a THREE.Vector3 rather than an array
           const lightPos = state.lightPosition;
-          state.lightPosition = new THREE.Vector3(lightPos.x, lightPos.y, lightPos.z);
+          state.lightPosition = new THREE.Vector3();
+          state.lightPosition.fromArray(lightPos);
           console.log(config);
           console.log(state);
         } else {
@@ -217,6 +215,18 @@ function main() {
     const planeWidth = textureWidthPixels/pixelsPerMetre;
     const planeHeight = textureHeightPixels/pixelsPerMetre;
     geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+  }
+
+  function initialiseLighting() {
+    scene.background = new THREE.Color(0x222222);
+
+    updateLightingGrid();
+    updateLightMotion();
+
+    const ambientColour = 0xFFFFFF;
+    const ambientIntensity = 1.0;
+    ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
+    scene.add(ambientLight);
   }
 
   function initialiseCamera() {
@@ -301,33 +311,41 @@ function main() {
     // Our custom shader assumes the light colour is grey or white.
     const color = 0xFFFFFF;
     const totalIntensity = 1;
-    const lightIntensity = totalIntensity/(state.lightNumber**2 + 1);
+    const lightIntensity = totalIntensity/(state.lightNumber**2);
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
+
+    // Create a grid of lights in XY plane at z = length of lightPosition vector.
+    let upVector = new THREE.Vector3(0, 0, state.lightPosition.length());
     lights = new THREE.Group();
     // We assume state.lightNumber is an odd integer.
     let mid = state.lightNumber/2 - 0.5;
     for (let i = 0; i < state.lightNumber; i++) {
       for (let j = 0; j < state.lightNumber; j++) {
-        // Create a grid of lights in XY plane.
         let offset = new THREE.Vector3(
           (i - mid)*state.lightSpacing,
           (j - mid)*state.lightSpacing,
           0
         );
         let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-        light.position.copy(state.lightPosition);
+        light.position.copy(upVector);
         light.position.add(offset);
         // console.log(light.position);
         lights.add(light);
       }
     }
+    let upVectorNorm = upVector.clone();
+    upVectorNorm.normalize();
+    let lightVectorNorm = state.lightPosition.clone();
+    lightVectorNorm.normalize();
+    let rotationAxis = new THREE.Vector3(0, 0, 0);
+    rotationAxis.crossVectors(upVectorNorm, lightVectorNorm);
+    let rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
+    lights.rotateOnAxis(rotationAxis, rotationAngle);
     // Test an extra light at 45 deg elevation.
-    /*
-    let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-    light.position.set(-0.5, 0.0, 0.5);
-    lights.add(light);
-    */
+    // let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+    // light.position.set(0.0, -0.5, 0.5);
+    // lights.add(light);
 
     scene.add(lights);
     requestRender();
@@ -433,19 +451,6 @@ function main() {
       // It also seems more natural to tilt the camera in the opposite direction wih device tilt.
       updateCameraPosition(config.camTiltWithDeviceOrient*x, config.camTiltWithDeviceOrient*y);
     }
-  }
-
-  function initialiseScene()
-  {
-    scene.background = new THREE.Color(0x222222);
-
-    updateLightingGrid();
-    updateLightMotion();
-
-    const ambientColour = 0xFFFFFF;
-    const ambientIntensity = 1.0;
-    ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
-    scene.add(ambientLight);
   }
 
   function addControlPanel() {
