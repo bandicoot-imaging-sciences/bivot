@@ -1,0 +1,24 @@
+{
+  "renders": {
+    "bamboo-board-v2": {"version": 2},
+    "bamboo-softbox": {"version": 2},
+    "blue-plate": {"version": 2},
+    "charcoal-tile-v2": {"version": 2},
+    "chopping-board-v2": {"version": 2},
+    "chopping-attach-flash-v2": {"version": 2},
+    "coffee-matte": {"version": 1},
+    "coffee-matte-v2": {"version": 2},
+    "gold-edge-v2": {"version": 2},
+    "gold-zelle-v2": {"version": 2},
+    "jeans": {"version": 2},
+    "kimono-attach": {"version": 2},
+    "kimono-matte": {"version": 1},
+    "kimono-matte-v2": {"version": 2},
+    "kimono-softbox": {"version": 2},
+    "shimmy-v2": {"version": 2},
+    "stool-attach": {"version": 2},
+    "soiree": {"version": 1},
+    "soiree-v2": {"version": 2},
+    "tan-wallet-v2": {"version": 2}
+  }
+}

@@ -62,29 +62,7 @@ function main() {
     lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
   };
 
-  let scans = new Map([
-    ['bamboo-board-v2', {version: 2}],
-    ['bamboo-softbox', {version: 2}],
-    ['blue-plate', {version: 2}],
-    ['charcoal-tile-v2', {version: 2}],
-    ['chopping-board-v2', {version: 2}],
-    ['chopping-attach-flash-v2', {version: 2}],
-    ['coffee-matte', {version: 1}],
-    ['coffee-matte-v2', {version: 2}],
-    ['gold-edge-v2', {version: 2}],
-    ['gold-zelle-v2', {version: 2}],
-    ['jeans', {version: 2}],
-    ['kimono-attach', {version: 2}],
-    ['kimono-matte', {version: 1}],
-    ['kimono-matte-v2', {version: 2}],
-    ['kimono-softbox', {version: 2}],
-    ['shimmy-v2', {version: 2}],
-    ['stool-attach', {version: 2}],
-    ['soiree', {version: 1}],
-    ['soiree-v2', {version: 2}],
-    ['tan-wallet-v2', {version: 2}],
-  ]);
-
+  let scans = null;
   let renderRequested = false;
   let lights = null;
   let lights45 = null;
@@ -112,7 +90,7 @@ function main() {
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
 
-  loadConfig('bivot-config.json', function () {
+  loadConfig('bivot-config.json', 'bivot-renders.json', function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
     initialiseRenderer();
     initialiseGeometry();
@@ -157,7 +135,7 @@ function main() {
     requestRender();
   };
 
-  function loadConfig(configFilename, configDone)
+  function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
       function(err, data) {
@@ -173,18 +151,30 @@ function main() {
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
           state.lightPosition.fromArray(lightPos);
-          console.log(config);
-          console.log(state);
+          console.log('Config:', config);
+          console.log('State:', state);
         } else {
-          console.log('Failed to load bivot-config.json: ' + err);
+          console.log('Failed to load ' + configFilename + ': ' + err);
         }
-        configDone();
+
+        getJSON(renderFilename,
+          function(err, data_renders) {
+            if (err == null) {
+              let renders = JSON.parse(data_renders);
+              scans = renders.renders;
+              console.log('Renders:', scans)
+            } else {
+              console.log('Failed to load ' + renderFilename + ': ' + err);
+            }
+
+            configDone();
+          });
       });
   }
 
   function getJSON(url, callback) {
     var req = new XMLHttpRequest();
-    req.open("GET", "bivot-config.json");
+    req.open("GET", url);
     req.overrideMimeType("application/json");
     req.onload = function() {
       var status = req.status;
@@ -352,7 +342,7 @@ function main() {
     let rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
     lights.rotateOnAxis(rotationAxis, rotationAngle);
     scene.add(lights);
-    
+
     if (state.light45) {
       // Add an extra light at 45 deg elevation for natural viewing on phone or tablet.
       lights45 = lights.clone();
@@ -471,7 +461,7 @@ function main() {
   function addControlPanel() {
     const gui = new dat.GUI();
     gui.close();
-    gui.add(state, 'scan', Array.from(scans.keys())).onChange(loadScan);
+    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
     gui.add(state, 'exposure', 0, 5, 0.01).onChange(requestRender);
     gui.add(state, 'diffuse', 0, 5, 0.01).onChange(requestRender);
     gui.add(state, 'specular', 0, 5, 0.01).onChange(requestRender);
@@ -495,7 +485,7 @@ function main() {
   }
 
   function loadScansImpl(brdfTexturePaths, loadManager) {
-    state.brdfVersion = scans.get(state.scan).version;
+    state.brdfVersion = scans[state.scan].version;
 
     brdfTextures = new Map();
 
