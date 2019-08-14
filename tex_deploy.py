@@ -328,8 +328,8 @@ def parseargs():
     parser.add_argument('bach_dir',             metavar='PATH',                                    help='Path of the input Bach textures to process.')
     parser.add_argument("-bivot_dir",           metavar='PATH',   dest='bivot_dir', required=True, help='Directory containing the bivot instance to update')
     parser.add_argument("-format",   nargs='+', metavar='FORMAT', dest='format',    default='u8',  help='Output image format for textures: u8 or f16.  Multiple formats may be selected.')
-    parser.add_argument("-name",                metavar='NAME',   dest='name',      default='',    help='Name of the bivot render dataset.  If unspecified, a default name will be set based on bach_dir.')
-    parser.add_argument("-clobber",   type=int, metavar='INT',    dest='clobber',   default=0,     help='True to allow clobbering an existing bivot dataset, False otherwise (default).')
+    parser.add_argument("-name",                metavar='NAME',   dest='name',      default=None,    help='Name of the bivot render dataset.  If unspecified, a default name will be set based on bach_dir.')
+    parser.add_argument("-clobber",             action="store_true", dest='clobber',               help='Allow clobbering an existing bivot dataset.')
 
     # parse command line args
     args = parser.parse_args()
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     args  = parseargs()
 
     dataset_name = args.name
-    if dataset_name == '':
+    if dataset_name is None:
         brdf_path = os.path.basename(os.path.abspath(os.path.join(args.bach_dir)))
         if '-' in brdf_path:
             brdf_path = (brdf_path.split('-'))[-1]
@@ -359,12 +359,12 @@ if __name__ == "__main__":
     # Determine and create the path for the texture in the bivot directory
     tex_out_path = os.path.join(args.bivot_dir, 'textures', dataset_name)
     if os.path.exists(tex_out_path):
-        if args.clobber != 1:
-            print('  *** Error: Target bivot texture path ' + tex_out_path + ' already exists.')
-            print('             (Invoke with "-clobber 1" to force overwrite.)')
+        if not args.clobber:
+            print('  *** Error: Target bivot texture path "' + tex_out_path + '" already exists.')
+            print('             (Invoke with "-clobber" to force overwrite.)')
             exit(0)
         else:
-            print('  *** Warning: Target bivot texture path ' + tex_out_path + ' already exists.')
+            print('  *** Warning: Target bivot texture path "' + tex_out_path + '" already exists.')
             print('               Overwriting...')
     else:
         os.mkdir(tex_out_path)
@@ -379,7 +379,6 @@ if __name__ == "__main__":
     for (textype, filename, im) in zip(in_paths.keys(), in_paths.values(), images):
         if textype == 'specular':
             out_fn = os.path.join(tex_out_path, 'brdf-' + textype + '-srt.exr')
-            print(out_fn)
         else:
             out_fn = os.path.join(tex_out_path, 'brdf-' + textype + '.exr')
 
