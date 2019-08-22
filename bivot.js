@@ -60,9 +60,16 @@ function main() {
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (-0.4 is good)
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
     lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
+    initialState: {},
   };
 
-  let scans = null;
+  // Store initial state in the config
+  for (var k in state) {
+    config.initialState[k] = state[k];
+  }
+
+
+  let scans = {};
   let renderRequested = false;
   let lights = null;
   let lights45 = null;
@@ -85,6 +92,7 @@ function main() {
   let loadManager = null;
   let loader = null;
   let brdfTextures = null;
+  let urlFlags = getUrlFlags();
 
   const canvas = document.querySelector('#c');
   const loadingElem = document.querySelector('#loading');
@@ -142,7 +150,10 @@ function main() {
         if (err == null) {
           console.log('Loaded bivot-config.json');
           config = JSON.parse(data);
-          state = config.initialState;
+          // Store initial state from JSON into the live state
+          for (var k in config.initialState) {
+            state[k] = config.initialState[k];
+          }
           console.assert(Math.abs(config.camTiltWithDeviceOrient) <= 1.0);
           console.assert(Math.abs(config.camTiltWithMousePos) <= 1.0);
           console.assert(Math.abs(config.lightTiltWithDeviceOrient) <= 1.0);
@@ -160,11 +171,27 @@ function main() {
         getJSON(renderFilename,
           function(err, data_renders) {
             if (err == null) {
-              let renders = JSON.parse(data_renders);
-              scans = renders.renders;
+              let j = JSON.parse(data_renders);
+
+              if (urlFlags.showcase == 1) {
+                for (let r in j.renders) {
+                  if (j.renders.hasOwnProperty(r)) {
+                    if (j.renders[r].showcase > 0) {
+                      scans[r] = j.renders[r];
+                    }
+                  }
+                }
+              } else {
+                scans = j.renders;
+              }
               console.log('Renders:', scans)
             } else {
               console.log('Failed to load ' + renderFilename + ': ' + err);
+            }
+
+            if (!scans.hasOwnProperty(state.scan)) {
+              // If the scan state isn't a scan in the list, use the first scan in the list
+              state.scan = Object.keys(scans)[0];
             }
 
             configDone();
@@ -187,6 +214,25 @@ function main() {
     req.send();
   };
 
+  function getUrlFlags() {
+    var dict = {};
+
+    var flags = window.location.href.split('?')[1];
+
+    if (flags) {
+      var params = flags.split('&');
+      var num_params = params.length;
+
+      for (var i = 0; i < num_params; i++) {
+        var key_value = params[i].split('=');
+        dict[key_value[0]] = key_value[1];
+      }
+    }
+
+    console.log('URL flags:', dict);
+
+    return dict;
+  }
 
   function initialiseRenderer() {
     renderer = new THREE.WebGLRenderer({canvas});
@@ -461,13 +507,13 @@ function main() {
   function addControlPanel() {
     const gui = new dat.GUI();
     gui.close();
-    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
-    gui.add(state, 'exposure', 0, 5, 0.01).onChange(requestRender);
-    gui.add(state, 'diffuse', 0, 5, 0.01).onChange(requestRender);
-    gui.add(state, 'specular', 0, 5, 0.01).onChange(requestRender);
-    gui.add(state, 'roughness', 0, 5, 0.01).onChange(requestRender);
-    gui.add(state, 'tint').onChange(requestRender);
-    gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(requestRender).name('ambient');
+    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan).listen();
+    gui.add(state, 'exposure', 0, 5, 0.01).onChange(requestRender).listen();
+    gui.add(state, 'diffuse', 0, 5, 0.01).onChange(requestRender).listen();
+    gui.add(state, 'specular', 0, 5, 0.01).onChange(requestRender).listen();
+    gui.add(state, 'roughness', 0, 5, 0.01).onChange(requestRender).listen();
+    gui.add(state, 'tint').onChange(requestRender).listen();
+    gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(requestRender).name('ambient').listen();
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
     gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
     gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
@@ -576,6 +622,20 @@ function main() {
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
     loadScansImpl(paths, loadManager);
+
+
+    let s = [];
+    if (scans[state.scan].hasOwnProperty('state')) {
+      s = scans[state.scan].state;
+    }
+    let keys = ['exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+    keys.forEach(function(item, index) {
+      if (item in s) {
+        state[item] = s[item];
+      } else {
+        state[item] = config.initialState[item];
+      }
+    });
   }
 
   function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {

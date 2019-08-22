@@ -7,7 +7,7 @@
     "chopping-board-v2": {"version": 2},
     "chopping-attach-flash-v2": {"version": 2},
     "coffee-matte": {"version": 1},
-    "coffee-matte-v2": {"version": 2},
+    "coffee-matte-v2": {"version": 2, "showcase": 1, "state": {"tint": false, "specular": 0.7}},
     "gold-edge-v2": {"version": 2},
     "gold-zelle-v2": {"version": 2},
     "jeans": {"version": 2},
@@ -19,6 +19,14 @@
     "stool-attach": {"version": 2},
     "soiree": {"version": 1},
     "soiree-v2": {"version": 2},
-    "tan-wallet-v2": {"version": 2}
+    "tan-wallet-v2": {"version": 2},
+    "2019-08-13 Red sheen blouse v2w": {"version": 2},
+    "2019-08-13 Blue silk vest v2w": {"version": 2},
+    "2019-06-17 Gold edge placemat v2w": {"version": 2, "showcase": 1},
+    "2019-06-17 Soiree stripe placemat v2w": {"version": 2, "showcase": 1, "state": {"exposure": 0.65, "specular": 2}},
+    "2019-07-16 Charcoal paving tile v2w": {"version": 2, "showcase": 1},
+    "2019-08-13 Tan wallet softbox v2wnr": {"version": 2, "showcase": 1},
+    "2019-06-17 Mini kimono matte 2 v2mb": {"version": 2, "showcase": 1, "state": {"exposure": 0.9}},
+    "2019-08-13 Blue silk vest v2mb": {"version": 2, "showcase": 1}
   }
 }
