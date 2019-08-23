@@ -21,8 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 # Licenses for third party code adapted into Bivot
-See references in source code for how each third party code was used. A recent copy of Threejs is also
-included in the third_party folder for convenience.
+See references in source code for how each third party code was used.
 
 ## Threejs license
 
