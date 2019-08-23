@@ -43,4 +43,10 @@ around this issue:
 * switch on Settings > Safari > Motion & Orientation Access, and then
 * reload the page.
 
-After iOS 13 is released (expected in September 2019) this will get easier as Safari will allow web pages to ask the user for permission to access tilt controls.
+After iOS 13 is released (expected in September 2019) this will get easier as Safari will allow web pages to
+ask the user for permission to access tilt controls.
+
+## License
+
+Bivot is released under the MIT license (see the `LICENSE` file). Licenses for additional code adapted into
+Bivot are in the `Licenses-third-party.md` file.
