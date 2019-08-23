@@ -42,6 +42,7 @@ function main() {
     light45: false,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
+    statusText: '',
   };
 
   let config = {
@@ -91,12 +92,24 @@ function main() {
   ]
   let loadManager = null;
   let loader = null;
+  let firstRenderLoaded = false;
   let brdfTextures = null;
   let urlFlags = getUrlFlags();
 
   const canvas = document.querySelector('#c');
   const loadingElem = document.querySelector('#loading');
   const progressBarElem = loadingElem.querySelector('.progressbar');
+  const subtitleElem = document.querySelector('#subtitle');
+  const subtitleTextElem = document.querySelector('.subtitle-text');
+
+  let iOSVersion = null;
+  let iOSVersionOrientBlocked = false;
+  let iOSVersionTimeoutID = null;
+  const iOSDetected = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (iOSDetected) {
+    iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
+    iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
+  }
 
   loadConfig('bivot-config.json', 'bivot-renders.json', function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
@@ -139,6 +152,15 @@ function main() {
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+
+    // The devicemotion event has been deprecated for privacy reasons.
+    // A work around on iOS >= 12.2 is to enable it in iOS Settings > Safari (off by default).
+    // The web page also has to be served over https.
+    // iOS 13 will introduce a permissions API so that we can ask the user more directly.
+    if (!firstRenderLoaded && iOSVersionOrientBlocked && !gyroDetected) {
+      setTiltWarning();
+    }
+    firstRenderLoaded = true;
 
     requestRender();
   };
@@ -300,9 +322,6 @@ function main() {
     controls.addEventListener('change', requestRender);
   }
 
-  // FIXME: devicemotion event has been deprecated for privacy reasons.
-  // A work around is to enable it in iOS Settings > Safari (off by default).
-  // The web page also has to be served over https.
   function detectGyro(event) {
     if (event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma) {
       gyroDetected = true;
@@ -316,6 +335,31 @@ function main() {
     touchDetected = true;
     controls.zoomSpeed *= 0.25;
     window.removeEventListener('touchstart', detectTouch, false);
+  }
+
+  function setTiltWarning () {
+    iOSVersionTimeoutID = setTimeout(() => {
+      state.statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
+      updateStatusTextDisplay();
+    }, 1000);
+    window.addEventListener('deviceorientation', clearTiltWarning);
+  }
+
+  function clearTiltWarning () {
+    clearTimeout(iOSVersionTimeoutID);
+    window.removeEventListener(clearTiltWarning);
+    state.statusText = '';
+    updateStatusTextDisplay();
+  }
+
+  function updateStatusTextDisplay() {
+    if (state.statusText.length == 0) {
+      subtitleElem.style.display = 'none';
+      subtitleTextElem.innerHTML = '';   
+    } else {
+      subtitleElem.style.display = 'flex';
+      subtitleTextElem.innerHTML = state.statusText;
+    }
   }
 
   function updateLightMotion() {
