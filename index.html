@@ -6,75 +6,38 @@
     <meta charset="utf-8">
     <!-- Disable favicon request until we make an icon -->
     <link rel="icon" href="data:,">
+    <!-- This viewport tag is recommended for Bivot. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Bivot material viewer</title>
+    <!-- bivot.css is required for Bivot. -->
+    <link href="bivot.css" rel="stylesheet" type="text/css"/>
     <style>
-    body {
+      body {
         margin: 0;
-    }
-    #c {
+      }
+      #bivot-canvas {
         width: 100vw;
         height: 100vh;
         display: block;
-    }
-    #loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    #loading .progress {
-        margin: 1.5em;
-        border: 1px solid white;
-        width: 50vw;
-    }
-    #loading .progressbar {
-        margin: 2px;
-        background: white;
-        height: 1em;
-        transform-origin: top left;
-        transform: scaleX(0);
-    }
-    #subtitle {
-        position: fixed;
-        bottom: 3em;
-        width: 100%;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
-    #subtitle .subtitle-background {
-        background-color: rgba(100, 100, 100, 0.7);
-        opacity: 0.8;
-        width: 75vw;
-    }
-    #subtitle .subtitle-text {
-      display: inline-block;
-      margin: 0.2em;
-      padding: 0.2em;
-      color: white;
-      opacity: 1.0;
-    }
+      }
     </style>
   </head>
   <body>
-    <canvas id="c"></canvas>
-    <div id="loading">
-      <div class="progress"><div class="progressbar"></div></div>
-    </div>
-    <div id="subtitle"><div class="subtitle-background"><p class="subtitle-text"></p></div></div>
+    <!-- Use a canvas with id="bivot-canvas" to place Bivot on the page. -->
+    <!-- FIXME: We need a way to add multiple Bivot canvases to the same page, e.g. by calling Bivot main()
+    with the canvas ID or the corresponding Element. -->
+    <canvas id="bivot-canvas"></canvas>
+    <!-- A div with id="bivot-overlay" is required to display progress and status text. -->
+    <div id="bivot-overlay"></div>
   </body>
+<!-- The following Three.js components are required for Bivot. -->
 <script src="third_party/threejs/three.min.js"></script>
 <script src="third_party/threejs/js/controls/OrbitControls.js"></script>
 <script src="third_party/threejs/js/loaders/EXRLoader.js"></script>
 <script src="third_party/threejs/js/libs/dat.gui.min.js"></script>
 <script src="third_party/threejs/js/WebGL.js"></script>
 <script src="third_party/threejs/js/libs/stats.min.js"></script>
+<!-- Finally, include the Bivot shaders and script. -->
 <script src="shaders.js"></script>
 <script src="bivot.js"></script>
 </html>

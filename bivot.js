@@ -96,11 +96,12 @@ function main() {
   let brdfTextures = null;
   let urlFlags = getUrlFlags();
 
-  const canvas = document.querySelector('#c');
-  const loadingElem = document.querySelector('#loading');
-  const progressBarElem = loadingElem.querySelector('.progressbar');
-  const subtitleElem = document.querySelector('#subtitle');
-  const subtitleTextElem = document.querySelector('.subtitle-text');
+  const canvas = document.querySelector('#bivot-canvas');
+  const overlaysElem = document.querySelector('#bivot-overlay');
+  let loadingElem = null;
+  let progressBarElem = null;
+  let subtitleElem = null;
+  let subtitleTextElem = null;
 
   let iOSVersion = null;
   let iOSVersionOrientBlocked = false;
@@ -113,6 +114,7 @@ function main() {
 
   loadConfig('bivot-config.json', 'bivot-renders.json', function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
+    initialiseOverlays();
     initialiseRenderer();
     initialiseGeometry();
     initialiseLighting();
@@ -254,6 +256,33 @@ function main() {
     console.log('URL flags:', dict);
 
     return dict;
+  }
+
+  function initialiseOverlays() {
+    let loadingDiv = document.createElement('div');
+    loadingDiv.id = 'bivot-loading';
+    let progressDiv = document.createElement('div');
+    progressDiv.id = 'bivot-progress';
+    let progressBarDiv = document.createElement('div');
+    progressBarDiv.id = 'bivot-progressbar';
+    overlaysElem.appendChild(loadingDiv);
+    loadingDiv.appendChild(progressDiv);
+    progressDiv.appendChild(progressBarDiv);
+    
+    let subtitleDiv = document.createElement('div');
+    subtitleDiv.id = 'bivot-subtitle';
+    let subtitleBGDiv = document.createElement('div');
+    subtitleBGDiv.id = 'bivot-subtitle-background';
+    let subtitleTextP = document.createElement('p');
+    subtitleTextP.id = 'bivot-subtitle-text';
+    overlaysElem.appendChild(subtitleDiv);
+    subtitleDiv.appendChild(subtitleBGDiv);
+    subtitleBGDiv.appendChild(subtitleTextP);
+
+    loadingElem = loadingDiv;
+    progressBarElem = progressBarDiv;
+    subtitleElem = subtitleDiv;
+    subtitleTextElem = subtitleTextP;
   }
 
   function initialiseRenderer() {
