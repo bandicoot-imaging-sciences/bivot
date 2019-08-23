@@ -1,7 +1,7 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
 
 /*
-Parts of this script were adapted from third party code. Refer to LICENSE-third_party.md for the
+Parts of this script were adapted from third party code. Refer to LICENSE.md for the
 relevant licenses.
 
 Parts adapted from Threejs:
