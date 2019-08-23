@@ -49,4 +49,4 @@ ask the user for permission to access tilt controls.
 ## License
 
 Bivot is released under the MIT license (see the `LICENSE` file). Licenses for additional code adapted into
-Bivot are in the `Licenses-third-party.md` file.
+Bivot are in the `THIRD-PARTY.md` file.
