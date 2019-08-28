@@ -1,7 +1,7 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
 
 /*
-Parts of this script were adapted from third party code. Refer to LICENSE-third_party.md for the
+Parts of this script were adapted from third party code. Refer to LICENSE.md for the
 relevant licenses.
 
 Parts adapted from Threejs:
@@ -42,6 +42,7 @@ function main() {
     light45: false,
     scan: 'kimono-matte-v2',
     brdfVersion: 2,
+    statusText: '',
   };
 
   let config = {
@@ -91,15 +92,29 @@ function main() {
   ]
   let loadManager = null;
   let loader = null;
+  let firstRenderLoaded = false;
   let brdfTextures = null;
   let urlFlags = getUrlFlags();
 
-  const canvas = document.querySelector('#c');
-  const loadingElem = document.querySelector('#loading');
-  const progressBarElem = loadingElem.querySelector('.progressbar');
+  const canvas = document.querySelector('#bivot-canvas');
+  const overlaysElem = document.querySelector('#bivot-overlay');
+  let loadingElem = null;
+  let progressBarElem = null;
+  let subtitleElem = null;
+  let subtitleTextElem = null;
+
+  let iOSVersion = null;
+  let iOSVersionOrientBlocked = false;
+  let iOSVersionTimeoutID = null;
+  const iOSDetected = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (iOSDetected) {
+    iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
+    iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
+  }
 
   loadConfig('bivot-config.json', 'bivot-renders.json', function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
+    initialiseOverlays();
     initialiseRenderer();
     initialiseGeometry();
     initialiseLighting();
@@ -139,6 +154,15 @@ function main() {
     material.extensions.derivatives = true;
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+
+    // The devicemotion event has been deprecated for privacy reasons.
+    // A work around on iOS >= 12.2 is to enable it in iOS Settings > Safari (off by default).
+    // The web page also has to be served over https.
+    // iOS 13 will introduce a permissions API so that we can ask the user more directly.
+    if (!firstRenderLoaded && iOSVersionOrientBlocked && !gyroDetected) {
+      setTiltWarning();
+    }
+    firstRenderLoaded = true;
 
     requestRender();
   };
@@ -234,6 +258,33 @@ function main() {
     return dict;
   }
 
+  function initialiseOverlays() {
+    let loadingDiv = document.createElement('div');
+    loadingDiv.id = 'bivot-loading';
+    let progressDiv = document.createElement('div');
+    progressDiv.id = 'bivot-progress';
+    let progressBarDiv = document.createElement('div');
+    progressBarDiv.id = 'bivot-progressbar';
+    overlaysElem.appendChild(loadingDiv);
+    loadingDiv.appendChild(progressDiv);
+    progressDiv.appendChild(progressBarDiv);
+    
+    let subtitleDiv = document.createElement('div');
+    subtitleDiv.id = 'bivot-subtitle';
+    let subtitleBGDiv = document.createElement('div');
+    subtitleBGDiv.id = 'bivot-subtitle-background';
+    let subtitleTextP = document.createElement('p');
+    subtitleTextP.id = 'bivot-subtitle-text';
+    overlaysElem.appendChild(subtitleDiv);
+    subtitleDiv.appendChild(subtitleBGDiv);
+    subtitleBGDiv.appendChild(subtitleTextP);
+
+    loadingElem = loadingDiv;
+    progressBarElem = progressBarDiv;
+    subtitleElem = subtitleDiv;
+    subtitleTextElem = subtitleTextP;
+  }
+
   function initialiseRenderer() {
     renderer = new THREE.WebGLRenderer({canvas});
     renderer.physicallyCorrectLights = true;
@@ -300,9 +351,6 @@ function main() {
     controls.addEventListener('change', requestRender);
   }
 
-  // FIXME: devicemotion event has been deprecated for privacy reasons.
-  // A work around is to enable it in iOS Settings > Safari (off by default).
-  // The web page also has to be served over https.
   function detectGyro(event) {
     if (event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma) {
       gyroDetected = true;
@@ -316,6 +364,31 @@ function main() {
     touchDetected = true;
     controls.zoomSpeed *= 0.25;
     window.removeEventListener('touchstart', detectTouch, false);
+  }
+
+  function setTiltWarning () {
+    iOSVersionTimeoutID = setTimeout(() => {
+      state.statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
+      updateStatusTextDisplay();
+    }, 1000);
+    window.addEventListener('deviceorientation', clearTiltWarning);
+  }
+
+  function clearTiltWarning () {
+    clearTimeout(iOSVersionTimeoutID);
+    window.removeEventListener(clearTiltWarning);
+    state.statusText = '';
+    updateStatusTextDisplay();
+  }
+
+  function updateStatusTextDisplay() {
+    if (state.statusText.length == 0) {
+      subtitleElem.style.display = 'none';
+      subtitleTextElem.innerHTML = '';   
+    } else {
+      subtitleElem.style.display = 'flex';
+      subtitleTextElem.innerHTML = state.statusText;
+    }
   }
 
   function updateLightMotion() {
