@@ -17,6 +17,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uBrdfVersion': {value: 2},
       'uLoadExr': {value: false},
       'uDual8Bit': {value: false},
+      'uNormalMatrix': {value: new THREE.Matrix3()},
       'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
       'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
       'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
@@ -66,6 +67,7 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform int uBrdfVersion;
     uniform bool uDual8Bit;
     uniform bool uLoadExr;
+    uniform mat3 uNormalMatrix;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -137,7 +139,8 @@ let uniforms = THREE.UniformsUtils.merge([
       float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
 
       vec3 macroNormal = normalize(vNormal);
-      vec3 mesoNormal = normal;
+      //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
+      vec3 mesoNormal = normalize(uNormalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
       vec3 viewerDirection = normalize(vViewPosition);
 
       vec3 totalSpecularLight = vec3(0.0);

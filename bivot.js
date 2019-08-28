@@ -75,8 +75,9 @@ function main() {
   let lights = null;
   let lights45 = null;
   let renderer = null;
-  let geometry = null;
+  let mesh = null;
   let scene = new THREE.Scene();
+  let normalMatrix = new(THREE.Matrix4);
   let fov = null;
   let camera = null;
   let controls = null;
@@ -116,7 +117,6 @@ function main() {
     // After loading (or failing to load) the config, begin the initialisation sequence.
     initialiseOverlays();
     initialiseRenderer();
-    initialiseGeometry();
     initialiseLighting();
     initialiseCamera();
     initialiseControls();
@@ -136,7 +136,7 @@ function main() {
   // ========== End mainline; functions follow ==========
 
   function onLoad() {
-    // Run after all textures are loaded.
+    // Run after all textures and the mesh are loaded.
     loadingElem.style.display = 'none';
     uniforms.diffuseMap.value = brdfTextures.get('diffuse');
     uniforms.normalMap.value = brdfTextures.get('normals');
@@ -146,13 +146,19 @@ function main() {
       uniforms.normalMapLow.value = brdfTextures.get('normals_low');
       uniforms.specularMapLow.value = brdfTextures.get('specular_low');
     }
+
+    // Set up the material and attach it to the mesh
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
     material.defines = {
       USE_NORMALMAP: 1,
       // USE_TANGENT: 1,
     };
     material.extensions.derivatives = true;
-    const mesh = new THREE.Mesh(geometry, material);
+    mesh.traverse(function(child) {
+      if (child instanceof THREE.Mesh) {
+        child.material = material;
+      }
+    });
     scene.add(mesh);
 
     // The devicemotion event has been deprecated for privacy reasons.
@@ -268,7 +274,7 @@ function main() {
     overlaysElem.appendChild(loadingDiv);
     loadingDiv.appendChild(progressDiv);
     progressDiv.appendChild(progressBarDiv);
-    
+
     let subtitleDiv = document.createElement('div');
     subtitleDiv.id = 'bivot-subtitle';
     let subtitleBGDiv = document.createElement('div');
@@ -289,21 +295,6 @@ function main() {
     renderer = new THREE.WebGLRenderer({canvas});
     renderer.physicallyCorrectLights = true;
     renderer.toneMapping = THREE.ReinhardToneMapping;
-  }
-
-  function initialiseGeometry() {
-    const dpi = 300;
-    const pixelsPerMetre = dpi/0.0254;
-    const textureWidthPixels = 2048;
-    const textureHeightPixels = 2048;
-    // const matxs = 1928;
-    // const matys = 1285;
-    // const padxs = 2048;
-    // const padys = padxs;
-    // const planeHeight = matys/matxs;
-    const planeWidth = textureWidthPixels/pixelsPerMetre;
-    const planeHeight = textureHeightPixels/pixelsPerMetre;
-    geometry = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
   }
 
   function initialiseLighting() {
@@ -384,7 +375,7 @@ function main() {
   function updateStatusTextDisplay() {
     if (state.statusText.length == 0) {
       subtitleElem.style.display = 'none';
-      subtitleTextElem.innerHTML = '';   
+      subtitleTextElem.innerHTML = '';
     } else {
       subtitleElem.style.display = 'flex';
       subtitleTextElem.innerHTML = state.statusText;
@@ -603,8 +594,23 @@ function main() {
     document.body.appendChild(stats.dom);
   }
 
-  function loadScansImpl(brdfTexturePaths, loadManager) {
+
+  function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
     state.brdfVersion = scans[state.scan].version;
+
+    var objLoader = new THREE.OBJLoader(loadManager);
+
+    objLoader.load(meshPath,
+      function(object) {
+        mesh = object
+        console.log('Loaded mesh object:', object);
+      },
+      function (xhr) {},
+      function (error) {
+        console.log('Mesh unavailable; using planar geometry');
+        mesh = new THREE.Mesh(getPlaneGeometry());
+      }
+    );
 
     brdfTextures = new Map();
 
@@ -672,6 +678,16 @@ function main() {
   }
 
   function loadScan() {
+    if (mesh != null) {
+      scene.remove(mesh); // Remove old mesh from scene and clean up memory
+      mesh.traverse(function(child) {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          child.material.dispose();
+        }
+      });
+    }
+
     let paths = new Map();
 
     if (config.loadExr) {
@@ -694,8 +710,9 @@ function main() {
     loadManager = new THREE.LoadingManager();
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
-    loadScansImpl(paths, loadManager);
 
+    let mesh_path = 'textures/' + state.scan + '/brdf-mesh.obj';
+    loadScansImpl(paths, mesh_path, loadManager);
 
     let s = [];
     if (scans[state.scan].hasOwnProperty('state')) {
@@ -716,6 +733,21 @@ function main() {
     loadingElem.style.display = '';
     progressBarElem.style.transform = `scaleX(${progress})`;
   };
+
+  function getPlaneGeometry() {
+    const dpi = 300;
+    const pixelsPerMetre = dpi/0.0254;
+    const textureWidthPixels = 2048;
+    const textureHeightPixels = 2048;
+    // const matxs = 1928;
+    // const matys = 1285;
+    // const padxs = 2048;
+    // const padys = padxs;
+    // const planeHeight = matys/matxs;
+    const planeWidth = textureWidthPixels/pixelsPerMetre;
+    const planeHeight = textureHeightPixels/pixelsPerMetre;
+    return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+  }
 
   function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
@@ -762,6 +794,10 @@ function main() {
     uniforms.uBrdfVersion.value = state.brdfVersion;
     uniforms.uLoadExr.value = config.loadExr;
     uniforms.uDual8Bit.value = config.dual8Bit;
+
+    normalMatrix.getInverse(camera.matrixWorld);
+    uniforms.uNormalMatrix.value.setFromMatrix4(normalMatrix);
+
     renderer.render(scene, camera);
     stats.end();
   }
