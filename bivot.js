@@ -120,6 +120,10 @@ function main() {
     if (urlFlags.tex8bit == 1) {
       config.loadExr = false;
     }
+    console.log('Config:', config);
+    console.log('State:', state);
+    console.log('Renders:', scans)
+
     initialiseOverlays();
     initialiseRenderer();
     initialiseLighting();
@@ -198,8 +202,6 @@ function main() {
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
           state.lightPosition.fromArray(lightPos);
-          console.log('Config:', config);
-          console.log('State:', state);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -220,7 +222,6 @@ function main() {
               } else {
                 scans = j.renders;
               }
-              console.log('Renders:', scans)
             } else {
               console.log('Failed to load ' + renderFilename + ': ' + err);
             }
