@@ -466,77 +466,54 @@ function main() {
     requestRender();
   }
 
-  function updateCameraPosition(x, y) {
-    // Constrain x and y positions to within a unit circle
-    const x2y2 = x * x + y * y;
-    if (x2y2 > 1) {
-      const n = Math.sqrt(x2y2);
-      x /= n;
-      y /= n;
-    }
-    console.assert(Math.abs(x) <= 1.0);
-    console.assert(Math.abs(y) <= 1.0);
-    let cam_x = x;
-    let cam_y = y;
-    let z2 = (1 - cam_x * cam_x - cam_y * cam_y);
-    let cam_z = 0.0;
+  function xy_to_3d_direction(xy, sensitivity) {
+    // Convert input XY co-ords in range -1..1 and given sensitivity to a unit 3D direction vector
+    let new_xy = new THREE.Vector2();
+    new_xy.copy(xy).multiplyScalar(sensitivity).clampLength(0.0, 1.0);
+    const z2 = 1 - new_xy.lengthSq();
+    let new_z = 0.0;
     if (z2 > 0.0) {
-      cam_z = Math.sqrt(z2);
+      new_z = Math.sqrt(z2);
     }
-    console.assert(!isNaN(cam_z));
+    console.assert(!isNaN(new_z));
+    return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
+  }
 
-    // Scale by existing camera distance
-    const c = camera.position;
-    const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
-    cam_x *= cam_dist;
-    cam_y *= cam_dist;
-    cam_z *= cam_dist;
-
-    camera.position.set(cam_x, cam_y, cam_z);
+  function updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
+    if (lights && light_sensitivity != 0.0) {
+      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity));
+      updateLightingGrid();
+    }
+    if (camera && cam_sensitivity != 0.0) {
+      // Retain existing camera distance
+      camera.position.copy(xy_to_3d_direction(xy, cam_sensitivity).multiplyScalar(camera.position.length()));
+    }
   }
 
   function onDocumentMouseMove(event) {
-    // Move light source based on mouse position
+    // Update cams and lights using relative mouse co-ords between -1 and 1 within the window
     event.preventDefault();
-    let x = (event.clientX / window.innerWidth) * 2 - 1;
-    let y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    if (lights) {
-      let light_x = config.lightTiltWithMousePos*x;
-      let light_y = config.lightTiltWithMousePos*y;
-      const x2y2 = light_x * light_x + light_y * light_y;
-      if (x2y2 > 1) {
-        const n = Math.sqrt(x2y2);
-        light_x /= n;
-        light_y /= n;
-      }
-      const light_z = Math.sqrt(1.001 - light_x * light_x - light_y * light_y);
-      console.assert(!isNaN(light_z));
-      state.lightPosition.set(light_x, light_y, light_z);
-      updateLightingGrid();
-    }
-
-    if (camera && config.camTiltWithMousePos != 0.0) {
-      // Move camera based on mouse position
-      updateCameraPosition(config.camTiltWithMousePos*x, config.camTiltWithMousePos*y);
-    }
+    let xy = new THREE.Vector2(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1
+    );
+    updateCamsAndLightsFromXY(xy, config.lightTiltWithMousePos, config.camTiltWithMousePos);
   }
 
-  // Reset light position and camera tilt if the mouse moves out.
   function onDocumentMouseOut(event) {
+    // Reset light position and camera tilt if the mouse moves out.
     if (lights) {
       state.lightPosition.set(0, 0, 1);
       updateLightingGrid();
     }
 
     if (camera && config.camTiltWithMousePos != 0.0) {
-      const c = camera.position;
-      const cam_dist = Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);
-      camera.position.set(0, 0, cam_dist);
+      camera.position.set(0, 0, camera.position.length());
     }
   }
 
   function onDeviceOrientation(event) {
+    // Update lights and camera using the device tilt rotation
     let orient = window.orientation || 0;
     let xRotation; // Rotation around X axis.
     let yRotation; // Rotation around Y axis.
@@ -557,23 +534,12 @@ function main() {
     } else if (orient == 180) {
       xRotation = -xRotation;
     }
-    let x = Math.asin(THREE.Math.degToRad(yRotation));
-    let y = Math.asin(THREE.Math.degToRad(xRotation));
-    if (lights && config.lightTiltWithDeviceOrient != 0.0) {
-      let light_x = config.lightTiltWithDeviceOrient*x;
-      let light_y = config.lightTiltWithDeviceOrient*y;
-      const light_z = Math.sqrt(1.001 - x * x - y * y);
-      console.assert(!isNaN(light_z));
-      state.lightPosition.set(light_x, light_y, light_z);
-      updateLightingGrid();
-    }
 
-    if (camera && config.camTiltWithMousePos != 0.0) {
-      // Move camera based on device tilt
-      // It feels better with 4x more sensitivity to device tilt compared with mouse motion.
-      // It also seems more natural to tilt the camera in the opposite direction wih device tilt.
-      updateCameraPosition(config.camTiltWithDeviceOrient*x, config.camTiltWithDeviceOrient*y);
-    }
+    let xy = new THREE.Vector2(
+      Math.asin(THREE.Math.degToRad(yRotation)),
+      Math.asin(THREE.Math.degToRad(xRotation))
+    );
+    updateCamsAndLightsFromXY(xy, config.lightTiltWithDeviceOrient, config.camTiltWithDeviceOrient);
   }
 
   function addControlPanel() {
