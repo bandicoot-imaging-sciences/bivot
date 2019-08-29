@@ -115,12 +115,11 @@ function main() {
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
 
-  if (urlFlags.tex8bit == 1) {
-    config.loadExr = false;
-  }
-
   loadConfig('bivot-config.json', 'bivot-renders.json', function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
+    if (urlFlags.tex8bit == 1) {
+      config.loadExr = false;
+    }
     initialiseOverlays();
     initialiseRenderer();
     initialiseLighting();
