@@ -86,6 +86,8 @@ function main() {
   let exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
   let gyroDetected = false;
   let touchDetected = false;
+  let baselineTilt = new THREE.Vector2(0, 0);
+  let baselineTiltSet = false;
   let lightMotionModes = [
     'gyro',
     'mouse',
@@ -169,6 +171,7 @@ function main() {
       setTiltWarning();
     }
     firstRenderLoaded = true;
+    baselineTiltSet = false;
 
     requestRender();
   };
@@ -184,10 +187,10 @@ function main() {
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
-          console.assert(Math.abs(config.camTiltWithDeviceOrient) <= 1.0);
-          console.assert(Math.abs(config.camTiltWithMousePos) <= 1.0);
-          console.assert(Math.abs(config.lightTiltWithDeviceOrient) <= 1.0);
-          console.assert(Math.abs(config.lightTiltWithMousePos) <= 1.0);
+          //console.assert(Math.abs(config.camTiltWithDeviceOrient) <= 1.0);
+          //console.assert(Math.abs(config.camTiltWithMousePos) <= 1.0);
+          //console.assert(Math.abs(config.lightTiltWithDeviceOrient) <= 1.0);
+          //console.assert(Math.abs(config.lightTiltWithMousePos) <= 1.0);
           // Make lightPosition a THREE.Vector3 rather than an array
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
@@ -346,6 +349,7 @@ function main() {
     if (event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma) {
       gyroDetected = true;
       window.removeEventListener('devicemotion', detectGyro, false);
+
       state.lightMotion = 'gyro';
       updateLightMotion();
     }
@@ -512,32 +516,38 @@ function main() {
     }
   }
 
-  function onDeviceOrientation(event) {
+  function getOrientation(event) {
     // Update lights and camera using the device tilt rotation
     let orient = window.orientation || 0;
-    let xRotation; // Rotation around X axis.
-    let yRotation; // Rotation around Y axis.
+    let rotation = new THREE.Vector2();
     if (orient == 0 || orient == 180) {
       // Portrait
-      xRotation = event.beta;
-      yRotation = event.gamma;
+      rotation.set(event.beta, event.gamma);
     } else {
       // Landscape
-      xRotation = event.gamma;
-      yRotation = event.beta;
+      rotation.set(event.gamma, event.beta);
     }
     if (orient == 0) {
-      yRotation = -yRotation;
+      rotation.y = -rotation.y;
     } else if (orient == 90) {
-      xRotation = -xRotation;
-      yRotation = -yRotation;
+      rotation.x = -rotation.x;
+      rotation.y = -rotation.y;
     } else if (orient == 180) {
-      xRotation = -xRotation;
+      rotation.x = -rotation.x;
     }
 
-    let xy = new THREE.Vector2(
-      Math.asin(THREE.Math.degToRad(yRotation)),
-      Math.asin(THREE.Math.degToRad(xRotation))
+    return rotation;
+  }
+
+  function onDeviceOrientation(event) {
+    if (!baselineTiltSet) {
+      baselineTilt.copy(getOrientation(event));
+      baselineTiltSet = true;
+    }
+    const rots = getOrientation(event).sub(baselineTilt);
+    const xy = new THREE.Vector2(
+      Math.asin(THREE.Math.degToRad(rots.y)),
+      Math.asin(THREE.Math.degToRad(rots.x))
     );
     updateCamsAndLightsFromXY(xy, config.lightTiltWithDeviceOrient, config.camTiltWithDeviceOrient);
   }
