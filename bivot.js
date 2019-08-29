@@ -467,12 +467,23 @@ function main() {
   }
 
   function updateCameraPosition(x, y) {
-    // Move camera based on supplied transverse position within a unit circle
+    // Constrain x and y positions to within a unit circle
+    const x2y2 = x * x + y * y;
+    if (x2y2 > 1) {
+      const n = Math.sqrt(x2y2);
+      x /= n;
+      y /= n;
+    }
     console.assert(Math.abs(x) <= 1.0);
     console.assert(Math.abs(y) <= 1.0);
     let cam_x = x;
     let cam_y = y;
-    let cam_z = Math.sqrt(1 - cam_x * cam_x - cam_y * cam_y);
+    let z2 = (1 - cam_x * cam_x - cam_y * cam_y);
+    let cam_z = 0.0;
+    if (z2 > 0.0) {
+      cam_z = Math.sqrt(z2);
+    }
+    console.assert(!isNaN(cam_z));
 
     // Scale by existing camera distance
     const c = camera.position;
@@ -481,9 +492,7 @@ function main() {
     cam_y *= cam_dist;
     cam_z *= cam_dist;
 
-    if (!(isNaN(cam_x) || isNaN(cam_y) || isNaN(cam_z))) {
-      camera.position.set(cam_x, cam_y, cam_z);
-    }
+    camera.position.set(cam_x, cam_y, cam_z);
   }
 
   function onDocumentMouseMove(event) {
@@ -492,18 +501,17 @@ function main() {
     let x = (event.clientX / window.innerWidth) * 2 - 1;
     let y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // Normalise vectors longer than 1 to lie on unit circle
-    const x2y2 = x * x + y * y;
-    if (x2y2 > 1) {
-      const n = Math.sqrt(x2y2);
-      x /= n;
-      y /= n;
-    }
-
     if (lights) {
-      const light_x = config.lightTiltWithMousePos*x;
-      const light_y = config.lightTiltWithMousePos*y;
-      const light_z = Math.sqrt(1.001 - x * x - y * y);
+      let light_x = config.lightTiltWithMousePos*x;
+      let light_y = config.lightTiltWithMousePos*y;
+      const x2y2 = light_x * light_x + light_y * light_y;
+      if (x2y2 > 1) {
+        const n = Math.sqrt(x2y2);
+        light_x /= n;
+        light_y /= n;
+      }
+      const light_z = Math.sqrt(1.001 - light_x * light_x - light_y * light_y);
+      console.assert(!isNaN(light_z));
       state.lightPosition.set(light_x, light_y, light_z);
       updateLightingGrid();
     }
