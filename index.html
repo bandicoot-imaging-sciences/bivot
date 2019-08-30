@@ -15,6 +15,7 @@
       body {
         margin: 0;
       }
+      /* This ID should match the canvas element ID used below. */
       #bivot-canvas {
         width: 100vw;
         height: 100vh;
@@ -23,10 +24,16 @@
     </style>
   </head>
   <body>
-    <!-- Use a canvas with id="bivot-canvas" to place Bivot on the page. -->
-    <canvas id="bivot-canvas"></canvas>
-    <!-- A div with id="bivot-overlay" is required to display progress and status text. -->
-    <div id="bivot-overlay"></div>
+    <!-- Bivot elements -->
+    
+    <!-- The IDs can be changed using options in the Bivot() call. -->
+    <!-- However, the class names shown below should be included verbatim. -->
+
+    <!-- An overlay div is required to display Bivot progress and status text. -->
+    <div id="bivot-overlay" class="bivot-overlay">
+      <!-- Use a canvas inside the overlay div to place Bivot on the page. -->
+      <canvas id="bivot-canvas" class="bivot-canvas"></canvas>
+    </div>
   </body>
   <!-- The following Three.js components are required for Bivot. -->
   <script src="third_party/threejs/three.min.js"></script>

@@ -1,7 +1,21 @@
 /* Copyright (C) Bandicoot Imaging Sciences 2019 */
 
+.bivot-canvas {
+    margin: 0;
+    padding: 0;
+}
+
+.bivot-overlay {
+    position: relative;
+    display: block;
+    margin: 0;
+    padding: 0;
+    width: fit-content;
+    height: fit-content;
+}
+
 #bivot-loading {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -23,7 +37,7 @@
     transform: scaleX(0);
 }
 #bivot-subtitle {
-    position: fixed;
+    position: absolute;
     bottom: 3em;
     width: 100%;
     display: none;
@@ -32,8 +46,8 @@
     text-align: center;
 }
 #bivot-subtitle-background {
-    background-color: rgba(100, 100, 100, 0.7);
-    opacity: 0.8;
+    background-color: rgba(100, 100, 100, 1.0);
+    opacity: 0.9;
     width: 75vw;
 }
 #bivot-subtitle-text {

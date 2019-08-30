@@ -35,8 +35,8 @@ Parts adapted from Threejsfundamentals:
 */
 function Bivot(options) {
   let defaultOptions = {
-    canvasID: '#bivot-canvas',
-    overlayID: '#bivot-overlay',
+    canvasID: 'bivot-canvas',
+    overlayID: 'bivot-overlay',
     configPath: 'bivot-config.json',
     renderPath: 'bivot-renders.json',
     texturePath: 'textures'
@@ -122,8 +122,8 @@ function Bivot(options) {
   let brdfTextures = null;
   let urlFlags = getUrlFlags();
 
-  const canvas = document.querySelector(opts.canvasID);
-  const overlay = document.querySelector(opts.overlayID);
+  const canvas = document.getElementById(opts.canvasID);
+  const overlay = document.getElementById(opts.overlayID);
   console.assert(canvas != null, 'canvas element ID not found:', opts.canvasID);
   console.assert(overlay != null, 'overlay div element ID not found:', opts.overlayID);
   let loadingElem = null;
