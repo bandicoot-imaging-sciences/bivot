@@ -24,8 +24,6 @@
   </head>
   <body>
     <!-- Use a canvas with id="bivot-canvas" to place Bivot on the page. -->
-    <!-- FIXME: We need a way to add multiple Bivot canvases to the same page, e.g. by calling Bivot main()
-    with the canvas ID or the corresponding Element. -->
     <canvas id="bivot-canvas"></canvas>
     <!-- A div with id="bivot-overlay" is required to display progress and status text. -->
     <div id="bivot-overlay"></div>
@@ -48,4 +46,8 @@
   <!-- Finally, include the Bivot shaders and script. -->
   <script src="shaders.js"></script>
   <script src="bivot.js"></script>
+  <script>
+    bivotCheckWebGL();
+    Bivot();
+  </script>
 </html>

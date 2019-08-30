@@ -25,7 +25,22 @@ Parts adapted from Threejsfundamentals:
 
 'use strict';
 
-function main() {
+/*
+  The options object is optional and can include the following:
+    canvasID: ID for the HTML canvas element that Bivot should use for rendering
+    overlayID: ID for the HTML div element that Bivot should use for the progress bar and status text
+    configPath: relative or absolute URL for the JSON configuration file
+    renderPath: relative or absolute URL for the JSON render file
+*/
+function Bivot(options) {
+  let defaultOptions = {
+    canvasID: '#bivot-canvas',
+    overlayID: '#bivot-overlay',
+    configPath: 'bivot-config.json',
+    renderPath: 'bivot-renders.json'
+  }
+  let opts = {...defaultOptions, ...options};
+
   // Initial state and configuration.  This will likely get overridden by the config file,
   // but if the config can't be loaded, then these are the defaults.
   let state = {
@@ -105,8 +120,10 @@ function main() {
   let brdfTextures = null;
   let urlFlags = getUrlFlags();
 
-  const canvas = document.querySelector('#bivot-canvas');
-  const overlaysElem = document.querySelector('#bivot-overlay');
+  const canvas = document.querySelector(opts.canvasID);
+  const overlay = document.querySelector(opts.overlayID);
+  console.assert(canvas != null, 'canvas element ID not found:', opts.canvasID);
+  console.assert(overlay != null, 'overlay div element ID not found:', opts.overlayID);
   let loadingElem = null;
   let progressBarElem = null;
   let subtitleElem = null;
@@ -121,7 +138,7 @@ function main() {
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
 
-  loadConfig('bivot-config.json', 'bivot-renders.json', function () {
+  loadConfig(opts.configPath, opts.renderPath, function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
     if (urlFlags.tex8bit == 1) {
       config.loadExr = false;
@@ -194,7 +211,7 @@ function main() {
     getJSON(configFilename,
       function(err, data) {
         if (err == null) {
-          console.log('Loaded bivot-config.json');
+          console.log('Loaded:', configFilename);
           config = JSON.parse(data);
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
@@ -284,7 +301,7 @@ function main() {
     progressDiv.id = 'bivot-progress';
     let progressBarDiv = document.createElement('div');
     progressBarDiv.id = 'bivot-progressbar';
-    overlaysElem.appendChild(loadingDiv);
+    overlay.appendChild(loadingDiv);
     loadingDiv.appendChild(progressDiv);
     progressDiv.appendChild(progressBarDiv);
 
@@ -294,7 +311,7 @@ function main() {
     subtitleBGDiv.id = 'bivot-subtitle-background';
     let subtitleTextP = document.createElement('p');
     subtitleTextP.id = 'bivot-subtitle-text';
-    overlaysElem.appendChild(subtitleDiv);
+    overlay.appendChild(subtitleDiv);
     subtitleDiv.appendChild(subtitleBGDiv);
     subtitleBGDiv.appendChild(subtitleTextP);
 
@@ -842,8 +859,8 @@ function main() {
 
 }
 
-if ( WEBGL.isWebGLAvailable() === false ) {
+function bivotCheckWebGL() {
+  if ( WEBGL.isWebGLAvailable() === false ) {
     document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+  }
 }
-
-main();
