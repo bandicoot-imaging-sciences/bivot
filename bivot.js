@@ -31,13 +31,15 @@ Parts adapted from Threejsfundamentals:
     overlayID: ID for the HTML div element that Bivot should use for the progress bar and status text
     configPath: relative or absolute URL for the JSON configuration file
     renderPath: relative or absolute URL for the JSON render file
+    texturePath: relative or absolute URL for the folder containing the texture folders
 */
 function Bivot(options) {
   let defaultOptions = {
     canvasID: '#bivot-canvas',
     overlayID: '#bivot-overlay',
     configPath: 'bivot-config.json',
-    renderPath: 'bivot-renders.json'
+    renderPath: 'bivot-renders.json',
+    texturePath: 'textures'
   }
   let opts = {...defaultOptions, ...options};
 
@@ -725,19 +727,19 @@ function Bivot(options) {
     let paths = new Map();
 
     if (config.loadExr) {
-      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('normals', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('specular', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
     }
     else
     {
-      paths.set('diffuse', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('normals', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('specular', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('normals', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('specular', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
       if (config.dual8Bit) {
-        paths.set('diffuse_low', {path: 'textures/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('normals_low', {path: 'textures/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('specular_low', {path: 'textures/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
+        paths.set('diffuse_low', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('normals_low', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('specular_low', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
       }
     }
 
@@ -745,7 +747,7 @@ function Bivot(options) {
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
 
-    let mesh_path = 'textures/' + state.scan + '/brdf-mesh.obj';
+    let mesh_path = opts.texturePath + '/' + state.scan + '/brdf-mesh.obj';
     loadScansImpl(paths, mesh_path, loadManager);
 
     let s = [];
