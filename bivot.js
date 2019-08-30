@@ -35,6 +35,8 @@ function main() {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    fxaa: true,
+    bloom: 1.2,
     lightMotion: 'mouse',
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightNumber: 1,
@@ -75,6 +77,10 @@ function main() {
   let lights = null;
   let lights45 = null;
   let renderer = null;
+  let composer = null;
+  let renderPass = null;
+  let bloomPass = null;
+  let fxaaPass = null;
   let mesh = null;
   let scene = new THREE.Scene();
   let normalMatrix = new(THREE.Matrix4);
@@ -125,13 +131,13 @@ function main() {
     console.log('Renders:', scans)
 
     initialiseOverlays();
-    initialiseRenderer();
     initialiseLighting();
     initialiseCamera();
     initialiseControls();
     if (config.showInterface) {
       addControlPanel();
     }
+    initialiseRenderer();
     loadScan();
 
     // Add listeners after finishing config and initialisation
@@ -302,6 +308,22 @@ function main() {
     renderer = new THREE.WebGLRenderer({canvas});
     renderer.physicallyCorrectLights = true;
     renderer.toneMapping = THREE.ReinhardToneMapping;
+    composer = new THREE.EffectComposer(renderer);
+
+    renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    bloomPass = new THREE.UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      state.bloom, // strength
+      0.4, // radius
+      0.99 // threshold
+    );
+    composer.addPass(bloomPass);
+
+    fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+    setFxaaResolution();
+    composer.addPass(fxaaPass);
   }
 
   function initialiseLighting() {
@@ -566,6 +588,8 @@ function main() {
     gui.add(state, 'roughness', 0, 5, 0.01).onChange(requestRender).listen();
     gui.add(state, 'tint').onChange(requestRender).listen();
     gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(requestRender).name('ambient').listen();
+    gui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
+    gui.add(state, 'bloom', 0, 5, 0.01).onChange(function(value){bloomPass.strength = Number(value);}).listen();
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
     gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
     gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
@@ -762,6 +786,18 @@ function main() {
     requestRender();
   }
 
+  function setFxaaResolution() {
+    var fxaaUniforms = fxaaPass.material.uniforms;
+    const pixelRatio = renderer.getPixelRatio();
+    console.log('pixelRatio:', pixelRatio);
+    var val = 1.0 / pixelRatio;
+    if (!state.fxaa) {
+      val = 0.0;
+    }
+    fxaaUniforms['resolution'].value.x = val / window.innerWidth;
+    fxaaUniforms['resolution'].value.y = val / window.innerHeight;
+  }
+
   function render() {
     renderRequested = undefined;
 
@@ -770,6 +806,8 @@ function main() {
       const canvas = renderer.domElement;
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
+      composer.setSize(canvas.width, canvas.height);
+      setFxaaResolution();
     }
 
     controls.update();
@@ -786,7 +824,7 @@ function main() {
     normalMatrix.getInverse(camera.matrixWorld);
     uniforms.uNormalMatrix.value.setFromMatrix4(normalMatrix);
 
-    renderer.render(scene, camera);
+    composer.render();
     stats.end();
   }
 

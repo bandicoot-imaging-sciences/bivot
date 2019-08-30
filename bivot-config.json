@@ -21,6 +21,8 @@
         "specular": 1.0,
         "roughness": 1.0,
         "tint": true,
+        "fxaa": true,
+        "bloom": 1.2,
         "lightMotion": "mouse",
         "lightPosition": [0, 0, 1],
         "lightNumber": 1,
