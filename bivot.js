@@ -659,20 +659,25 @@ function main() {
           // However, for some surfaces with high-frequency normals or specular detials, LinearFilter causes
           // cause moire artifacts, so NearestFilter is used.
           if (config.linearFilter) {
-            texture.minFilter = THREE.LinearFilter;
-            texture.magFilter = THREE.LinearFilter;
+            if (config.loadExr) {
+              // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
+              // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
+              // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
+              // the right extensions:
+              // OES_texture_float
+              // OES_texture_float_linear
+              // or the equivalent for half-float textures. However, when I tried this I got a blank render and
+              // console errors (see notes on extension loading above).
+              texture.minFilter = THREE.LinearFilter;
+              texture.magFilter = THREE.LinearFilter;
+            } else {
+              texture.minFilter = THREE.LinearMipMapLinearFilter;
+              texture.magFilter = THREE.LinearMipMapLinearFilter;
+            }
           } else {
             texture.minFilter = THREE.NearestFilter;
             texture.magFilter = THREE.NearestFilter;
           }
-          // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
-          // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
-          // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
-          // the right extensions:
-          // OES_texture_float
-          // OES_texture_float_linear
-          // or the equivalent for half-float textures. However, when I tried this I got a blank render and
-          // console errors (see notes on extension loading above).
 
           texture.name = key;
           // Flip from chart space back into camera view space.  Only needed when loading EXR.
@@ -789,7 +794,6 @@ function main() {
   function setFxaaResolution() {
     var fxaaUniforms = fxaaPass.material.uniforms;
     const pixelRatio = renderer.getPixelRatio();
-    console.log('pixelRatio:', pixelRatio);
     var val = 1.0 / pixelRatio;
     if (!state.fxaa) {
       val = 0.0;
