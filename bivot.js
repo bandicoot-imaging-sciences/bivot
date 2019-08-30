@@ -691,7 +691,7 @@ function Bivot(options) {
               texture.magFilter = THREE.LinearFilter;
             } else {
               texture.minFilter = THREE.LinearMipMapLinearFilter;
-              texture.magFilter = THREE.LinearMipMapLinearFilter;
+              texture.magFilter = THREE.LinearFilter;
             }
           } else {
             texture.minFilter = THREE.NearestFilter;
