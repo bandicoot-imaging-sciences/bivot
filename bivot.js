@@ -372,8 +372,8 @@ function Bivot(options) {
     controls = new THREE.OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.15;
-    controls.panSpeed = 0.1;
-    controls.rotateSpeed = 0.15;
+    controls.panSpeed = 0.3;
+    controls.rotateSpeed = 1.0;
     controls.zoomSpeed = 1.0;
     controls.target.set(0, 0, 0);
     controls.update();
@@ -862,7 +862,7 @@ function Bivot(options) {
 }
 
 function bivotCheckWebGL() {
-  if ( WEBGL.isWebGLAvailable() === false ) {
-    document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+  if (THREE.WEBGL.isWebGLAvailable() === false) {
+    document.body.appendChild(THREE.WEBGL.getWebGLErrorMessage());
   }
 }
