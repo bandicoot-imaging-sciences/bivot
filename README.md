@@ -12,8 +12,12 @@ Features:
 * Clone the bivot repository.
 * Inside the `bivot` folder:
   * Create a folder called `textures`.
-  * Create a folder called `third_party`.
-  * Download [ThreeJS](http://threejs.org) and unpack into the `third_party` folder.
+  * Download, extract and setup [ThreeJS](http://threejs.org):
+  ```
+  $ mkdir -p third_party/threejs/examples
+  $ cp -ipr <path_to_extracted_threejs>/build third_party/threejs
+  $ cp -ipr <path_to_extracted_threejs>/examples/js third_party/threejs/examples
+  ```
 * Install local web server, e.g. webfs if using Windows Subsystem for Linux / Ubuntu Linux:
   * `$ sudo apt install webfs`
 
