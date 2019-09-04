@@ -25,14 +25,12 @@ Features:
 
 ## Adding a new dataset
 
-* Create EXR floating point texture maps which use the Disney-Bandicoot BRDF
-  model:
-  * `brdf-diffuse.exr`: Diffuse colour (RGB)
-  * `brdf-normals.exr`: Tangent-space unit normals (XYZ), with X and Y in the range -1 to 1
-  * `brdf-specular-srt.exr`: Specular amplitude, roughness and tint (3 channels)
-* Run the texture map conversion script `tex_deploy.py` to create texture files that are ready to use with
-  Bivot (run with `python3 tex_deploy.py --help` for help).
-* Copy the output EXR files to a new folder `<texture-name>` inside the `bivot/textures` folder.
+* Copy EXR floating point texture maps to a new folder `<texture-name>` inside the `bivot/textures`
+  folder, which use the Disney-Bandicoot BRDF model:
+  * `brdf-diffuse_cropf16.exr`: Diffuse colour (RGB)
+  * `brdf-normals_cropf16.exr`: Tangent-space unit normals (XYZ), with X and Y in the range -1 to 1
+  * `brdf-specular-srt_cropf16.exr`: Specular amplitude, roughness and tint (3 channels)
+  * (Optional) `brdf-mesh.obj`: A 3D mesh, including UV co-ordinates, which defines the surface geometry
 * Edit `bivot-renders.json` to add the new `<texture-name>` to the `scans` variable.
 
 ## Tilt control on iOS
