@@ -54,6 +54,8 @@ function Bivot(options) {
     tint: true,
     fxaa: true,
     bloom: 1.2,
+    adaptiveToneMap: true,
+    gammaCorrect: true,
     lightMotion: 'mouse',
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightNumber: 1,
@@ -98,6 +100,8 @@ function Bivot(options) {
   let renderPass = null;
   let bloomPass = null;
   let fxaaPass = null;
+  let toneMappingPass = null;
+  let gammaCorrectPass = null;
   let mesh = null;
   let scene = new THREE.Scene();
   let normalMatrix = new(THREE.Matrix4);
@@ -326,7 +330,11 @@ function Bivot(options) {
   function initialiseRenderer() {
     renderer = new THREE.WebGLRenderer({canvas});
     renderer.physicallyCorrectLights = true;
-    renderer.toneMapping = THREE.ReinhardToneMapping;
+
+    renderer.gammaInput = true;
+    renderer.gammaOutput = false;
+    renderer.gammaFactor = 2.2;
+
     composer = new THREE.EffectComposer(renderer);
 
     renderPass = new THREE.RenderPass(scene, camera);
@@ -343,10 +351,16 @@ function Bivot(options) {
     fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
     setFxaaResolution();
     composer.addPass(fxaaPass);
+
+    gammaCorrectPass = new THREE.ShaderPass(THREE.GammaCorrectionShader);
+    composer.addPass(gammaCorrectPass);
+
+    toneMappingPass = new THREE.AdaptiveToneMappingPass(true, 256);
+    composer.addPass(toneMappingPass);
   }
 
   function initialiseLighting() {
-    scene.background = new THREE.Color(0x222222);
+    scene.background = new THREE.Color(0x050505);
 
     updateLightingGrid();
     updateLightMotion();
@@ -609,6 +623,8 @@ function Bivot(options) {
     gui.add(ambientLight, 'intensity', 0, 5, 0.01).onChange(requestRender).name('ambient').listen();
     gui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
     gui.add(state, 'bloom', 0, 5, 0.01).onChange(function(value){bloomPass.strength = Number(value);}).listen();
+    gui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
+    gui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
     gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
     gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
