@@ -10,7 +10,7 @@
     "camTiltWithDeviceOrient": 1.0,
     "lightTiltWithDeviceOrient": 2.8,
     "initCamZ": 0.9,
-    "minCamZ": 0.4,
+    "minCamZ": 0.1,
     "maxCamZ": 2.0,
     "linearFilter": true,
     "initialState":
