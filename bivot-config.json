@@ -13,6 +13,7 @@
     "minCamZ": 0.1,
     "maxCamZ": 2.0,
     "linearFilter": true,
+    "gamma": 1.8,
     "initialState":
     {
         "exposure": 1.0,
@@ -23,7 +24,8 @@
         "tint": true,
         "fxaa": false,
         "bloom": 0.8,
-        "adaptiveToneMap": true,
+        "adaptiveToneMap": false,
+        "toneMapDarkness": 0.04,
         "gammaCorrect": true,
         "lightMotion": "mouse",
         "lightPosition": [0, 0, 1],

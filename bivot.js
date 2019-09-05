@@ -54,7 +54,7 @@ function Bivot(options) {
     tint: true,
     fxaa: true,
     bloom: 1.2,
-    adaptiveToneMap: true,
+    adaptiveToneMap: false,
     gammaCorrect: true,
     lightMotion: 'mouse',
     lightPosition: new THREE.Vector3(0, 0, 1),
@@ -77,6 +77,8 @@ function Bivot(options) {
     minCamZ: 0.4,
     maxCamZ: 2.0,
     linearFilter: true,
+    gamma: 1.8,
+    toneMapDarkness: 0.04,
     // The following factors must have an absolute value <= 1.0.
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (-0.4 is good)
@@ -333,7 +335,7 @@ function Bivot(options) {
 
     renderer.gammaInput = true;
     renderer.gammaOutput = false;
-    renderer.gammaFactor = 2.2;
+    renderer.gammaFactor = config.gamma;
 
     composer = new THREE.EffectComposer(renderer);
 
@@ -356,7 +358,15 @@ function Bivot(options) {
     composer.addPass(gammaCorrectPass);
 
     toneMappingPass = new THREE.AdaptiveToneMappingPass(true, 256);
+    updateToneMapParams();
     composer.addPass(toneMappingPass);
+  }
+
+  function updateToneMapParams() {
+    if (!state.adaptiveToneMap) {
+      toneMappingPass.setAdaptive(false);
+      toneMappingPass.setAverageLuminance(state.toneMapDarkness);
+    }
   }
 
   function initialiseLighting() {
@@ -625,6 +635,7 @@ function Bivot(options) {
     gui.add(state, 'bloom', 0, 5, 0.01).onChange(function(value){bloomPass.strength = Number(value);}).listen();
     gui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
     gui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
+    gui.add(state, 'toneMapDarkness', 0, 0.5, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
     gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
     gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
