@@ -23,7 +23,7 @@
         "roughness": 1.0,
         "tint": true,
         "fxaa": false,
-        "bloom": 0.8,
+        "bloom": 0.5,
         "adaptiveToneMap": false,
         "toneMapDarkness": 0.04,
         "gammaCorrect": true,

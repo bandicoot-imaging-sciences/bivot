@@ -53,7 +53,7 @@ function Bivot(options) {
     roughness: 1.0,
     tint: true,
     fxaa: true,
-    bloom: 1.2,
+    bloom: 0.5,
     adaptiveToneMap: false,
     gammaCorrect: true,
     lightMotion: 'mouse',
