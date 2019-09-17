@@ -14,7 +14,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uSpecular': {value: 1.0},
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
-      'uBrdfVersion': {value: 2},
+      'uBrdfVersion': {value: 2.0},
       'uLoadExr': {value: false},
       'uDual8Bit': {value: false},
       'uNormalMatrix': {value: new THREE.Matrix3()},
@@ -64,7 +64,7 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uSpecular;
     uniform float uRoughness;
     uniform bool uTint;
-    uniform int uBrdfVersion;
+    uniform float uBrdfVersion;
     uniform bool uDual8Bit;
     uniform bool uLoadExr;
     uniform mat3 uNormalMatrix;
@@ -124,15 +124,19 @@ let uniforms = THREE.UniformsUtils.merge([
       }
 
       float specularSurface = specularTexel.r;
-      if (!uLoadExr) {
+      if (uLoadExr) {
+        if (uBrdfVersion >= 3.0) {
+          diffuseSurface *= 16383.0;
+        }
+      } else {
         diffuseSurface *= 65535.0;
       }
       float roughnessSurface = specularTexel.g;
       float tintSurface = 0.0;
-      if (uTint && uBrdfVersion == 2) {
+      if (uTint && uBrdfVersion >= 2.0) {
         tintSurface = specularTexel.b;
       }
-      if (uBrdfVersion == 2) {
+      if (uBrdfVersion >= 2.0) {
         s = 65535.0*0.01;
       }
 

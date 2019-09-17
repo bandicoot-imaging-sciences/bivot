@@ -79,7 +79,6 @@ function Bivot(options) {
     linearFilter: true,
     gamma: 1.8,
     toneMapDarkness: 0.04,
-    // The following factors must have an absolute value <= 1.0.
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (-0.4 is good)
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
