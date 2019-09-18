@@ -7,7 +7,7 @@
     "mouseCamControlsPan": true,
     "camTiltWithMousePos": 0.0,
     "lightTiltWithMousePos": 1.0,
-    "camTiltWithDeviceOrient": 1.0,
+    "camTiltWithDeviceOrient": 0.0,
     "lightTiltWithDeviceOrient": 2.8,
     "initCamZ": 0.9,
     "minCamZ": 0.1,
