@@ -411,6 +411,10 @@ function Bivot(options) {
     controls.minAzimuthAngle = -Math.PI/2 + 0.1;
     controls.maxAzimuthAngle = +Math.PI/2 - 0.1;
 
+    if (config.camTiltWithMousePos != 0.0 && config.camTiltWithDeviceOrient != 0.0) {
+      controls.dispose();
+    }
+
     controls.addEventListener('change', requestRender);
   }
 
