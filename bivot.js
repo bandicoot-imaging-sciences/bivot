@@ -79,7 +79,6 @@ function Bivot(options) {
     linearFilter: true,
     gamma: 1.8,
     toneMapDarkness: 0.04,
-    // The following factors must have an absolute value <= 1.0.
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (-0.4 is good)
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
@@ -91,7 +90,6 @@ function Bivot(options) {
   for (var k in state) {
     config.initialState[k] = state[k];
   }
-
 
   let scans = {};
   let renderRequested = false;
@@ -126,7 +124,6 @@ function Bivot(options) {
   let loader = null;
   let firstRenderLoaded = false;
   let brdfTextures = null;
-  let urlFlags = getUrlFlags();
 
   const canvas = document.getElementById(opts.canvasID);
   const overlay = document.getElementById(opts.overlayID);
@@ -146,11 +143,13 @@ function Bivot(options) {
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
 
+  let urlFlags = getUrlFlags(); // Get options from URL
+
   loadConfig(opts.configPath, opts.renderPath, function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
-    if (urlFlags.tex8bit == 1) {
-      config.loadExr = false;
-    }
+
+    processUrlFlags();
+
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -170,7 +169,6 @@ function Bivot(options) {
     window.addEventListener('resize', requestRender);
     window.addEventListener('touchstart', detectTouch, false);
   });
-
 
 
   // ========== End mainline; functions follow ==========
@@ -300,6 +298,16 @@ function Bivot(options) {
     console.log('URL flags:', dict);
 
     return dict;
+  }
+
+  function processUrlFlags() {
+    if (urlFlags.tex8bit == 1) {
+      config.loadExr = false;
+    }
+    if (urlFlags.show != null)
+    {
+      state.scan = decodeURI(urlFlags.show);
+    }
   }
 
   function initialiseOverlays() {
