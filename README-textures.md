@@ -6,7 +6,7 @@ Materials are stored in a `textures` folder, with sub-folders for each material.
 contains the following files:
 
 1. `brdf-diffuse_cropf16.exr` - Diffuse RGB colour in linear sRGB (sensor counts divided by 2^14, 0 to 1 range)
-2. `brdf-normals_cropf16.exr` - Normal map in object space (3 channel, unit vectors in XYZ, scaled to 0 to 1 range, with 0.5 being zero-length component)
+2. `brdf-normals_cropf16.exr` - Normal map in object space (3 channel, unit vectors in XYZ, OpenGL convention, scaled to 0 to 1 range, with 0.5 being zero-length component)
 3. `brdf-specular-srt_cropf16.exr` - Three-channel specular image:
     1. Channel 1: Specular amplitude (0 to 1 nominal range, but some values are larger)
     2. Channel 2: Specular roughness (0 to 1 range)
