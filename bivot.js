@@ -52,6 +52,7 @@ function Bivot(options) {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    ambient: 1.0,
     fxaa: true,
     bloom: 0.5,
     adaptiveToneMap: false,
@@ -147,7 +148,6 @@ function Bivot(options) {
 
   loadConfig(opts.configPath, opts.renderPath, function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
-
     processUrlFlags();
 
     console.log('Config:', config);
@@ -211,6 +211,46 @@ function Bivot(options) {
 
     requestRender();
   };
+
+  function loadMetadata(texture_path)
+  {
+    const jsonFilename = texture_path + '/render.json';
+    getJSON(jsonFilename,
+      function(err, data) {
+        if (err == null) {
+          console.log('Loaded:', jsonFilename);
+          const metadata = JSON.parse(data);
+          console.log(metadata);
+
+          state.brdfVersion = metadata.version;
+
+          let keys = ['exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+          let bivotState = [];
+          let scanState = [];
+          if (scans[state.scan].hasOwnProperty('state')) {
+            bivotState = scans[state.scan].state;
+          }
+          if (metadata.hasOwnProperty('state')) {
+            scanState = metadata.state;
+          }
+          // Take configuration from the first place it's specified out of:
+          // * Bivot instance state (bivot-renders.json)
+          // * Texture state (render.json)
+          // * Initial (default) state (bivot-config.json or code defaults)
+          keys.forEach(function(item, index) {
+            if (item in bivotState) {
+              state[item] = bivotState[item];
+            } else if (item in scanState) {
+              state[item] = scanState[item];
+            } else {
+              state[item] = config.initialState[item];
+            }
+          });
+        } else {
+          console.log('Failed to load ' + jsonFilename + ': ' + err);
+        }
+    });
+  }
 
   function loadConfig(configFilename, renderFilename, configDone)
   {
@@ -662,8 +702,6 @@ function Bivot(options) {
 
 
   function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
-    state.brdfVersion = scans[state.scan].version;
-
     var objLoader = new THREE.OBJLoader(loadManager);
 
     objLoader.load(meshPath,
@@ -759,22 +797,24 @@ function Bivot(options) {
       });
     }
 
-    let paths = new Map();
+    let tex_dir = opts.texturePath + '/' + state.scan;
+    loadMetadata(tex_dir);
 
+    let paths = new Map();
     if (config.loadExr) {
-      paths.set('diffuse', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('normals', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('specular', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: tex_dir + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('normals', {path: tex_dir + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('specular', {path: tex_dir + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
     }
     else
     {
-      paths.set('diffuse', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('normals', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('specular', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: tex_dir + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('normals', {path: tex_dir + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('specular', {path: tex_dir + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
       if (config.dual8Bit) {
-        paths.set('diffuse_low', {path: opts.texturePath + '/' + state.scan + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('normals_low', {path: opts.texturePath + '/' + state.scan + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('specular_low', {path: opts.texturePath + '/' + state.scan + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
+        paths.set('diffuse_low', {path: tex_dir + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('normals_low', {path: tex_dir + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('specular_low', {path: tex_dir + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
       }
     }
 
@@ -782,21 +822,7 @@ function Bivot(options) {
     loadManager.onLoad = onLoad;
     loadManager.onProgress = onProgress;
 
-    let mesh_path = opts.texturePath + '/' + state.scan + '/brdf-mesh.obj';
-    loadScansImpl(paths, mesh_path, loadManager);
-
-    let s = [];
-    if (scans[state.scan].hasOwnProperty('state')) {
-      s = scans[state.scan].state;
-    }
-    let keys = ['exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
-    keys.forEach(function(item, index) {
-      if (item in s) {
-        state[item] = s[item];
-      } else {
-        state[item] = config.initialState[item];
-      }
-    });
+    loadScansImpl(paths, tex_dir + '/brdf-mesh.obj', loadManager);
   }
 
   function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
