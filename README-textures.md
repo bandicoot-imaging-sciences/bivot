@@ -14,7 +14,9 @@ contains the following files:
        from the diffuse map; behaves a bit like "metalness")
 4. `brdf-mesh.obj` - Mesh (decimated, distances are in metres)
 
-The texture file format is 16 bit half float EXR. Textures are 2k square.
+The texture file format is 16 bit half float EXR. Textures are 2k square. The origin of the texture maps is in
+the lower left corner (this means the texture maps will appear vertically
+flipped in a conventional image viewer).
 
 # References
 
