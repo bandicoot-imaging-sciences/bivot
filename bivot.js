@@ -723,7 +723,7 @@ function Bivot(options) {
     objLoader.load(meshPath,
       function(object) {
         mesh = object
-        console.log('Loaded mesh object:', object);
+        console.log('Loaded mesh object:', meshPath);
       },
       function (xhr) {},
       function (error) {
@@ -795,7 +795,7 @@ function Bivot(options) {
           // iOS does not support WebGL2
           // Textures need to be square powers of 2 for WebGL1
           // texture.repeat.set(matxs/padxs, matxs/padys);
-          console.log('Loaded:', key, texture, textureData);
+          console.log('Loaded:', key, value.path);
           brdfTextures.set(key, texture);
         }
       );
