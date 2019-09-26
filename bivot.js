@@ -138,13 +138,20 @@ function Bivot(options) {
   let subtitleTextElem = null;
 
   let iOSVersion = null;
+  // Device orientation events are blocked by default on iOS 12.2 - 12.4.
+  // The user can unblock them in Settings.
   let iOSVersionOrientBlocked = false;
+  // Device orientation events require user permission for iOS > 13.
+  let orientPermNeeded = false;
+  let orientPermObtained = false;
   let iOSVersionTimeoutID = null;
   const iOSDetected = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (iOSDetected) {
     iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
+  // We use a feature detector for tilt permission in case Android picks up the same API.
+  orientPermNeeded = (typeof DeviceOrientationEvent.requestPermission === 'function');
 
   let urlFlags = getUrlFlags(); // Get options from URL
 
@@ -201,11 +208,12 @@ function Bivot(options) {
     });
     scene.add(mesh);
 
-    // The devicemotion event has been deprecated for privacy reasons.
-    // A work around on iOS >= 12.2 is to enable it in iOS Settings > Safari (off by default).
+    // The deviceorientation event has been restricted for privacy reasons.
+    // A work around on iOS >= 12.2 is for the user to enable it in iOS Settings > Safari (off by default).
     // The web page also has to be served over https.
-    // iOS 13 will introduce a permissions API so that we can ask the user more directly.
-    if (!firstRenderLoaded && iOSVersionOrientBlocked && !gyroDetected) {
+    // iOS 13 introduced a permissions API so that we can ask the user more directly. The request has to be in
+    // response to a "user gesture", e.g. in response to the user tapping on the canvas.
+    if (!firstRenderLoaded && (iOSVersionOrientBlocked || orientPermNeeded) && !gyroDetected) {
       setTiltWarning();
     }
     firstRenderLoaded = true;
@@ -494,23 +502,46 @@ function Bivot(options) {
     window.removeEventListener('touchstart', detectTouch, false);
   }
 
-  function setTiltWarning () {
+  function requestTiltPermission(event) {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            orientPermObtained = true;
+            updateLightMotion();
+            clearTiltWarning();
+          }
+        })
+        .catch(console.error);
+    }
+  }
+
+  function setTiltWarning() {
     iOSVersionTimeoutID = setTimeout(() => {
-      state.statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
+      if (iOSVersionOrientBlocked) {
+        state.statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
+      }
       updateStatusTextDisplay();
     }, 1000);
     window.addEventListener('deviceorientation', clearTiltWarning);
   }
 
-  function clearTiltWarning () {
+  function clearTiltWarning() {
     clearTimeout(iOSVersionTimeoutID);
-    window.removeEventListener(clearTiltWarning);
+    window.removeEventListener('deviceorientation', clearTiltWarning);
     state.statusText = '';
     updateStatusTextDisplay();
   }
 
   function updateStatusTextDisplay() {
-    if (state.statusText.length == 0) {
+    // Trying to add this button while also displaying status text sends iOS Safari into a reload loop. So the
+    // button takes precedence.
+    if (orientPermObtained && !orientPermObtained) {
+      let requestButton = document.createElement('button');
+      requestButton.innerHTML = 'Tap to enable tilt control';
+      requestButton.onclick = requestTiltPermission;
+      subtitleTextElem.appendChild(requestButton);
+    } else if (state.statusText.length == 0) {
       subtitleElem.style.display = 'none';
       subtitleTextElem.innerHTML = '';
     } else {
