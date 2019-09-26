@@ -537,6 +537,7 @@ function Bivot(options) {
     // Trying to add this button while also displaying status text sends iOS Safari into a reload loop. So the
     // button takes precedence.
     if (orientPermObtained && !orientPermObtained) {
+      subtitleElem.style.display = 'flex';
       let requestButton = document.createElement('button');
       requestButton.innerHTML = 'Tap to enable tilt control';
       requestButton.onclick = requestTiltPermission;
