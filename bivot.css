@@ -38,7 +38,7 @@
 }
 #bivot-subtitle {
     position: absolute;
-    bottom: 35%;
+    top: 3em;
     width: 100%;
     display: none;
     justify-content: center;
