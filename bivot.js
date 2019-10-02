@@ -65,6 +65,7 @@ function Bivot(options) {
     lightSpacing: 0.5,
     light45: false,
     scan: 'kimono-matte-v2',
+    brdfModel: 0,
     brdfVersion: 2,
     statusText: '',
   };
@@ -140,7 +141,7 @@ function Bivot(options) {
   // Device orientation events require user permission for iOS > 13.
   // We use a feature detector for tilt permission in case Android picks up the same API.
   let orientPermNeeded = (typeof DeviceOrientationEvent.requestPermission === 'function');
-  // Do we actually want to use the device orientation for anything? 
+  // Do we actually want to use the device orientation for anything?
   // We set this later after loading the config.
   let orientPermWanted = null;
   let orientPermObtained = false;
@@ -155,7 +156,7 @@ function Bivot(options) {
     iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
-    
+
   let urlFlags = getUrlFlags(); // Get options from URL
 
   loadConfig(opts.configPath, opts.renderPath, function () {
@@ -454,7 +455,7 @@ function Bivot(options) {
     updateLightingGrid();
     updateLightMotion();
 
-    const ambientColour = 0xFFFFFF;
+    const ambientColour = 0x3F3F3F;
     const ambientIntensity = 1.0;
     ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
     scene.add(ambientLight);
@@ -853,7 +854,7 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
-    let keys = ['exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+    let keys = ['brdfModel', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
     loadMetadata(tex_dir, keys);
 
     let paths = new Map();
@@ -957,6 +958,7 @@ function Bivot(options) {
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
     uniforms.uTint.value = state.tint;
+    uniforms.uBrdfModel.value = state.brdfModel;
     uniforms.uBrdfVersion.value = state.brdfVersion;
     uniforms.uLoadExr.value = config.loadExr;
     uniforms.uDual8Bit.value = config.dual8Bit;

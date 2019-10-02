@@ -14,6 +14,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uSpecular': {value: 1.0},
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
+      'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
       'uBrdfVersion': {value: 2.0},
       'uLoadExr': {value: false},
       'uDual8Bit': {value: false},
@@ -63,11 +64,12 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
-    uniform bool uTint;
+    uniform bool  uTint;
+    uniform int   uBrdfModel;
     uniform float uBrdfVersion;
-    uniform bool uDual8Bit;
-    uniform bool uLoadExr;
-    uniform mat3 uNormalMatrix;
+    uniform bool  uDual8Bit;
+    uniform bool  uLoadExr;
+    uniform mat3  uNormalMatrix;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -76,6 +78,7 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec3 vViewPosition;
 
     float s = 1.0;
+    float pi = 3.14159265359;
 
     #include <common>
     #include <bsdfs>
@@ -91,17 +94,23 @@ let uniforms = THREE.UniformsUtils.merge([
       return 1.0;
     }
 
-    float DisneySpecular(float specular, float roughness, vec3 normal, vec3 light, vec3 view) {
+    float DisneySpecular(float specular, float roughness, float ndh) {
       // TODO: Add episilon to fragile denominators.
-      float k = 1.0 - pow(roughness, 4.0);
-      float c = (1.0/(s*PI))*((1.0/pow(roughness, 4.0) + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
-      // float c = 1.0;
-
-      vec3 halfVector = normalize(light + view);
-      float halfDot = dot(normal, halfVector);
-      float denom = pow((1.0 + (pow(roughness, 4.0) - 1.0)*pow(halfDot, 2.0)), 2.0);
+      float r4 = pow(roughness, 4.0);
+      float k = 1.0 - r4;
+      float c = (1.0/(s*PI))*((1.0/r4 + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
+      float denom = pow((1.0 + (r4 - 1.0)*pow(ndh, 2.0)), 2.0);
       return (specular)/(c*denom);
     }
+
+    float MRSpecular(float roughness, float ndh, float ndl, float ndv) {
+      float r2 = roughness * roughness;
+      //float visibility = 1.0 / ((ndl * (1.0 - r2) + r2) * (ndv * (1.0 - r2) + r2));
+      float visibility = 1.0;
+      float t = r2 / (1.0 + (r2 * r2 - 1.0) * ndh * ndh);
+      return visibility * t * t / pi;
+    }
+
 
     void main() {
       #include <normal_fragment_begin>
@@ -123,64 +132,84 @@ let uniforms = THREE.UniformsUtils.merge([
         specularTexel = specularTexel + specularTexelLow;
       }
 
-      float specularSurface = specularTexel.r;
-      if (uLoadExr) {
-        if (uBrdfVersion >= 3.0) {
-          diffuseSurface *= 16383.0;
-        }
-      } else {
-        diffuseSurface *= 65535.0;
-      }
-      float roughnessSurface = specularTexel.g;
+      float white_L = 1.0;
+      float specularSurface = 0.0;
+      float roughnessSurface = 0.0;
       float tintSurface = 0.0;
-      if (uTint && uBrdfVersion >= 2.0) {
-        tintSurface = specularTexel.b;
-      }
-      if (uBrdfVersion >= 2.0) {
-        s = 65535.0*0.01;
-      }
+      float metallicSurface = 0.0;
 
-      float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
+      if (uBrdfModel == 1) {
+        // (M/R model)
+        white_L = 16383.0;
+        roughnessSurface = specularTexel.r;
+        metallicSurface = specularTexel.g;
+      } else {
+        // uBrdfModel == 0 (BIS model)
+        specularSurface = specularTexel.r;
+        roughnessSurface = specularTexel.g;
+        if (uTint && uBrdfVersion >= 2.0) {
+          tintSurface = specularTexel.b;
+        }
+        if (uBrdfVersion >= 2.0) {
+          s = 65535.0*0.01;
+        }
+
+        if (uLoadExr) {
+          if (uBrdfVersion == 3.0) {
+            diffuseSurface *= 16383.0;
+          }
+        } else {
+          diffuseSurface *= 65535.0;
+        }
+      }
 
       vec3 macroNormal = normalize(vNormal);
       //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
       vec3 mesoNormal = normalize(uNormalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
       vec3 viewerDirection = normalize(vViewPosition);
+      float ndv = max(dot(mesoNormal, viewerDirection), 0.0);
 
       vec3 totalSpecularLight = vec3(0.0);
       vec3 totalDiffuseLight = vec3(0.0);
-      const vec3 diffuseWeights = vec3(0.75, 0.375, 0.1875);
 
 #if NUM_POINT_LIGHTS > 0
+      float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
       for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
         vec3 lVector = pointLights[i].position + vViewPosition.xyz;
+        lVector = normalize(lVector);
+        vec3 halfVector = normalize(lVector + viewerDirection);
+        //float ndh = max(dot(mesoNormal, halfVector), 0.0);
+        float ndh = dot(mesoNormal, halfVector);
+        float ndl = max(dot(mesoNormal, lVector), 0.0);
+
+        float pointSpecularWeight;
+        vec3 pointSpecularColor;
+        vec3 pointDiffuseColor;
+        if (uBrdfModel == 1) {
+          pointSpecularWeight = ndl * MRSpecular(uRoughness*roughnessSurface, ndh, ndl, ndv);
+          pointSpecularColor = uSpecular * diffuseSurface.rgb * metallicSurface;
+          pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor) / pi;
+        } else {  // uBrdfModel == 0
+          pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh);
+          // FIXME: This assumes the light colour is white or grey.
+          pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
+          pointSpecularColor = (diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface + (1.0 - tintSurface);
+          pointDiffuseColor = diffuseSurface.rgb;
+        }
 
         float attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
 
-        lVector = normalize(lVector);
-
-        float pointDiffuseWeightFull = max(dot(mesoNormal, lVector), 0.0);
-        float pointDiffuseWeightHalf = max(0.5*dot(mesoNormal, lVector) + 0.5, 0.0);
-        // It seems like this mix operation would produce a colour shift? But in practice the output doesn't
-        // look colour shifted.
-        // vec3 pointDiffuseWeight = mix(vec3(pointDiffuseWeightFull), vec3(pointDiffuseWeightHalf), diffuseWeights);
-        vec3 pointDiffuseWeight = vec3(pointDiffuseWeightFull);
-        // vec3 pointDiffuseWeight = vec3(1.0);
-
-        float pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface,
-          mesoNormal, lVector, viewerDirection);
-        // FIXME: This assumes the light colour is white or grey.
-        pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
-
-        totalDiffuseLight += attenuation*pointDiffuseWeight*pointLights[i].color;
-        totalSpecularLight += attenuation*pointSpecularWeight
-                              *((diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface
-                                + (1.0 - tintSurface));
+        totalDiffuseLight += attenuation * ndl * pointLights[i].color * pointDiffuseColor;
+        totalSpecularLight += attenuation * pointSpecularWeight * pointSpecularColor;
       }
 #endif
+      vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
+      if (uBrdfModel == 0) {
+        ambientContrib = ambientContrib * 4.0;
+      }
 
-      outgoingLight = uExposure*(diffuseSurface.rgb*(uDiffuse*totalDiffuseLight + ambientLightColor)
-                                 + totalSpecularLight);
+      outgoingLight = white_L * uExposure *
+          (ambientContrib + uDiffuse*totalDiffuseLight + totalSpecularLight);
 
       gl_FragColor = vec4(outgoingLight, 1.0);
     }
