@@ -292,7 +292,17 @@ function Bivot(options) {
       function(err, data) {
         if (err == null) {
           console.log('Loaded:', configFilename);
-          config = JSON.parse(data);
+          var json_config = JSON.parse(data);
+          // Merge items from the JSON config file into the initial state
+          for (var k in json_config) {
+            if (k == 'initialState') {
+              for (var s in json_config[k]) {
+                config.initialState[s] = json_config[k][s];
+              }
+            } else {
+              config[k] = json_config[k];
+            }
+          }
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
