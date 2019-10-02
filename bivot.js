@@ -257,7 +257,6 @@ function Bivot(options) {
           } else {
             state.brdfVersion = scans[state.scan].version;
           }
-          console.log('  BRDF version: ', state.brdfVersion);
 
           let bivotState = [];
           let scanState = [];
@@ -268,15 +267,20 @@ function Bivot(options) {
             scanState = metadata.state;
           }
           mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+
+          console.log('  BRDF model: ', state.brdfModel);
+          console.log('  BRDF version: ', state.brdfVersion);
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
           state.brdfVersion = scans[state.scan].version;
-          console.log('  BRDF version: ', state.brdfVersion);
           let bivotState = [];
           if (scans[state.scan].hasOwnProperty('state')) {
             bivotState = scans[state.scan].state;
             mergeDictKeys(keys, state, bivotState, [], config.initialState);
           }
+
+          console.log('  BRDF model: ', state.brdfModel);
+          console.log('  BRDF version: ', state.brdfVersion);
         }
     });
   }
@@ -854,7 +858,7 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
-    let keys = ['brdfModel', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+    let keys = ['brdfModel', 'brdfVersion', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
     loadMetadata(tex_dir, keys);
 
     let paths = new Map();
