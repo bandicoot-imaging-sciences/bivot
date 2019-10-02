@@ -54,6 +54,7 @@ function Bivot(options) {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    fresnel: false,
     ambient: 1.0,
     fxaa: true,
     bloom: 0.5,
@@ -738,6 +739,7 @@ function Bivot(options) {
     gui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'tint').onChange(requestRender).listen();
+    gui.add(state, 'fresnel').onChange(requestRender).listen();
     gui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
     gui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
     gui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
@@ -962,6 +964,7 @@ function Bivot(options) {
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
     uniforms.uTint.value = state.tint;
+    uniforms.uFresnel.value = state.fresnel;
     uniforms.uBrdfModel.value = state.brdfModel;
     uniforms.uBrdfVersion.value = state.brdfVersion;
     uniforms.uLoadExr.value = config.loadExr;

@@ -14,6 +14,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uSpecular': {value: 1.0},
       'uRoughness': {value: 1.0},
       'uTint': {value: true},
+      'uFresnel': {value: false},
       'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
       'uBrdfVersion': {value: 2.0},
       'uLoadExr': {value: false},
@@ -65,6 +66,7 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uSpecular;
     uniform float uRoughness;
     uniform bool  uTint;
+    uniform bool  uFresnel;
     uniform int   uBrdfModel;
     uniform float uBrdfVersion;
     uniform bool  uDual8Bit;
@@ -101,6 +103,10 @@ let uniforms = THREE.UniformsUtils.merge([
       float c = (1.0/(s*PI))*((1.0/r4 + (1.0/(2.0*sqrt(k))*log((sqrt(k) + k)/(sqrt(k) - k)))));
       float denom = pow((1.0 + (r4 - 1.0)*pow(ndh, 2.0)), 2.0);
       return (specular)/(c*denom);
+    }
+
+    vec3 MRFresnel(vec3 spec_color, float vdh, float white_L) {
+      return spec_color + (white_L - spec_color) * pow(2.0, -5.55473*vdh*vdh - 6.98316*vdh);
     }
 
     float MRSpecular(float roughness, float ndh, float ndl, float ndv) {
@@ -189,6 +195,10 @@ let uniforms = THREE.UniformsUtils.merge([
           pointSpecularWeight = ndl * MRSpecular(uRoughness*roughnessSurface, ndh, ndl, ndv);
           pointSpecularColor = uSpecular * diffuseSurface.rgb * metallicSurface;
           pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor) / pi;
+          if (uFresnel) {
+            float vdh = dot(viewerDirection, halfVector);
+            pointSpecularColor *= MRFresnel(pointSpecularColor, vdh, 1.0);
+          }
         } else {  // uBrdfModel == 0
           pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh);
           // FIXME: This assumes the light colour is white or grey.
