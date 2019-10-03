@@ -249,40 +249,34 @@ function Bivot(options) {
     const jsonFilename = texture_path + '/render.json';
     getJSON(jsonFilename,
       function(err, data) {
+        let bivotState = [];
+        let scanState = [];
+
         if (err == null) {
           const metadata = JSON.parse(data);
           console.log('Loaded metata from ' + jsonFilename + ':', metadata);
 
-          if (metadata.hasOwnProperty('version')) {
-            state.brdfVersion = metadata.version;
-          } else {
-            state.brdfVersion = scans[state.scan].version;
-          }
-
-          let bivotState = [];
-          let scanState = [];
-          if (scans[state.scan].hasOwnProperty('state')) {
-            bivotState = scans[state.scan].state;
-          }
           if (metadata.hasOwnProperty('state')) {
             scanState = metadata.state;
           }
-          mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
-
-          console.log('  BRDF model: ', state.brdfModel);
-          console.log('  BRDF version: ', state.brdfVersion);
+          if (metadata.hasOwnProperty('version')) {
+            scanState.brdfVersion = metadata.version;
+          }
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
-          state.brdfVersion = scans[state.scan].version;
-          let bivotState = [];
-          if (scans[state.scan].hasOwnProperty('state')) {
-            bivotState = scans[state.scan].state;
-            mergeDictKeys(keys, state, bivotState, [], config.initialState);
-          }
-
-          console.log('  BRDF model: ', state.brdfModel);
-          console.log('  BRDF version: ', state.brdfVersion);
         }
+
+        if (scans[state.scan].hasOwnProperty('state')) {
+          bivotState = scans[state.scan].state;
+        }
+        if (scans[state.scan].hasOwnProperty('version')) {
+          bivotState.brdfVersion = scans[state.scan].version;
+        }
+
+        mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+
+        console.log('  BRDF model: ', state.brdfModel);
+        console.log('  BRDF version: ', state.brdfVersion);
     });
   }
 
