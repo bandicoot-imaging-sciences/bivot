@@ -1,6 +1,7 @@
 /local-certs
 /textures
 /tx-bdata
+/tx-collider
 /third_party
 /.vscode/.ropeproject
 *.bak
