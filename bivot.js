@@ -54,6 +54,7 @@ function Bivot(options) {
     specular: 1.0,
     roughness: 1.0,
     tint: true,
+    fresnel: false,
     ambient: 1.0,
     fxaa: true,
     bloom: 0.5,
@@ -65,6 +66,7 @@ function Bivot(options) {
     lightSpacing: 0.5,
     light45: false,
     scan: 'kimono-matte-v2',
+    brdfModel: 0,
     brdfVersion: 2,
     statusText: '',
   };
@@ -140,7 +142,7 @@ function Bivot(options) {
   // Device orientation events require user permission for iOS > 13.
   // We use a feature detector for tilt permission in case Android picks up the same API.
   let orientPermNeeded = (typeof DeviceOrientationEvent.requestPermission === 'function');
-  // Do we actually want to use the device orientation for anything? 
+  // Do we actually want to use the device orientation for anything?
   // We set this later after loading the config.
   let orientPermWanted = null;
   let orientPermObtained = false;
@@ -155,7 +157,7 @@ function Bivot(options) {
     iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
     iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
   }
-    
+
   let urlFlags = getUrlFlags(); // Get options from URL
 
   loadConfig(opts.configPath, opts.renderPath, function () {
@@ -247,36 +249,34 @@ function Bivot(options) {
     const jsonFilename = texture_path + '/render.json';
     getJSON(jsonFilename,
       function(err, data) {
+        let bivotState = [];
+        let scanState = [];
+
         if (err == null) {
           const metadata = JSON.parse(data);
           console.log('Loaded metata from ' + jsonFilename + ':', metadata);
 
-          if (metadata.hasOwnProperty('version')) {
-            state.brdfVersion = metadata.version;
-          } else {
-            state.brdfVersion = scans[state.scan].version;
-          }
-          console.log('  BRDF version: ', state.brdfVersion);
-
-          let bivotState = [];
-          let scanState = [];
-          if (scans[state.scan].hasOwnProperty('state')) {
-            bivotState = scans[state.scan].state;
-          }
           if (metadata.hasOwnProperty('state')) {
             scanState = metadata.state;
           }
-          mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+          if (metadata.hasOwnProperty('version')) {
+            scanState.brdfVersion = metadata.version;
+          }
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
-          state.brdfVersion = scans[state.scan].version;
-          console.log('  BRDF version: ', state.brdfVersion);
-          let bivotState = [];
-          if (scans[state.scan].hasOwnProperty('state')) {
-            bivotState = scans[state.scan].state;
-            mergeDictKeys(keys, state, bivotState, [], config.initialState);
-          }
         }
+
+        if (scans[state.scan].hasOwnProperty('state')) {
+          bivotState = scans[state.scan].state;
+        }
+        if (scans[state.scan].hasOwnProperty('version')) {
+          bivotState.brdfVersion = scans[state.scan].version;
+        }
+
+        mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+
+        console.log('  BRDF model: ', state.brdfModel);
+        console.log('  BRDF version: ', state.brdfVersion);
     });
   }
 
@@ -286,7 +286,17 @@ function Bivot(options) {
       function(err, data) {
         if (err == null) {
           console.log('Loaded:', configFilename);
-          config = JSON.parse(data);
+          var json_config = JSON.parse(data);
+          // Merge items from the JSON config file into the initial state
+          for (var k in json_config) {
+            if (k == 'initialState') {
+              for (var s in json_config[k]) {
+                config.initialState[s] = json_config[k][s];
+              }
+            } else {
+              config[k] = json_config[k];
+            }
+          }
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
@@ -454,7 +464,7 @@ function Bivot(options) {
     updateLightingGrid();
     updateLightMotion();
 
-    const ambientColour = 0xFFFFFF;
+    const ambientColour = 0x3F3F3F;
     const ambientIntensity = 1.0;
     ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
     scene.add(ambientLight);
@@ -733,6 +743,7 @@ function Bivot(options) {
     gui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'tint').onChange(requestRender).listen();
+    gui.add(state, 'fresnel').onChange(requestRender).listen();
     gui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
     gui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
     gui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
@@ -853,7 +864,7 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
-    let keys = ['exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+    let keys = ['brdfModel', 'brdfVersion', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
     loadMetadata(tex_dir, keys);
 
     let paths = new Map();
@@ -957,6 +968,8 @@ function Bivot(options) {
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
     uniforms.uTint.value = state.tint;
+    uniforms.uFresnel.value = state.fresnel;
+    uniforms.uBrdfModel.value = state.brdfModel;
     uniforms.uBrdfVersion.value = state.brdfVersion;
     uniforms.uLoadExr.value = config.loadExr;
     uniforms.uDual8Bit.value = config.dual8Bit;
