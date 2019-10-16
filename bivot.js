@@ -244,42 +244,6 @@ function Bivot(options) {
     });
   }
 
-  function loadMetadata(texture_path, keys)
-  {
-    const jsonFilename = texture_path + '/render.json';
-    getJSON(jsonFilename,
-      function(err, data) {
-        let bivotState = [];
-        let scanState = [];
-
-        if (err == null) {
-          const metadata = JSON.parse(data);
-          console.log('Loaded metata from ' + jsonFilename + ':', metadata);
-
-          if (metadata.hasOwnProperty('state')) {
-            scanState = metadata.state;
-          }
-          if (metadata.hasOwnProperty('version')) {
-            scanState.brdfVersion = metadata.version;
-          }
-        } else {
-          console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
-        }
-
-        if (scans[state.scan].hasOwnProperty('state')) {
-          bivotState = scans[state.scan].state;
-        }
-        if (scans[state.scan].hasOwnProperty('version')) {
-          bivotState.brdfVersion = scans[state.scan].version;
-        }
-
-        mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
-
-        console.log('  BRDF model: ', state.brdfModel);
-        console.log('  BRDF version: ', state.brdfVersion);
-    });
-  }
-
   function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
@@ -865,23 +829,73 @@ function Bivot(options) {
 
     let tex_dir = opts.texturePath + '/' + state.scan;
     let keys = ['brdfModel', 'brdfVersion', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
-    loadMetadata(tex_dir, keys);
+    loadScanMetadata(tex_dir, keys);
+  }
+
+  function loadScanMetadata(texture_path, keys) {
+    const jsonFilename = texture_path + '/render.json';
+    getJSON(jsonFilename,
+      function(err, data) {
+        let bivotState = [];
+        let scanState = [];
+
+        if (err == null) {
+          const metadata = JSON.parse(data);
+          console.log('Loaded metata from ' + jsonFilename + ':', metadata);
+
+          if (metadata.hasOwnProperty('state')) {
+            scanState = metadata.state;
+          }
+          if (metadata.hasOwnProperty('version')) {
+            scanState.brdfVersion = metadata.version;
+          }
+        } else {
+          console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
+        }
+
+        if (scans[state.scan].hasOwnProperty('state')) {
+          bivotState = scans[state.scan].state;
+        }
+        if (scans[state.scan].hasOwnProperty('version')) {
+          bivotState.brdfVersion = scans[state.scan].version;
+        }
+
+        mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+
+        console.log('  BRDF model: ', state.brdfModel);
+        console.log('  BRDF version: ', state.brdfVersion);
+
+        loadScanFilenames(texture_path);
+    });
+  }
+
+  function loadScanFilenames(tex_dir) {
+    let texNames = new Map();
+    if (state.brdfModel == 1 && state.brdfVersion >= 2.0) {
+      texNames.set('diffuse', 'basecolor');
+      texNames.set('normals', 'normals');
+      texNames.set('specular', 'roughness-metallic');
+    } else {
+      texNames.set('diffuse', 'diffuse');
+      texNames.set('normals', 'normals');
+      texNames.set('specular', 'specular-srt');
+    }
 
     let paths = new Map();
     if (config.loadExr) {
-      paths.set('diffuse', {path: tex_dir + '/brdf-diffuse_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('normals', {path: tex_dir + '/brdf-normals_cropf16.exr', format:THREE.RGBFormat});
-      paths.set('specular', {path: tex_dir + '/brdf-specular-srt_cropf16.exr', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
+      paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
     }
     else
     {
-      paths.set('diffuse', {path: tex_dir + '/brdf-diffuse_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('normals', {path: tex_dir + '/brdf-normals_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('specular', {path: tex_dir + '/brdf-specular-srt_cropu8_hi.png', format: THREE.RGBFormat});
+      paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
+      paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
       if (config.dual8Bit) {
-        paths.set('diffuse_low', {path: tex_dir + '/brdf-diffuse_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('normals_low', {path: tex_dir + '/brdf-normals_cropu8_lo.png', format:THREE.RGBFormat});
-        paths.set('specular_low', {path: tex_dir + '/brdf-specular-srt_cropu8_lo.png', format: THREE.RGBFormat});
+        paths.set('diffuse_low', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('normals_low', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
+        paths.set('specular_low', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
       }
     }
 
