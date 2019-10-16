@@ -803,8 +803,9 @@ function Bivot(options) {
           }
 
           texture.name = key;
-          // Flip from chart space back into camera view space.  Only needed when loading EXR.
-          texture.flipY = state.yFlip;
+          // Flip from chart space back into camera view space.  The handling of texture.flipY inside Three.js
+          // is reversed for PNG compared with EXR.
+          texture.flipY = (state.yFlip == config.loadExr);
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
