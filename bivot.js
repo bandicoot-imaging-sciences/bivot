@@ -68,6 +68,7 @@ function Bivot(options) {
     scan: 'kimono-matte-v2',
     brdfModel: 0,
     brdfVersion: 2,
+    yFlip: true,
     statusText: '',
   };
 
@@ -803,7 +804,7 @@ function Bivot(options) {
 
           texture.name = key;
           // Flip from chart space back into camera view space.  Only needed when loading EXR.
-          texture.flipY = config.loadExr;
+          texture.flipY = state.yFlip;
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
