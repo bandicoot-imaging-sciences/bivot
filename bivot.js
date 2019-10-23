@@ -142,7 +142,8 @@ function Bivot(options) {
 
   // Device orientation events require user permission for iOS > 13.
   // We use a feature detector for tilt permission in case Android picks up the same API.
-  let orientPermNeeded = (typeof DeviceOrientationEvent.requestPermission === 'function');
+  let orientPermNeeded = (typeof DeviceOrientationEvent !== 'undefined' 
+                       && typeof DeviceOrientationEvent.requestPermission === 'function');
   // Do we actually want to use the device orientation for anything?
   // We set this later after loading the config.
   let orientPermWanted = null;
