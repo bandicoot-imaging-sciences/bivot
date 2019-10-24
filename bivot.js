@@ -703,7 +703,7 @@ function Bivot(options) {
     const gui = new dat.GUI();
     gui.close();
     gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan).listen();
-    gui.add(state, 'exposure', 0, 2, 0.01).onChange(requestRender).listen();
+    gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
     gui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
     gui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
@@ -830,7 +830,7 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
-    let keys = ['brdfModel', 'brdfVersion', 'yFlip', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient'];
+    let keys = ['brdfModel', 'brdfVersion', 'yFlip', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient', 'bloom'];
     loadScanMetadata(tex_dir, keys);
   }
 
