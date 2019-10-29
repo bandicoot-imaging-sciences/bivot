@@ -16,6 +16,7 @@ let uniforms = THREE.UniformsUtils.merge([
       'uTint': {value: true},
       'uFresnel': {value: false},
       'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
+      'uThreeJsShader': {value: false},
       'uBrdfVersion': {value: 2.0},
       'uLoadExr': {value: false},
       'uDual8Bit': {value: false},
@@ -23,6 +24,8 @@ let uniforms = THREE.UniformsUtils.merge([
       'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
       'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
       'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
+      'ltc_1': {value: null}, // Linearly Transformed Cosines look-up table 1 for area lighting
+      'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
     }
   ]);
 
@@ -67,6 +70,8 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uRoughness;
     uniform bool  uTint;
     uniform bool  uFresnel;
+    uniform bool  uThreeJsShader;
+
     uniform int   uBrdfModel;
     uniform float uBrdfVersion;
     uniform bool  uDual8Bit;
@@ -87,6 +92,7 @@ let uniforms = THREE.UniformsUtils.merge([
     #include <packing>
     #include <lights_pars_begin>
     #include <normalmap_pars_fragment>
+    #include <lights_physical_pars_fragment>
 
     float calcLightAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
       if (decayExponent > 0.0) {
@@ -119,11 +125,6 @@ let uniforms = THREE.UniformsUtils.merge([
 
 
     void main() {
-      #include <normal_fragment_begin>
-      #include <normal_fragment_maps>
-
-      vec3 outgoingLight = vec3(0.0);
-
       vec4 diffuseSurface = texture2D(diffuseMap, vUv);
       vec3 normalSurface = texture2D(normalMap, vUv).xyz;
       vec4 specularTexel = texture2D(specularMap, vUv);
@@ -169,58 +170,80 @@ let uniforms = THREE.UniformsUtils.merge([
         }
       }
 
-      vec3 macroNormal = normalize(vNormal);
-      //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
-      vec3 mesoNormal = normalize(uNormalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
-      vec3 viewerDirection = normalize(vViewPosition);
-      float ndv = max(dot(mesoNormal, viewerDirection), 0.0);
+      if (uThreeJsShader) {
+        ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
+        vec4 diffuseColor = diffuseSurface;
+        float metalnessFactor = 1.0 * metallicSurface;
+        float roughnessFactor = uRoughness * roughnessSurface;
 
-      vec3 totalSpecularLight = vec3(0.0);
-      vec3 totalDiffuseLight = vec3(0.0);
+        #define OBJECTSPACE_NORMALMAP
+        #define normalMatrix uNormalMatrix
+        #include <normal_fragment_begin>
+        #include <normal_fragment_maps>
+        #include <lights_physical_fragment>
+        #include <lights_fragment_begin>
+        #include <lights_fragment_maps>
+        #include <lights_fragment_end>
+
+        vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
+        vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
+        vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
+        vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor + ambientContrib);
+        gl_FragColor = vec4(outgoingLight, diffuseColor.a);
+      } else {
+        vec3 macroNormal = normalize(vNormal);
+        //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
+        vec3 mesoNormal = normalize(uNormalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
+        vec3 viewerDirection = normalize(vViewPosition);
+        float ndv = max(dot(mesoNormal, viewerDirection), 0.0);
+
+        vec3 totalSpecularLight = vec3(0.0);
+        vec3 totalDiffuseLight = vec3(0.0);
 
 #if NUM_POINT_LIGHTS > 0
-      float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
-      for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
-        vec3 lVector = pointLights[i].position + vViewPosition.xyz;
-        lVector = normalize(lVector);
-        vec3 halfVector = normalize(lVector + viewerDirection);
-        //float ndh = max(dot(mesoNormal, halfVector), 0.0);
-        float ndh = dot(mesoNormal, halfVector);
-        float ndl = max(dot(mesoNormal, lVector), 0.0);
+        float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
+        for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
+          vec3 lVector = pointLights[i].position + vViewPosition.xyz;
+          lVector = normalize(lVector);
+          vec3 halfVector = normalize(lVector + viewerDirection);
+          //float ndh = max(dot(mesoNormal, halfVector), 0.0);
+          float ndh = dot(mesoNormal, halfVector);
+          float ndl = max(dot(mesoNormal, lVector), 0.0);
 
-        float pointSpecularWeight;
-        vec3 pointSpecularColor;
-        vec3 pointDiffuseColor;
-        if (uBrdfModel == 1) {
-          pointSpecularWeight = ndl * MRSpecular(uRoughness*roughnessSurface, ndh, ndl, ndv);
-          pointSpecularColor = uSpecular * diffuseSurface.rgb * metallicSurface;
-          pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor) / pi;
-          if (uFresnel) {
-            float vdh = dot(viewerDirection, halfVector);
-            pointSpecularColor *= MRFresnel(pointSpecularColor, vdh, 1.0);
+          float pointSpecularWeight;
+          vec3 pointSpecularColor;
+          vec3 pointDiffuseColor;
+          if (uBrdfModel == 1) {
+            pointSpecularWeight = ndl * MRSpecular(uRoughness*roughnessSurface, ndh, ndl, ndv);
+            pointSpecularColor = uSpecular * diffuseSurface.rgb * metallicSurface;
+            pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor) / pi;
+            if (uFresnel) {
+              float vdh = dot(viewerDirection, halfVector);
+              pointSpecularColor *= MRFresnel(pointSpecularColor, vdh, 1.0);
+            }
+          } else {  // uBrdfModel == 0
+            pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh);
+            // FIXME: This assumes the light colour is white or grey.
+            pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
+            pointSpecularColor = (diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface + (1.0 - tintSurface);
+            pointDiffuseColor = diffuseSurface.rgb;
           }
-        } else {  // uBrdfModel == 0
-          pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh);
-          // FIXME: This assumes the light colour is white or grey.
-          pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
-          pointSpecularColor = (diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface + (1.0 - tintSurface);
-          pointDiffuseColor = diffuseSurface.rgb;
+
+          float attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
+
+          totalDiffuseLight += attenuation * ndl * pointLights[i].color * pointDiffuseColor;
+          totalSpecularLight += attenuation * pointSpecularWeight * pointSpecularColor;
+        }
+#endif
+        vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
+        if (uBrdfModel == 0) {
+          ambientContrib = ambientContrib * 4.0;
         }
 
-        float attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
+        vec3 outgoingLight = white_L * uExposure *
+            (ambientContrib + uDiffuse*totalDiffuseLight + totalSpecularLight);
 
-        totalDiffuseLight += attenuation * ndl * pointLights[i].color * pointDiffuseColor;
-        totalSpecularLight += attenuation * pointSpecularWeight * pointSpecularColor;
+        gl_FragColor = vec4(outgoingLight, 1.0);
       }
-#endif
-      vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
-      if (uBrdfModel == 0) {
-        ambientContrib = ambientContrib * 4.0;
-      }
-
-      outgoingLight = white_L * uExposure *
-          (ambientContrib + uDiffuse*totalDiffuseLight + totalSpecularLight);
-
-      gl_FragColor = vec4(outgoingLight, 1.0);
     }
     `;

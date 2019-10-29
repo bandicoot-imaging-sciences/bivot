@@ -60,6 +60,10 @@ function Bivot(options) {
     bloom: 0.5,
     adaptiveToneMap: false,
     gammaCorrect: true,
+    threeJsShader: false,
+    lightType: 'point',
+    areaLightWidth: 5.0,
+    areaLightHeight: 0.2,
     lightMotion: 'mouse',
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightNumber: 1,
@@ -126,6 +130,10 @@ function Bivot(options) {
     'mouse',
     'sliders',
   ]
+  let lightTypeModes = [
+    'point',
+    'area',
+  ]
   let loadManager = null;
   let loader = null;
   let firstRenderLoaded = false;
@@ -142,7 +150,7 @@ function Bivot(options) {
 
   // Device orientation events require user permission for iOS > 13.
   // We use a feature detector for tilt permission in case Android picks up the same API.
-  let orientPermNeeded = (typeof DeviceOrientationEvent !== 'undefined' 
+  let orientPermNeeded = (typeof DeviceOrientationEvent !== 'undefined'
                        && typeof DeviceOrientationEvent.requestPermission === 'function');
   // Do we actually want to use the device orientation for anything?
   // We set this later after loading the config.
@@ -179,6 +187,7 @@ function Bivot(options) {
     if (config.showInterface) {
       addControlPanel();
     }
+    THREE.RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
     initialiseRenderer();
     loadScan();
 
@@ -588,11 +597,22 @@ function Bivot(options) {
           (j - mid)*state.lightSpacing,
           0
         );
-        let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-        light.position.copy(upVector);
-        light.position.add(offset);
-        // console.log(light.position);
-        lights.add(light);
+        if (state.lightType == 'area') {
+          let areaFactor = lightIntensity / (Math.atan(state.areaLightWidth) * Math.atan(state.areaLightHeight));
+          let rectLight = new THREE.RectAreaLight(color, areaFactor, state.areaLightWidth, state.areaLightHeight);
+          rectLight.position.copy(upVector);
+          rectLight.position.add(offset);
+          // console.log(light.position);
+          lights.add(rectLight);
+          //var rectLightHelper = new THREE.RectAreaLightHelper( rectLight );
+          //rectLight.add( rectLightHelper );
+        } else {
+          let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
+          light.position.copy(upVector);
+          light.position.add(offset);
+          // console.log(light.position);
+          lights.add(light);
+        }
       }
     }
     let upVectorNorm = upVector.clone();
@@ -716,6 +736,10 @@ function Bivot(options) {
     gui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
     gui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
     gui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
+    gui.add(state, 'threeJsShader').onChange(requestRender);
+    gui.add(state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
+    gui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
+    gui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
     gui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
     gui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
     gui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
@@ -980,16 +1004,19 @@ function Bivot(options) {
 
     controls.update();
 
-    uniforms.uExposure.value = exposureGain*state.exposure;
+    uniforms.uExposure.value = exposureGain * state.exposure;
     uniforms.uDiffuse.value = state.diffuse;
     uniforms.uSpecular.value = state.specular;
     uniforms.uRoughness.value = state.roughness;
     uniforms.uTint.value = state.tint;
     uniforms.uFresnel.value = state.fresnel;
+    uniforms.uThreeJsShader.value = state.threeJsShader;
     uniforms.uBrdfModel.value = state.brdfModel;
     uniforms.uBrdfVersion.value = state.brdfVersion;
     uniforms.uLoadExr.value = config.loadExr;
     uniforms.uDual8Bit.value = config.dual8Bit;
+    uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
+    uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
 
     normalMatrix.getInverse(camera.matrixWorld);
     uniforms.uNormalMatrix.value.setFromMatrix4(normalMatrix);
