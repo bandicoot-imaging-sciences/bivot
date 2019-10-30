@@ -665,6 +665,7 @@ function Bivot(options) {
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
       camera.position.copy(xy_to_3d_direction(xy, cam_sensitivity).multiplyScalar(camera.position.length()));
+      requestRender();
     }
   }
 
