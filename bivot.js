@@ -74,6 +74,7 @@ function Bivot(options) {
     brdfVersion: 2,
     yFlip: true,
     statusText: '',
+    background: 0x05,
   };
 
   let config = {
@@ -433,8 +434,13 @@ function Bivot(options) {
     }
   }
 
+  function updateBackground() {
+    scene.background = new THREE.Color(state.background * 0x010101);
+    requestRender();
+  }
+
   function initialiseLighting() {
-    scene.background = new THREE.Color(0x050505);
+    scene.background = new THREE.Color(state.background * 0x010101);
 
     updateLightingGrid();
     updateLightMotion();
@@ -751,6 +757,8 @@ function Bivot(options) {
     gui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     gui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
     gui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
+    gui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
+
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
