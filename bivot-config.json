@@ -34,6 +34,7 @@
         "lightSpacing": 0.5,
         "light45": false,
         "scan": "2019-06-17 Mini kimono matte 2 v2mb",
-        "brdfVersion": 2
+        "brdfVersion": 2,
+        "meshRotateZDegrees": 0
     }
 }
