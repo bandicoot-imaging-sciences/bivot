@@ -75,6 +75,8 @@ function Bivot(options) {
     yFlip: true,
     statusText: '',
     background: 0x05,
+    meshRotateZDegrees: 0,
+    meshRotateZDegreesPrevious: 0
   };
 
   let config = {
@@ -727,6 +729,18 @@ function Bivot(options) {
     updateCamsAndLightsFromXY(xy, config.lightTiltWithDeviceOrient, config.camTiltWithDeviceOrient);
   }
 
+  function newMeshRotation() {
+    state.meshRotateZDegreesPrevious = 0;
+    updateMeshRotation();
+  }
+
+  function updateMeshRotation() {
+    if (mesh) {
+      mesh.rotateZ((state.meshRotateZDegrees - state.meshRotateZDegreesPrevious)*Math.PI/180);
+      state.meshRotateZDegreesPrevious = state.meshRotateZDegrees;
+    }
+  }
+
   function addControlPanel() {
     const gui = new dat.GUI();
     gui.close();
@@ -754,6 +768,7 @@ function Bivot(options) {
     gui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
     gui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     gui.add(state, 'light45').onChange(updateLightingGrid);
+    gui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('rotation (deg)');
     gui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
     gui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     gui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
@@ -771,13 +786,15 @@ function Bivot(options) {
 
     objLoader.load(meshPath,
       function(object) {
-        mesh = object
         console.log('Loaded mesh object:', meshPath);
+        mesh = object;
+        newMeshRotation();
       },
       function (xhr) {},
       function (error) {
         console.log('Mesh unavailable; using planar geometry');
         mesh = new THREE.Mesh(getPlaneGeometry());
+        newMeshRotation();
       }
     );
 
