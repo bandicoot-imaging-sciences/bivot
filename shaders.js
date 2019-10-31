@@ -84,7 +84,6 @@ let uniforms = THREE.UniformsUtils.merge([
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
-    float s = 1.0;
     float pi = 3.14159265359;
 
     #include <common>
@@ -102,7 +101,7 @@ let uniforms = THREE.UniformsUtils.merge([
       return 1.0;
     }
 
-    float DisneySpecular(float specular, float roughness, float ndh) {
+    float DisneySpecular(float specular, float roughness, float ndh, float s) {
       // TODO: Add episilon to fragile denominators.
       float r4 = pow(roughness, 4.0);
       float k = 1.0 - r4;
@@ -111,16 +110,23 @@ let uniforms = THREE.UniformsUtils.merge([
       return (specular)/(c*denom);
     }
 
-    vec3 MRFresnel(vec3 spec_color, float vdh, float white_L) {
-      return spec_color + (white_L - spec_color) * pow(2.0, -5.55473*vdh*vdh - 6.98316*vdh);
-    }
-
     float MRSpecular(float roughness, float ndh, float ndl, float ndv) {
       float r2 = roughness * roughness;
-      //float visibility = 1.0 / ((ndl * (1.0 - r2) + r2) * (ndv * (1.0 - r2) + r2));
-      float visibility = 1.0;
-      float t = r2 / (1.0 + (r2 * r2 - 1.0) * ndh * ndh);
-      return visibility * t * t / pi;
+
+      // Substance Designer uses a different expression for visibility:
+      //   float k = r2 / 2.0;
+      //   float visibility = 1.0 / (4.0 * (ndl * (1.0 - k) + k) * (ndv * (1.0 - k) + k));
+
+      // Three.js
+      //   The following code should be equivalent to calling:
+      //     return G_GGX_Smith(r2, ndl, ndv) * D_GGX(r2, ndh);
+      float k = r2 * r2;
+      float gl = ndl + sqrt(ndv*ndv * (1.0 - k) + k);
+      float gv = ndv + sqrt(ndl*ndl * (1.0 - k) + k);
+      float visibility = 1.0 / (gl * gv);
+      //float visibility = 0.25;
+      float t = r2 / (1.0 + (r2 * r2 - 1.0) * ndh*ndh);
+      return visibility * t*t / pi;
     }
 
 
@@ -139,6 +145,7 @@ let uniforms = THREE.UniformsUtils.merge([
         specularTexel = specularTexel + specularTexelLow;
       }
 
+      float s = 1.0;
       float white_L = 1.0;
       float specularSurface = 0.0;
       float roughnessSurface = 0.0;
@@ -173,11 +180,10 @@ let uniforms = THREE.UniformsUtils.merge([
       if (uThreeJsShader) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
         vec4 diffuseColor = diffuseSurface;
-        float metalnessFactor = 1.0 * metallicSurface;
+        float metalnessFactor = metallicSurface;
         float roughnessFactor = uRoughness * roughnessSurface;
-
-        #define OBJECTSPACE_NORMALMAP
         #define normalMatrix uNormalMatrix
+        #define OBJECTSPACE_NORMALMAP
         #include <normal_fragment_begin>
         #include <normal_fragment_maps>
         #include <lights_physical_fragment>
@@ -185,10 +191,11 @@ let uniforms = THREE.UniformsUtils.merge([
         #include <lights_fragment_maps>
         #include <lights_fragment_end>
 
-        vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
+        // Ambient light is calculated automatically as part of reflectedLight.indirectDiffuse
+        //vec3 ambientFactor = diffuseSurface.rgb * ambientLightColor;
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
         vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
-        vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor + ambientContrib);
+        vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor);
         gl_FragColor = vec4(outgoingLight, diffuseColor.a);
       } else {
         vec3 macroNormal = normalize(vNormal);
@@ -201,44 +208,52 @@ let uniforms = THREE.UniformsUtils.merge([
         vec3 totalDiffuseLight = vec3(0.0);
 
 #if NUM_POINT_LIGHTS > 0
+        vec3 pointSpecularColor;
+        vec3 pointDiffuseColor;
+        vec3 pointAmbientColor;
         float diffuseSurfaceMean = dot(diffuseSurface.rgb, vec3(1.0))/3.0;
+        if (uBrdfModel == 1) {  // [Three.js MR]
+          pointSpecularColor = diffuseSurface.rgb * metallicSurface + 0.04 * (1.0 - metallicSurface);
+          pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface);
+          // Substance Designer:
+          //pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor);
+          pointAmbientColor = ambientLightColor;
+        } else {                // [BIS Disney]]
+          pointSpecularColor = (diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface + (1.0 - tintSurface);
+          pointDiffuseColor = diffuseSurface.rgb * pi; // Convert to physically correct lighting
+          pointAmbientColor = ambientLightColor * pi;  // Convert to physically correct lighting
+        }
         for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {
           vec3 lVector = pointLights[i].position + vViewPosition.xyz;
           lVector = normalize(lVector);
           vec3 halfVector = normalize(lVector + viewerDirection);
-          //float ndh = max(dot(mesoNormal, halfVector), 0.0);
           float ndh = dot(mesoNormal, halfVector);
           float ndl = max(dot(mesoNormal, lVector), 0.0);
 
+          float attenuation;
           float pointSpecularWeight;
-          vec3 pointSpecularColor;
-          vec3 pointDiffuseColor;
-          if (uBrdfModel == 1) {
-            pointSpecularWeight = ndl * MRSpecular(uRoughness*roughnessSurface, ndh, ndl, ndv);
-            pointSpecularColor = uSpecular * diffuseSurface.rgb * metallicSurface;
-            pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface) * (1.0 - pointSpecularColor) / pi;
+          if (uBrdfModel == 1) {  // [Three.js MR]
+            attenuation = punctualLightIntensityToIrradianceFactor(length(lVector), pointLights[i].distance, pointLights[i].decay);
+            pointSpecularWeight = uSpecular * MRSpecular(uRoughness * roughnessSurface, ndh, ndl, ndv);
             if (uFresnel) {
               float vdh = dot(viewerDirection, halfVector);
-              pointSpecularColor *= MRFresnel(pointSpecularColor, vdh, 1.0);
+              pointSpecularColor = F_Schlick(pointSpecularColor, vdh);
             }
-          } else {  // uBrdfModel == 0
-            pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh);
+          } else {                // [BIS Disney]
+            attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
+            pointSpecularWeight = DisneySpecular(uSpecular*specularSurface, uRoughness*roughnessSurface, ndh, s) / ndl;
             // FIXME: This assumes the light colour is white or grey.
-            pointSpecularWeight = pointSpecularWeight * pointLights[i].color.r;
-            pointSpecularColor = (diffuseSurface.rgb/diffuseSurfaceMean)*tintSurface + (1.0 - tintSurface);
-            pointDiffuseColor = diffuseSurface.rgb;
+            pointSpecularWeight *= pointLights[i].color.r;
           }
 
-          float attenuation = calcLightAttenuation(length(lVector), pointLights[i].distance, pointLights[i].decay);
-
-          totalDiffuseLight += attenuation * ndl * pointLights[i].color * pointDiffuseColor;
-          totalSpecularLight += attenuation * pointSpecularWeight * pointSpecularColor;
+          vec3 irradiance = ndl * attenuation * pointLights[i].color;
+          totalDiffuseLight += pointDiffuseColor * irradiance / pi;
+          totalSpecularLight += pointSpecularWeight * pointSpecularColor * irradiance;
         }
+        vec3 ambientContrib = pointDiffuseColor * pointAmbientColor / pi;
+#else
+        vec3 ambientContrib = vec3(0.0);
 #endif
-        vec3 ambientContrib = diffuseSurface.rgb * ambientLightColor;
-        if (uBrdfModel == 0) {
-          ambientContrib = ambientContrib * 4.0;
-        }
 
         vec3 outgoingLight = white_L * uExposure *
             (ambientContrib + uDiffuse*totalDiffuseLight + totalSpecularLight);
