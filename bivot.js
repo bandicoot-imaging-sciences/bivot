@@ -772,7 +772,7 @@ function Bivot(options) {
     lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     lightingGui.add(state, 'light45').onChange(updateLightingGrid);
     let sceneGui = gui.addFolder('Scene');
-    sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('cam rotate (deg)');
+    sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('obj rotate (deg)');
     sceneGui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
     sceneGui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     sceneGui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
