@@ -60,7 +60,7 @@ function Bivot(options) {
     bloom: 0.5,
     adaptiveToneMap: false,
     gammaCorrect: true,
-    threeJsShader: false,
+    threeJsShader: true,
     lightType: 'point',
     areaLightWidth: 5.0,
     areaLightHeight: 0.2,
@@ -745,22 +745,22 @@ function Bivot(options) {
     const gui = new dat.GUI();
     gui.close();
     gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan).listen();
-    let intensityGui = gui.addFolder('Intensity');
-    intensityGui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
-    intensityGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
-    intensityGui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
-    intensityGui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
-    intensityGui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
-    intensityGui.add(state, 'tint').onChange(requestRender).listen();
-    intensityGui.add(state, 'fresnel').onChange(requestRender).listen();
-    intensityGui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
-    intensityGui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
-    intensityGui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
-    intensityGui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
-    intensityGui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
-    intensityGui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
+    gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
+    let renderGui = gui.addFolder('Render');
+    renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
+    renderGui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
+    renderGui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
+    renderGui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
+    renderGui.add(state, 'tint').onChange(requestRender).listen();
+    renderGui.add(state, 'fresnel').onChange(requestRender).listen();
+    renderGui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
+    renderGui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
+    renderGui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
+    renderGui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
+    renderGui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
+    renderGui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
+    renderGui.add(state, 'threeJsShader').onChange(requestRender);
     let lightingGui = gui.addFolder('Lighting');
-    lightingGui.add(state, 'threeJsShader').onChange(requestRender);
     lightingGui.add(state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
@@ -772,7 +772,7 @@ function Bivot(options) {
     lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     lightingGui.add(state, 'light45').onChange(updateLightingGrid);
     let sceneGui = gui.addFolder('Scene');
-    sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('rotation (deg)');
+    sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('cam rotate (deg)');
     sceneGui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
     sceneGui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     sceneGui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');

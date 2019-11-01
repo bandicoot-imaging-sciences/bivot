@@ -177,7 +177,7 @@ let uniforms = THREE.UniformsUtils.merge([
         }
       }
 
-      if (uThreeJsShader) {
+      if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
         vec4 diffuseColor = diffuseSurface;
         float metalnessFactor = metallicSurface;
