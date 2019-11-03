@@ -482,6 +482,7 @@ function Bivot(options) {
     controls.maxPolarAngle = Math.PI - 0.1;
     controls.minAzimuthAngle = -Math.PI/2 + 0.1;
     controls.maxAzimuthAngle = +Math.PI/2 - 0.1;
+    controls.screenSpacePanning = true;
 
     controls.addEventListener('change', requestRender);
   }
