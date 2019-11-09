@@ -57,7 +57,7 @@ function Bivot(options) {
     fresnel: false,
     ambient: 1.0,
     fxaa: true,
-    bloom: 0.5,
+    bloom: 0.1,
     adaptiveToneMap: false,
     gammaCorrect: true,
     threeJsShader: true,
