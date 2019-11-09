@@ -81,6 +81,7 @@ function Bivot(options) {
 
   let config = {
     loadExr: true,
+    loadJpeg: false,
     dual8Bit: false,
     showInterface: true,
     mouseCamControlsZoom: true,
@@ -367,6 +368,11 @@ function Bivot(options) {
     {
       state.scan = decodeURI(urlFlags.show);
     }
+    if (urlFlags.loadJpeg == 1)
+    {
+      config.loadJpeg = true;
+    }
+
   }
 
   function initialiseOverlays() {
@@ -946,9 +952,15 @@ function Bivot(options) {
     }
     else
     {
-      paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
-      paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
+      if (config.loadJpeg) {
+        paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
+      } else {
+        paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
+      }
       if (config.dual8Bit) {
         paths.set('diffuse_low', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('normals_low', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
