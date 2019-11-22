@@ -5,13 +5,16 @@ supported:
 1. Metal/roughness model
 2. BIS model
 
-Materials are stored in a `textures` folder, with sub-folders for each material. The texture file format is 16
-bit half float EXR. Textures are 1k, 2k or 4k square.
+Materials are stored in a `textures` folder, with sub-folders for each material. Textures are 1k, 2k or 4k
+square. The texture file formats supported are:
+* 16 bit half float EXR, RGB channel names
+* 8 bit PNG, RGB channels
+* 8 bit JPEG, RGB channels
 
 ## Metal/roughness model
 
 This model is intended to match the common physically-based rendering (PBR) metal/roughness model used in
-visual effects and rendering tools such as Substance, Redshift, Maya, KeyShot, Three.js and Blender.
+visual effects and rendering tools such as Substance, Redshift, KeyShot, Three.js and Blender.
 
 Each material sub-folder contains the following files:
 
