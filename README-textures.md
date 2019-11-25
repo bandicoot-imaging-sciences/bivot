@@ -20,8 +20,8 @@ Each material sub-folder contains the following files (EXR format):
 
 1. `brdf-basecolor_cropf16.exr` - RGB basecolour in linear sRGB (scaled so that a white diffuse object is
    approximately 1.0, nominal 0 to 1 range, channel names RGB)
-2. `brdf-normals_cropf16.exr` - Normal map in object space (3 channel, unit vectors in XYZ, OpenGL convention,
-   scaled to 0 to 1 range, with 0.5 being zero-length component, channel names RGB)
+2. `brdf-normals_cropf16.exr` - Normal map in object space (3 channel, unit vectors in XYZ, DirectX
+   convention, scaled to 0 to 1 range, with 0.5 being zero-length component, channel names RGB)
 3. `brdf-roughness-metallic_cropf16.exr` - Three-channel specular image (channel names RGB):
     1. Channel 1: Specular roughness (0 to 1 range)
     2. Channel 2: Metallic (0 to 1 range)
