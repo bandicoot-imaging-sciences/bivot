@@ -80,9 +80,11 @@ function Bivot(options) {
   };
 
   let config = {
-    loadExr: true,
-    loadJpeg: false,
-    dual8Bit: false,
+    textureFormat: 'EXR', // Valid formats are 'JPG', 'PNG', 'EXR'.
+    loadExr: undefined, // Deprecated, use textureFormat instead.
+    loadPng: undefined, // Deprecated, use textureFormat instead.
+    loadJpeg: undefined, // Deprecated, use textureFormat instead.
+    dual8Bit: false, // Make 16-bit texture from two 8-bit PNG images. Only valid when textureFormat == 'PNG'.
     showInterface: true,
     mouseCamControlsZoom: true,
     mouseCamControlsRotate: true,
@@ -280,14 +282,19 @@ function Bivot(options) {
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
-          //console.assert(Math.abs(config.camTiltWithDeviceOrient) <= 1.0);
-          //console.assert(Math.abs(config.camTiltWithMousePos) <= 1.0);
-          //console.assert(Math.abs(config.lightTiltWithDeviceOrient) <= 1.0);
-          //console.assert(Math.abs(config.lightTiltWithMousePos) <= 1.0);
           // Make lightPosition a THREE.Vector3 rather than an array
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
           state.lightPosition.fromArray(lightPos);
+          // Backward compatibility for deprecated load* flags.
+          console.assert(((config.loadExr || 0) + (config.loadPng || 0) + (config.loadJpeg || 0)) <= 1);
+          if (config.loadExr) {
+            config.textureFormat = 'EXR';
+          } else if (config.loadPng) {
+            config.textureFormat = 'PNG';
+          } else if (config.loadJpeg) {
+            config.textureFormat = 'JPG';
+          }
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -361,16 +368,15 @@ function Bivot(options) {
   }
 
   function processUrlFlags() {
-    if (urlFlags.tex8bit == 1) {
-      config.loadExr = false;
-    }
+    // FIXME: Replace with URL API to reduce security risk.
+    // https://developer.mozilla.org/en-US/docs/Web/API/URL
     if (urlFlags.show != null)
     {
       state.scan = decodeURI(urlFlags.show);
     }
-    if (urlFlags.loadJpeg == 1)
+    if (urlFlags.hasOwnProperty('textureFormat'))
     {
-      config.loadJpeg = true;
+      config.textureFormat = urlFlags.textureFormat;
     }
 
   }
@@ -810,7 +816,7 @@ function Bivot(options) {
 
     brdfTextures = new Map();
 
-    if (config.loadExr) {
+    if (config.textureFormat == 'EXR') {
       loader = new THREE.EXRLoader(loadManager);
     } else{
       loader = new THREE.TextureLoader(loadManager);
@@ -843,7 +849,7 @@ function Bivot(options) {
           // However, for some surfaces with high-frequency normals or specular detials, LinearFilter causes
           // cause moire artifacts, so NearestFilter is used.
           if (config.linearFilter) {
-            if (config.loadExr) {
+            if (config.textureFormat == 'EXR') {
               // FIXME: Setting magFilter to LinearMipMapLinearFilter doesn't seem to work for float EXR textures.
               // WebGL complains: RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe
               // non-power-of-2 and have incompatible texture filtering. This can possibly be overcome by loading
@@ -866,7 +872,7 @@ function Bivot(options) {
           texture.name = key;
           // Flip from chart space back into camera view space.  The handling of texture.flipY inside Three.js
           // is reversed for PNG compared with EXR.
-          texture.flipY = (state.yFlip == config.loadExr);
+          texture.flipY = (state.yFlip == (config.textureFormat == 'EXR'));
           // EXRLoader sets the format incorrectly for single channel textures.
           texture.format = value.format;
           // iOS does not support WebGL2
@@ -945,22 +951,20 @@ function Bivot(options) {
     }
 
     let paths = new Map();
-    if (config.loadExr) {
+    console.assert(['JPG', 'PNG', 'EXR'].includes(config.textureFormat));
+    if (config.textureFormat == 'EXR') {
       paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
       paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
       paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
     }
-    else
-    {
-      if (config.loadJpeg) {
+    else if (config.textureFormat == 'JPG') {
         paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
         paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
         paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
-      } else {
+    } else {
         paths.set('diffuse', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
         paths.set('normals', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
         paths.set('specular', {path: tex_dir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
-      }
       if (config.dual8Bit) {
         paths.set('diffuse_low', {path: tex_dir + '/brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
         paths.set('normals_low', {path: tex_dir + '/brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
@@ -1055,7 +1059,7 @@ function Bivot(options) {
     uniforms.uThreeJsShader.value = state.threeJsShader;
     uniforms.uBrdfModel.value = state.brdfModel;
     uniforms.uBrdfVersion.value = state.brdfVersion;
-    uniforms.uLoadExr.value = config.loadExr;
+    uniforms.uLoadExr.value = (config.textureFormat == 'EXR');
     uniforms.uDual8Bit.value = config.dual8Bit;
     uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
     uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;

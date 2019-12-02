@@ -1,19 +1,20 @@
 {
-    "loadExr": true,
+    "textureFormat": "JPG",
     "dual8Bit": false,
     "showInterface": true,
     "mouseCamControlsZoom": true,
     "mouseCamControlsRotate": true,
     "mouseCamControlsPan": true,
-    "camTiltWithMousePos": 0.0,
-    "lightTiltWithMousePos": 1.0,
-    "camTiltWithDeviceOrient": 0.0,
-    "lightTiltWithDeviceOrient": 2.8,
     "initCamZ": 0.9,
     "minCamZ": 0.1,
     "maxCamZ": 2.0,
     "linearFilter": true,
     "gamma": 1.8,
+    "toneMapDarkness": 0.04,
+    "camTiltWithMousePos": 0.0,
+    "camTiltWithDeviceOrient": 0.0,
+    "lightTiltWithMousePos": 1.0,
+    "lightTiltWithDeviceOrient": 2.8,
     "initialState":
     {
         "exposure": 1.0,
@@ -33,7 +34,7 @@
         "lightNumber": 1,
         "lightSpacing": 0.5,
         "light45": false,
-        "scan": "2019-06-17 Mini kimono matte 2 v2mb",
+        "scan": "kimono 2k",
         "brdfVersion": 2,
         "meshRotateZDegrees": 0
     }
