@@ -25,7 +25,10 @@ Features:
 ## Adding a new dataset
 
 * Copy textures to a new folder `<texture-name>` inside the `bivot/textures`
-  folder. See `README-textures.md` for details on the texture folder format.
+  folder. 
+  * See `README-textures.md` for details on the texture folder format.
+  * You can download a working Bivot folder including a sample texture folder from
+    https://www.bandicootimaging.com.au/samples/bandicoot-sample-kimono-j.zip
 * Edit `bivot-renders.json` to add the new `<texture-name>` to the `scans` variable.
 
 ## Tilt control on iOS
