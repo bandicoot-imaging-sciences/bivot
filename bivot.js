@@ -180,6 +180,19 @@ function Bivot(options) {
     // After loading (or failing to load) the config, begin the initialisation sequence.
     processUrlFlags();
 
+    // Backward compatibility for deprecated load* flags.
+    console.assert(((config.loadExr || 0) + (config.loadPng || 0) + (config.loadJpeg || 0)) <= 1);
+    if (config.loadExr) {
+      config.textureFormat = 'EXR';
+    } else if (config.loadPng) {
+      config.textureFormat = 'PNG';
+    } else if (config.loadJpeg) {
+      config.textureFormat = 'JPG';
+    }
+    if (config.hasOwnProperty('textureFormat') && typeof config.textureFormat === 'string') {
+      config.textureFormat = config.textureFormat.toUpperCase();
+    }
+    
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -286,15 +299,6 @@ function Bivot(options) {
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
           state.lightPosition.fromArray(lightPos);
-          // Backward compatibility for deprecated load* flags.
-          console.assert(((config.loadExr || 0) + (config.loadPng || 0) + (config.loadJpeg || 0)) <= 1);
-          if (config.loadExr) {
-            config.textureFormat = 'EXR';
-          } else if (config.loadPng) {
-            config.textureFormat = 'PNG';
-          } else if (config.loadJpeg) {
-            config.textureFormat = 'JPG';
-          }
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -348,6 +352,8 @@ function Bivot(options) {
   };
 
   function getUrlFlags() {
+    // FIXME: Replace with URL API to reduce security risk.
+    // https://developer.mozilla.org/en-US/docs/Web/API/URL
     var dict = {};
 
     var flags = window.location.href.split('?')[1];
@@ -368,17 +374,22 @@ function Bivot(options) {
   }
 
   function processUrlFlags() {
-    // FIXME: Replace with URL API to reduce security risk.
-    // https://developer.mozilla.org/en-US/docs/Web/API/URL
-    if (urlFlags.show != null)
-    {
+    // WARNING: load* flags are deprecated.
+    if (urlFlags.hasOwnProperty('loadJpeg')) {
+      config.loadJpeg = (decodeURI(urlFlags.loadJpeg) == 1);
+    }
+    if (urlFlags.hasOwnProperty('loadPng')) {
+      config.loadPng = (decodeURI(urlFlags.loadPng) == 1);
+    }
+    if (urlFlags.hasOwnProperty('loadExr')) {
+      config.loadExr = (decodeURI(urlFlags.loadExr) == 1);
+    }
+    if (urlFlags.hasOwnProperty('show')) {
       state.scan = decodeURI(urlFlags.show);
     }
-    if (urlFlags.hasOwnProperty('textureFormat'))
-    {
-      config.textureFormat = urlFlags.textureFormat;
+    if (urlFlags.hasOwnProperty('textureFormat')) {
+      config.textureFormat = decodeURI(urlFlags.textureFormat);
     }
-
   }
 
   function initialiseOverlays() {
