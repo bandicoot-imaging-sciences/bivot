@@ -20,7 +20,6 @@ let uniforms = THREE.UniformsUtils.merge([
       'uBrdfVersion': {value: 2.0},
       'uLoadExr': {value: false},
       'uDual8Bit': {value: false},
-      'uNormalMatrix': {value: new THREE.Matrix3()},
       'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
       'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
       'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
@@ -76,7 +75,6 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform float uBrdfVersion;
     uniform bool  uDual8Bit;
     uniform bool  uLoadExr;
-    uniform mat3  uNormalMatrix;
 
     varying vec3 vNormal;
     varying vec3 vTangent;
@@ -182,8 +180,6 @@ let uniforms = THREE.UniformsUtils.merge([
         vec4 diffuseColor = diffuseSurface;
         float metalnessFactor = metallicSurface;
         float roughnessFactor = uRoughness * roughnessSurface;
-        #define normalMatrix uNormalMatrix
-        #define OBJECTSPACE_NORMALMAP
         #include <normal_fragment_begin>
         #include <normal_fragment_maps>
         #include <lights_physical_fragment>
@@ -200,7 +196,7 @@ let uniforms = THREE.UniformsUtils.merge([
       } else {
         vec3 macroNormal = normalize(vNormal);
         //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
-        vec3 mesoNormal = normalize(uNormalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
+        vec3 mesoNormal = normalize(normalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
         vec3 viewerDirection = normalize(vViewPosition);
         float ndv = max(dot(mesoNormal, viewerDirection), 0.0);
 

@@ -120,7 +120,6 @@ function Bivot(options) {
   let gammaCorrectPass = null;
   let mesh = null;
   let scene = new THREE.Scene();
-  let normalMatrix = new(THREE.Matrix4);
   let fov = null;
   let camera = null;
   let controls = null;
@@ -237,6 +236,7 @@ function Bivot(options) {
     let material = new THREE.ShaderMaterial({fragmentShader, vertexShader, uniforms, lights: true});
     material.defines = {
       USE_NORMALMAP: 1,
+      OBJECTSPACE_NORMALMAP: 1,
       // USE_TANGENT: 1,
     };
     material.extensions.derivatives = true;
@@ -1074,9 +1074,6 @@ function Bivot(options) {
     uniforms.uDual8Bit.value = config.dual8Bit;
     uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
     uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
-
-    normalMatrix.getInverse(camera.matrixWorld);
-    uniforms.uNormalMatrix.value.setFromMatrix4(normalMatrix);
 
     composer.render();
     stats.end();
