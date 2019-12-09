@@ -908,7 +908,13 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
+    // List of keys to merge between the 3 states.
     let keys = Object.keys(config.initialState);
+    // Remove lightPosition until we implement the special handling needed for JSON -> Vector3.
+    let lpIndex = keys.indexOf('lightPosition');
+    if (lpIndex > -1) {
+      keys.splice(lpIndex, 1);
+    }
     loadScanMetadata(tex_dir, keys);
   }
 
