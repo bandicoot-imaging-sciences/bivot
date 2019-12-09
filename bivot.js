@@ -143,6 +143,7 @@ function Bivot(options) {
   let loader = null;
   let firstRenderLoaded = false;
   let brdfTextures = null;
+  let gui = null;
 
   const canvas = document.getElementById(opts.canvasID);
   const overlay = document.getElementById(opts.overlayID);
@@ -766,7 +767,7 @@ function Bivot(options) {
   }
 
   function addControlPanel() {
-    const gui = new dat.GUI();
+    gui = new dat.GUI();
     gui.close();
     gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan).listen();
     gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
@@ -807,6 +808,15 @@ function Bivot(options) {
     document.body.appendChild(stats.dom);
   }
 
+  function updateControlPanel() {
+    for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
+      var key = Object.keys(gui.__folders)[i];
+      for (var j = 0; j < gui.__folders[key].__controllers.length; j++ )
+      {
+          gui.__folders[key].__controllers[j].updateDisplay();
+      }
+    }
+  }
 
   function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
     var objLoader = new THREE.OBJLoader(loadManager);
@@ -947,6 +957,7 @@ function Bivot(options) {
         }
 
         mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+        updateControlPanel();
 
         console.log('  BRDF model: ', state.brdfModel);
         console.log('  BRDF version: ', state.brdfVersion);
