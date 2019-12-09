@@ -908,7 +908,7 @@ function Bivot(options) {
     }
 
     let tex_dir = opts.texturePath + '/' + state.scan;
-    let keys = ['brdfModel', 'brdfVersion', 'yFlip', 'exposure', 'diffuse', 'specular', 'roughness', 'tint', 'ambient', 'bloom'];
+    let keys = Object.keys(config.initialState);
     loadScanMetadata(tex_dir, keys);
   }
 
