@@ -769,7 +769,7 @@ function Bivot(options) {
   function addControlPanel() {
     gui = new dat.GUI();
     gui.close();
-    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan).listen();
+    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
     gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
     let renderGui = gui.addFolder('Render');
     renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
