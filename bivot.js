@@ -97,8 +97,10 @@ function Bivot(options) {
     toneMapDarkness: 0.04,
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
+    camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
     lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
+    lightTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the light can tilt to.
     initialState: {},
   };
 
@@ -502,10 +504,11 @@ function Bivot(options) {
     controls.enablePan = config.mouseCamControlsPan;
     controls.minDistance = config.minCamZ;
     controls.maxDistance = config.maxCamZ;
-    controls.minPolarAngle = 0.1;
-    controls.maxPolarAngle = Math.PI - 0.1;
-    controls.minAzimuthAngle = -Math.PI/2 + 0.1;
-    controls.maxAzimuthAngle = +Math.PI/2 - 0.1;
+    let tiltLimitRadians = Math.PI*config.camTiltLimitDegrees/180;
+    controls.minPolarAngle = tiltLimitRadians;
+    controls.maxPolarAngle = Math.PI - tiltLimitRadians;
+    controls.minAzimuthAngle = -Math.PI/2 + tiltLimitRadians;
+    controls.maxAzimuthAngle = +Math.PI/2 - tiltLimitRadians;
     controls.screenSpacePanning = true;
 
     controls.addEventListener('change', requestRender);
@@ -671,10 +674,12 @@ function Bivot(options) {
     requestRender();
   }
 
-  function xy_to_3d_direction(xy, sensitivity) {
+  function xy_to_3d_direction(xy, sensitivity, elevationLimit) {
     // Convert input XY co-ords in range -1..1 and given sensitivity to a unit 3D direction vector
     let new_xy = new THREE.Vector2();
-    new_xy.copy(xy).multiplyScalar(sensitivity).clampLength(0.0, 1.0);
+    // Clamp 2D length to elevation angle limit.
+    let qLimit = Math.cos(Math.PI*elevationLimit/180);
+    new_xy.copy(xy).multiplyScalar(sensitivity).clampLength(0.0, qLimit);
     const z2 = 1 - new_xy.lengthSq();
     let new_z = 0.0;
     if (z2 > 0.0) {
@@ -686,12 +691,13 @@ function Bivot(options) {
 
   function updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
     if (lights && light_sensitivity != 0.0) {
-      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity));
+      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity, config.lightTiltLimitDegrees));
       updateLightingGrid();
     }
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
-      camera.position.copy(xy_to_3d_direction(xy, cam_sensitivity).multiplyScalar(camera.position.length()));
+      let camVec = xy_to_3d_direction(xy, cam_sensitivity, config.camTiltLimitDegrees);
+      camera.position.copy(camVec.multiplyScalar(camera.position.length()));
       requestRender();
     }
   }

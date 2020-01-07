@@ -1,5 +1,5 @@
 {
-    "textureFormat": "JPG",
+    "textureFormat": "PNG",
     "dual8Bit": false,
     "showInterface": true,
     "mouseCamControlsZoom": true,
@@ -13,8 +13,10 @@
     "toneMapDarkness": 0.04,
     "camTiltWithMousePos": 0.0,
     "camTiltWithDeviceOrient": 0.0,
+    "camTiltLimitDegrees": 25.0,
     "lightTiltWithMousePos": 1.0,
     "lightTiltWithDeviceOrient": 2.8,
+    "lightTiltLimitDegrees": 25.0,
     "initialState":
     {
         "exposure": 1.0,
@@ -33,8 +35,9 @@
         "lightPosition": [0, 0, 1],
         "lightNumber": 1,
         "lightSpacing": 0.5,
+        "lightType": "point",
         "light45": false,
-        "scan": "kimono 2k",
+        "scan": "2019-11-06_kimono_foc v020",
         "brdfVersion": 2,
         "meshRotateZDegrees": 0
     }
