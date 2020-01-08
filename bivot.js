@@ -754,8 +754,8 @@ function Bivot(options) {
     }
     const rots = getOrientation(event).sub(baselineTilt);
     const xy = new THREE.Vector2(
-      Math.asin(THREE.Math.degToRad(rots.y)),
-      Math.asin(THREE.Math.degToRad(rots.x))
+      Math.sin(THREE.Math.degToRad(rots.y)),
+      Math.sin(THREE.Math.degToRad(rots.x))
     );
     updateCamsAndLightsFromXY(xy, config.lightTiltWithDeviceOrient, config.camTiltWithDeviceOrient);
   }
