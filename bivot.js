@@ -59,6 +59,7 @@ function Bivot(options) {
     fxaa: true,
     bloom: 0.1,
     adaptiveToneMap: false,
+    toneMapDarkness: 0.04,
     gammaCorrect: true,
     threeJsShader: true,
     lightType: 'point',
@@ -94,7 +95,6 @@ function Bivot(options) {
     maxCamZ: 2.0,
     linearFilter: true,
     gamma: 1.8,
-    toneMapDarkness: 0.04,
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
     camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
