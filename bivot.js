@@ -46,7 +46,8 @@ function Bivot(options) {
   let opts = {...defaultOptions, ...options};
 
   // Initial state and configuration.  This will likely get overridden by the config file,
-  // but if the config can't be loaded, then these are the defaults.
+  // but if the config can't be loaded, then these are the defaults. Attributes with underscore prefixes are
+  // intended for internal use only, and should not be set in the configuration files.
   let state = {
     exposure: 1.0,
     focalLength: 85,
@@ -74,10 +75,10 @@ function Bivot(options) {
     brdfModel: 0,
     brdfVersion: 2,
     yFlip: true,
-    statusText: '',
     background: 0x05,
     meshRotateZDegrees: 0,
-    meshRotateZDegreesPrevious: 0
+    _meshRotateZDegreesPrevious: 0,
+    _statusText: ''
   };
 
   let config = {
@@ -91,10 +92,10 @@ function Bivot(options) {
     mouseCamControlsRotate: true,
     mouseCamControlsPan: true,
     initCamZ: 0.9,
-    minCamZ: 0.4,
-    maxCamZ: 2.0,
-    linearFilter: true,
-    gamma: 1.8,
+    minCamZ: 0.4, // Initial value, state is changed via controls object.
+    maxCamZ: 2.0, // Initial value, state is changed via controls object.
+    linearFilter: true, // Applied during texture loading.
+    gamma: 1.8, // Initial value, cannot be changed after renderer is initialised.
     camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
     camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
     camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
@@ -429,6 +430,10 @@ function Bivot(options) {
     renderer.gammaInput = true;
     renderer.gammaOutput = false;
     renderer.gammaFactor = config.gamma;
+    // The gamma cannot be changed after the renderer is initialised:
+    // https://github.com/mrdoob/three.js/issues/12831
+    // A work around would be to implement our own version of GammaCorrectionShader with an adjustable gamma
+    // uniform.
 
     composer = new THREE.EffectComposer(renderer);
 
@@ -547,7 +552,7 @@ function Bivot(options) {
   function setTiltWarning() {
     iOSVersionTimeoutID = setTimeout(() => {
       if (iOSVersionOrientBlocked) {
-        state.statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
+        state._statusText = 'To enable tilt control, please switch on Settings > Safari > Motion & Orientation Access and then reload this page.';
       }
       updateStatusTextDisplay();
     }, 1000);
@@ -557,7 +562,7 @@ function Bivot(options) {
   function clearTiltWarning() {
     clearTimeout(iOSVersionTimeoutID);
     window.removeEventListener('deviceorientation', clearTiltWarning);
-    state.statusText = '';
+    state._statusText = '';
     updateStatusTextDisplay();
   }
 
@@ -570,12 +575,12 @@ function Bivot(options) {
       requestButton.innerHTML = 'Tap to enable tilt control';
       requestButton.onclick = requestTiltPermission;
       subtitleTextElem.appendChild(requestButton);
-    } else if (state.statusText.length == 0) {
+    } else if (state._statusText.length == 0) {
       subtitleElem.style.display = 'none';
       subtitleTextElem.innerHTML = '';
     } else {
       subtitleElem.style.display = 'flex';
-      subtitleTextElem.innerHTML = state.statusText;
+      subtitleTextElem.innerHTML = state._statusText;
     }
   }
 
@@ -761,14 +766,14 @@ function Bivot(options) {
   }
 
   function newMeshRotation() {
-    state.meshRotateZDegreesPrevious = 0;
+    state._meshRotateZDegreesPrevious = 0;
     updateMeshRotation();
   }
 
   function updateMeshRotation() {
     if (mesh) {
-      mesh.rotateZ((state.meshRotateZDegrees - state.meshRotateZDegreesPrevious)*Math.PI/180);
-      state.meshRotateZDegreesPrevious = state.meshRotateZDegrees;
+      mesh.rotateZ((state.meshRotateZDegrees - state._meshRotateZDegreesPrevious)*Math.PI/180);
+      state._meshRotateZDegreesPrevious = state.meshRotateZDegrees;
     }
   }
 
@@ -777,6 +782,7 @@ function Bivot(options) {
     gui.close();
     gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
     gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
+
     let renderGui = gui.addFolder('Render');
     renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
     renderGui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
@@ -791,6 +797,7 @@ function Bivot(options) {
     renderGui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
     renderGui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
     renderGui.add(state, 'threeJsShader').onChange(requestRender);
+
     let lightingGui = gui.addFolder('Lighting');
     lightingGui.add(state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
@@ -802,13 +809,15 @@ function Bivot(options) {
     lightingGui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     lightingGui.add(state, 'light45').onChange(updateLightingGrid);
+
     let sceneGui = gui.addFolder('Scene');
     sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('obj rotate (deg)');
     sceneGui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
     sceneGui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
     sceneGui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
     sceneGui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
-
+    sceneGui.add(controls, 'minDistance', 0.1, 2.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(controls, 'maxDistance', 0.1, 4.0, 0.1).onChange(requestRender).listen();
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
