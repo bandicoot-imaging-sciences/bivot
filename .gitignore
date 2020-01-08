@@ -4,3 +4,5 @@
 /third_party
 /.vscode/.ropeproject
 *.bak
+/bivot-config.json
+/bivot-renders.json
