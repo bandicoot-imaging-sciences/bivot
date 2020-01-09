@@ -12,6 +12,8 @@ Features:
 * Clone the bivot repository.
 * Create a folder called `textures` inside the `bivot` folder, and put your texture folders inside that (see
   "Adding a new dataset" below).
+* Copy `bivot-config-sample.json` to `bivot-config.json` and modify to suit your needs.
+* Copy `bivot-renders-sample.json` to `bivot-renders.json` and modify to suit your needs.
 * Serve `index.html` using HTTPS to ensure tilt control works on mobile devices (see below).
 
 ## Use with local web server
