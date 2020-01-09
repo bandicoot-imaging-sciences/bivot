@@ -77,6 +77,12 @@ function Bivot(options) {
     yFlip: true,
     background: 0x05,
     meshRotateZDegrees: 0,
+    camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
+    camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
+    camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
+    lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
+    lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
+    lightTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the light can tilt to.
     _meshRotateZDegreesPrevious: 0,
     _statusText: ''
   };
@@ -96,12 +102,6 @@ function Bivot(options) {
     maxCamZ: 2.0, // Initial value, state is changed via controls object.
     linearFilter: true, // Applied during texture loading.
     gamma: 1.8, // Initial value, cannot be changed after renderer is initialised.
-    camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
-    camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
-    camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
-    lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
-    lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
-    lightTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the light can tilt to.
     initialState: {},
   };
 
@@ -200,7 +200,7 @@ function Bivot(options) {
     console.log('State:', state);
     console.log('Renders:', scans)
 
-    orientPermWanted = (config.camTiltWithDeviceOrient != 0.0 || config.lightTiltWithDeviceOrient != 0.0);
+    orientPermWanted = (state.camTiltWithDeviceOrient != 0.0 || state.lightTiltWithDeviceOrient != 0.0);
 
     initialiseOverlays();
     initialiseLighting();
@@ -509,14 +509,17 @@ function Bivot(options) {
     controls.enablePan = config.mouseCamControlsPan;
     controls.minDistance = config.minCamZ;
     controls.maxDistance = config.maxCamZ;
-    let tiltLimitRadians = Math.PI*config.camTiltLimitDegrees/180;
+    controls.screenSpacePanning = true;
+    updateCamTiltLimit();
+    controls.addEventListener('change', requestRender);
+  }
+
+  function updateCamTiltLimit() {
+    let tiltLimitRadians = Math.PI*state.camTiltLimitDegrees/180;
     controls.minPolarAngle = tiltLimitRadians;
     controls.maxPolarAngle = Math.PI - tiltLimitRadians;
     controls.minAzimuthAngle = -Math.PI/2 + tiltLimitRadians;
     controls.maxAzimuthAngle = +Math.PI/2 - tiltLimitRadians;
-    controls.screenSpacePanning = true;
-
-    controls.addEventListener('change', requestRender);
   }
 
   function detectGyro(event) {
@@ -696,12 +699,12 @@ function Bivot(options) {
 
   function updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
     if (lights && light_sensitivity != 0.0) {
-      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity, config.lightTiltLimitDegrees));
+      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity, state.lightTiltLimitDegrees));
       updateLightingGrid();
     }
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
-      let camVec = xy_to_3d_direction(xy, cam_sensitivity, config.camTiltLimitDegrees);
+      let camVec = xy_to_3d_direction(xy, cam_sensitivity, state.camTiltLimitDegrees);
       camera.position.copy(camVec.multiplyScalar(camera.position.length()));
       requestRender();
     }
@@ -714,7 +717,7 @@ function Bivot(options) {
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1
     );
-    updateCamsAndLightsFromXY(xy, config.lightTiltWithMousePos, config.camTiltWithMousePos);
+    updateCamsAndLightsFromXY(xy, state.lightTiltWithMousePos, state.camTiltWithMousePos);
   }
 
   function onDocumentMouseOut(event) {
@@ -724,7 +727,7 @@ function Bivot(options) {
       updateLightingGrid();
     }
 
-    if (camera && config.camTiltWithMousePos != 0.0) {
+    if (camera && state.camTiltWithMousePos != 0.0) {
       camera.position.set(0, 0, camera.position.length());
     }
   }
@@ -762,7 +765,7 @@ function Bivot(options) {
       Math.sin(THREE.Math.degToRad(rots.y)),
       Math.sin(THREE.Math.degToRad(rots.x))
     );
-    updateCamsAndLightsFromXY(xy, config.lightTiltWithDeviceOrient, config.camTiltWithDeviceOrient);
+    updateCamsAndLightsFromXY(xy, state.lightTiltWithDeviceOrient, state.camTiltWithDeviceOrient);
   }
 
   function newMeshRotation() {
@@ -818,6 +821,12 @@ function Bivot(options) {
     sceneGui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
     sceneGui.add(controls, 'minDistance', 0.1, 2.0, 0.1).onChange(requestRender).listen();
     sceneGui.add(controls, 'maxDistance', 0.1, 4.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(state, 'camTiltLimitDegrees', 0, 90, 1).onChange(updateCamTiltLimit).listen();
+    sceneGui.add(state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+    sceneGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(requestRender).listen();
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);

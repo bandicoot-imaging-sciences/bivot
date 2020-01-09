@@ -10,12 +10,6 @@
     "maxCamZ": 2.0,
     "linearFilter": true,
     "gamma": 1.8,
-    "camTiltWithMousePos": 0.0,
-    "camTiltWithDeviceOrient": 0.6,
-    "camTiltLimitDegrees": 25.0,
-    "lightTiltWithMousePos": 1.0,
-    "lightTiltWithDeviceOrient": 2.8,
-    "lightTiltLimitDegrees": 45.0,
     "initialState":
     {
         "exposure": 1.0,
@@ -45,6 +39,12 @@
         "brdfVersion": 2,
         "yFlip": true,
         "background": 5,
-        "meshRotateZDegrees": 0
-    }
+        "meshRotateZDegrees": 0,
+        "camTiltWithMousePos": 0.0,
+        "camTiltWithDeviceOrient": 0.6,
+        "camTiltLimitDegrees": 25.0,
+        "lightTiltWithMousePos": 1.0,
+        "lightTiltWithDeviceOrient": 2.8,
+        "lightTiltLimitDegrees": 45.0
+        }
 }
