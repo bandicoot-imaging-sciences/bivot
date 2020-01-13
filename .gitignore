@@ -6,3 +6,4 @@
 *.bak
 /bivot-config.json
 /bivot-renders.json
+/configs
