@@ -86,6 +86,7 @@ function Bivot(options) {
     // Speed of device baseline drift towards current tilt, when current tilt elevation is lower than
     // camTiltLimitDegrees or lightTiltLimitDegrees.
     tiltDriftSpeed: 1.0,
+    tiltZeroOnMouseOut: false, // If true, reset the tilt to zero when the mouse moves out of the window.
     _meshRotateZDegreesPrevious: 0,
     _statusText: ''
   };
@@ -725,12 +726,12 @@ function Bivot(options) {
 
   function onDocumentMouseOut(event) {
     // Reset light position and camera tilt if the mouse moves out.
-    if (lights) {
+    if (lights && state.tiltZeroOnMouseOut) {
       state.lightPosition.set(0, 0, 1);
       updateLightingGrid();
     }
 
-    if (camera && state.camTiltWithMousePos != 0.0) {
+    if (camera && state.tiltZeroOnMouseOut && state.camTiltWithMousePos != 0.0) {
       camera.position.set(0, 0, camera.position.length());
     }
   }
@@ -838,6 +839,7 @@ function Bivot(options) {
     sceneGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
     sceneGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(requestRender).listen();
     sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
+    sceneGui.add(state, 'tiltZeroOnMouseOut').listen();
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
