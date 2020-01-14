@@ -579,6 +579,7 @@ function Bivot(options) {
     if (orientPermWanted && orientPermNeeded && !orientPermObtained) {
       subtitleElem.style.display = 'flex';
       let requestButton = document.createElement('button');
+      requestButton.className = 'bivot-button';
       requestButton.innerHTML = 'Tap to enable tilt control';
       requestButton.onclick = requestTiltPermission;
       subtitleTextElem.appendChild(requestButton);
