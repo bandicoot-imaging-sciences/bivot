@@ -83,6 +83,9 @@ function Bivot(options) {
     lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
     lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
     lightTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the light can tilt to.
+    // Speed of device baseline drift towards current tilt, when current tilt elevation is lower than
+    // camTiltLimitDegrees or lightTiltLimitDegrees.
+    tiltDriftSpeed: 1.0,
     _meshRotateZDegreesPrevious: 0,
     _statusText: ''
   };
@@ -756,15 +759,22 @@ function Bivot(options) {
   }
 
   function onDeviceOrientation(event) {
+    const currentTilt = getOrientation(event);
     if (!baselineTiltSet) {
-      baselineTilt.copy(getOrientation(event));
+      baselineTilt.copy(currentTilt);
       baselineTiltSet = true;
     }
-    const rots = getOrientation(event).sub(baselineTilt);
+    const deltaTilt = currentTilt.clone().sub(baselineTilt);
     const xy = new THREE.Vector2(
-      Math.sin(THREE.Math.degToRad(rots.y)),
-      Math.sin(THREE.Math.degToRad(rots.x))
+      Math.sin(THREE.Math.degToRad(deltaTilt.y)),
+      Math.sin(THREE.Math.degToRad(deltaTilt.x))
     );
+    const elevationLimit = Math.max(state.camTiltLimitDegrees, state.lightTiltLimitDegrees);
+    const qLimit = Math.cos(THREE.Math.degToRad(elevationLimit));
+    if (xy.length() > qLimit) {
+      const surplus = xy.length() - xy.clone().clampLength(0.0, qLimit).length();
+      baselineTilt.addScaledVector(deltaTilt, surplus*state.tiltDriftSpeed);
+    }
     updateCamsAndLightsFromXY(xy, state.lightTiltWithDeviceOrient, state.camTiltWithDeviceOrient);
   }
 
@@ -827,6 +837,7 @@ function Bivot(options) {
     sceneGui.add(state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
     sceneGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
     sceneGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(requestRender).listen();
+    sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
 
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);

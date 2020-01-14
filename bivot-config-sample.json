@@ -45,6 +45,7 @@
         "camTiltLimitDegrees": 25.0,
         "lightTiltWithMousePos": 1.0,
         "lightTiltWithDeviceOrient": 2.8,
-        "lightTiltLimitDegrees": 45.0
+        "lightTiltLimitDegrees": 45.0,
+        "tiltDriftSpeed": 1.0
         }
 }
