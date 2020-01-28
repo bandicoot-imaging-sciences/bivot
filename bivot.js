@@ -71,8 +71,8 @@ function Bivot(options) {
     lightNumber: 1,
     lightSpacing: 0.5,
     light45: false,
-    scan: 'kimono-matte-v2',
-    brdfModel: 0,
+    scan: 'kimono 2k',
+    brdfModel: 1,
     brdfVersion: 2,
     yFlip: true,
     background: 0x05,
@@ -847,11 +847,13 @@ function Bivot(options) {
   }
 
   function updateControlPanel() {
-    for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
-      var key = Object.keys(gui.__folders)[i];
-      for (var j = 0; j < gui.__folders[key].__controllers.length; j++ )
-      {
-          gui.__folders[key].__controllers[j].updateDisplay();
+    if (gui) {
+      for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
+        var key = Object.keys(gui.__folders)[i];
+        for (var j = 0; j < gui.__folders[key].__controllers.length; j++ )
+        {
+            gui.__folders[key].__controllers[j].updateDisplay();
+        }
       }
     }
   }
@@ -975,7 +977,7 @@ function Bivot(options) {
 
         if (err == null) {
           const metadata = JSON.parse(data);
-          console.log('Loaded metata from ' + jsonFilename + ':', metadata);
+          console.log('Loaded metadata from ' + jsonFilename + ':', metadata);
 
           if (metadata.hasOwnProperty('state')) {
             scanState = metadata.state;
