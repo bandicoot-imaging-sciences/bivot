@@ -7,6 +7,16 @@ Features:
 * Control lighting using mouse position or device tilt.
 * Supports most modern browsers and devices (rendering is implemented using WebGL).
 
+## Embedding
+
+You can embed Bivot into a web page, if the viewer is hosted on another site, for example:
+```
+<iframe width="600" height ="400" scrolling="no" 
+  src="https://www.bandicootimaging.com.au/retail/biv_wallet/index.html">
+</iframe>
+
+```
+
 ## Install
 
 * Clone the bivot repository.
