@@ -32,6 +32,7 @@
         "areaLightHeight": 0.2,
         "lightMotion": "mouse",
         "lightPosition": [0, 0, 1],
+        "lightPositionOffset": [0, 0],
         "lightNumber": 1,
         "lightSpacing": 0.5,
         "light45": false,

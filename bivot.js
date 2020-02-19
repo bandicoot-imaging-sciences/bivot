@@ -68,6 +68,7 @@ function Bivot(options) {
     areaLightHeight: 0.2,
     lightMotion: 'mouse',
     lightPosition: new THREE.Vector3(0, 0, 1),
+    lightPositionOffset: new THREE.Vector2(0, 0), // Offset light controls by this vector.
     lightNumber: 1,
     lightSpacing: 0.5,
     light45: false,
@@ -87,6 +88,7 @@ function Bivot(options) {
     // camTiltLimitDegrees or lightTiltLimitDegrees.
     tiltDriftSpeed: 1.0,
     tiltZeroOnMouseOut: false, // If true, reset the tilt to zero when the mouse moves out of the window.
+    _camPositionOffset: new THREE.Vector2(0, 0),
     _meshRotateZDegreesPrevious: 0,
     _statusText: ''
   };
@@ -301,14 +303,21 @@ function Bivot(options) {
               config[k] = json_config[k];
             }
           }
+          
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
+          
           // Make lightPosition a THREE.Vector3 rather than an array
           const lightPos = state.lightPosition;
           state.lightPosition = new THREE.Vector3();
           state.lightPosition.fromArray(lightPos);
+
+          // Make lightPositionOffset a THREE.Vector2 rather than an array
+          const lightPosOff = state.lightPositionOffset;
+          state.lightPositionOffset = new THREE.Vector2();
+          state.lightPositionOffset.fromArray(lightPosOff);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -701,12 +710,12 @@ function Bivot(options) {
     requestRender();
   }
 
-  function xy_to_3d_direction(xy, sensitivity, elevationLimit) {
+  function xy_to_3d_direction(xy, offset, sensitivity, elevationLimit) {
     // Convert input XY co-ords in range -1..1 and given sensitivity to a unit 3D direction vector
     let new_xy = new THREE.Vector2();
     // Clamp 2D length to elevation angle limit.
     let qLimit = Math.cos(Math.PI*elevationLimit/180);
-    new_xy.copy(xy).multiplyScalar(sensitivity).clampLength(0.0, qLimit);
+    new_xy.copy(xy).add(offset).multiplyScalar(sensitivity).clampLength(0.0, qLimit);
     const z2 = 1 - new_xy.lengthSq();
     let new_z = 0.0;
     if (z2 > 0.0) {
@@ -718,12 +727,15 @@ function Bivot(options) {
 
   function updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
     if (lights && light_sensitivity != 0.0) {
-      state.lightPosition.copy(xy_to_3d_direction(xy, light_sensitivity, state.lightTiltLimitDegrees));
+      state.lightPosition.copy(
+        xy_to_3d_direction(xy, state.lightPositionOffset, light_sensitivity, state.lightTiltLimitDegrees)
+        );
       updateLightingGrid();
     }
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
-      let camVec = xy_to_3d_direction(xy, cam_sensitivity, state.camTiltLimitDegrees);
+      let camVec = xy_to_3d_direction(xy, state._camPositionOffset, cam_sensitivity, 
+        state.camTiltLimitDegrees);
       camera.position.copy(camVec.multiplyScalar(camera.position.length()));
       requestRender();
     }
@@ -742,7 +754,12 @@ function Bivot(options) {
   function onDocumentMouseOut(event) {
     // Reset light position and camera tilt if the mouse moves out.
     if (lights && state.tiltZeroOnMouseOut) {
-      state.lightPosition.set(0, 0, 1);
+      state.lightPosition.set(state.lightPositionOffset.x, state.lightPositionOffset.y, 1);
+      state.lightPosition.copy(
+        xy_to_3d_direction(new THREE.Vector2(0, 0), state.lightPositionOffset, state.lightTiltWithMousePos, 
+          state.lightTiltLimitDegrees)
+        );
+  
       updateLightingGrid();
     }
 
@@ -832,9 +849,11 @@ function Bivot(options) {
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-    lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light x');
-    lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('centre light y');
-    lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('centre light z');
+    lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
+    lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
+    lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
+    lightingGui.add(state.lightPositionOffset, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset x');
+    lightingGui.add(state.lightPositionOffset, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset y');
     lightingGui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
     lightingGui.add(state, 'light45').onChange(updateLightingGrid);
@@ -974,10 +993,15 @@ function Bivot(options) {
     let tex_dir = opts.texturePath + '/' + state.scan;
     // List of keys to merge between the 3 states.
     let keys = Object.keys(config.initialState);
-    // Remove lightPosition until we implement the special handling needed for JSON -> Vector3.
+    // Remove lightPosition and lightPositionOffset until we perform the special handling needed for JSON ->
+    // Vector2/3.
     let lpIndex = keys.indexOf('lightPosition');
     if (lpIndex > -1) {
       keys.splice(lpIndex, 1);
+    }
+    let lpoIndex = keys.indexOf('lightPositionOffset');
+    if (lpoIndex > -1) {
+      keys.splice(lpoIndex, 1);
     }
     loadScanMetadata(tex_dir, keys);
   }
