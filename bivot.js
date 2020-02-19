@@ -101,6 +101,9 @@ function Bivot(options) {
     mouseCamControlsZoom: true,
     mouseCamControlsRotate: true,
     mouseCamControlsPan: true,
+    // Enables touch control for phones and tablet, but disables scrolling the page for touch-drags inside the
+    // Bivot canvas.
+    useTouch: true, 
     initCamZ: 0.9,
     minCamZ: 0.4, // Initial value, state is changed via controls object.
     maxCamZ: 2.0, // Initial value, state is changed via controls object.
@@ -134,7 +137,7 @@ function Bivot(options) {
   let ambientLight = null;
   let exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
   let gyroDetected = false;
-  let touchDetected = false;
+  let touchDetected = detectTouch();
   let baselineTilt = new THREE.Vector2(0, 0);
   let baselineTiltSet = false;
   let lightMotionModes = [
@@ -222,7 +225,6 @@ function Bivot(options) {
       window.addEventListener('deviceorientation', detectGyro, false);
     }
     window.addEventListener('resize', requestRender);
-    window.addEventListener('touchstart', detectTouch, false);
   });
 
 
@@ -514,6 +516,12 @@ function Bivot(options) {
     controls.minDistance = config.minCamZ;
     controls.maxDistance = config.maxCamZ;
     controls.screenSpacePanning = true;
+    if (touchDetected) {
+      controls.zoomSpeed *= 0.25;
+      if (!config.useTouch) {
+        controls.dispose();
+      }
+    }
     updateCamTiltLimit();
     controls.addEventListener('change', requestRender);
   }
@@ -536,10 +544,10 @@ function Bivot(options) {
     }
   }
 
-  function detectTouch(event) {
-    touchDetected = true;
-    controls.zoomSpeed *= 0.25;
-    window.removeEventListener('touchstart', detectTouch, false);
+  function detectTouch() {
+    // Detect if primary control is touch (true for phones and tablets, false for touch-screen laptops with
+    // trackpad and mouse).
+    return window.matchMedia("(pointer: coarse)").matches;
   }
 
   function requestTiltPermission(event) {

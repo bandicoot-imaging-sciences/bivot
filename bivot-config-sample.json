@@ -5,6 +5,7 @@
     "mouseCamControlsZoom": true,
     "mouseCamControlsRotate": true,
     "mouseCamControlsPan": true,
+    "useTouch": true,
     "initCamZ": 0.9,
     "minCamZ": 0.1,
     "maxCamZ": 2.0,
