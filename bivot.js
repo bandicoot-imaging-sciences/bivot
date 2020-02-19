@@ -570,6 +570,12 @@ function Bivot(options) {
     clearTimeout(iOSVersionTimeoutID);
     window.removeEventListener('deviceorientation', clearTiltWarning);
     state._statusText = '';
+    // Permission may have been granted in another window running Bivot, e.g. another IFRAME. If so, we should
+    // have started to receive valid deviceorientation events, and gyroDetected will be true. This only works
+    // if detectGyro() was added as a deviceorientation event listener *before* clearTiltWarning().
+    if (gyroDetected) {
+      orientPermObtained = true;
+    }
     updateStatusTextDisplay();
   }
 
