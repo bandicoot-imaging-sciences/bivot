@@ -286,6 +286,20 @@ function Bivot(options) {
     });
   }
 
+  function arrayToVector(input, vecType) {
+    // If the input is an Array, convert it to the specified vector type (either THREE.Vector2 or
+    // THREE.Vector3).
+    console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3);
+    let output = null;
+    if (Array.isArray(input)) {
+      output = new vecType();
+      output.fromArray(input);
+    } else {
+      output = input;
+    }
+    return output;
+  }
+
   function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
@@ -309,15 +323,8 @@ function Bivot(options) {
             state[k] = config.initialState[k];
           }
           
-          // Make lightPosition a THREE.Vector3 rather than an array
-          const lightPos = state.lightPosition;
-          state.lightPosition = new THREE.Vector3();
-          state.lightPosition.fromArray(lightPos);
-
-          // Make lightPositionOffset a THREE.Vector2 rather than an array
-          const lightPosOff = state.lightPositionOffset;
-          state.lightPositionOffset = new THREE.Vector2();
-          state.lightPositionOffset.fromArray(lightPosOff);
+          state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
+          state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -993,16 +1000,6 @@ function Bivot(options) {
     let tex_dir = opts.texturePath + '/' + state.scan;
     // List of keys to merge between the 3 states.
     let keys = Object.keys(config.initialState);
-    // Remove lightPosition and lightPositionOffset until we perform the special handling needed for JSON ->
-    // Vector2/3.
-    let lpIndex = keys.indexOf('lightPosition');
-    if (lpIndex > -1) {
-      keys.splice(lpIndex, 1);
-    }
-    let lpoIndex = keys.indexOf('lightPositionOffset');
-    if (lpoIndex > -1) {
-      keys.splice(lpoIndex, 1);
-    }
     loadScanMetadata(tex_dir, keys);
   }
 
@@ -1035,6 +1032,8 @@ function Bivot(options) {
         }
 
         mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
+        state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
+        state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         updateControlPanel();
 
         console.log('  BRDF model: ', state.brdfModel);
