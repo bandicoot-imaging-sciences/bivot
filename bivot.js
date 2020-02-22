@@ -1021,25 +1021,26 @@ function Bivot(options) {
           if (metadata.hasOwnProperty('version')) {
             scanState.brdfVersion = metadata.version;
           }
-          if (metadata.hasOwnProperty('cameraPositionX')) {
-            camera.position.x = metadata.cameraPositionX;
-          }
-          if (metadata.hasOwnProperty('cameraPositionY')) {
-            camera.position.y = metadata.cameraPositionY;
-          }
-          if (metadata.hasOwnProperty('cameraPositionZ')) {
-            camera.position.z = metadata.cameraPositionZ;
-          }
-          if (metadata.hasOwnProperty('controlsMinDistance')) {
-            controls.minDistance = metadata.controlsMinDistance;
-          }
-          if (metadata.hasOwnProperty('controlsMaxDistance')) {
-            controls.maxDistance = metadata.controlsMaxDistance;
-          }
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
         }
-
+        
+        // Read valid bivot-renders.json parameters, if present
+        if (scans[state.scan].hasOwnProperty('cameraPositionX')) {
+          camera.position.x = scans[state.scan].cameraPositionX;
+        }
+        if (scans[state.scan].hasOwnProperty('cameraPositionY')) {
+          camera.position.y = scans[state.scan].cameraPositionY;
+        }
+        if (scans[state.scan].hasOwnProperty('cameraPositionZ')) {
+          camera.position.z = scans[state.scan].cameraPositionZ;
+        }
+        if (scans[state.scan].hasOwnProperty('controlsMinDistance')) {
+          controls.minDistance = scans[state.scan].controlsMinDistance;
+        }
+        if (scans[state.scan].hasOwnProperty('controlsMaxDistance')) {
+          controls.maxDistance = scans[state.scan].controlsMaxDistance;
+        }
         if (scans[state.scan].hasOwnProperty('state')) {
           bivotState = scans[state.scan].state;
         }
