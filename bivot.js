@@ -1014,11 +1014,27 @@ function Bivot(options) {
           const metadata = JSON.parse(data);
           console.log('Loaded metadata from ' + jsonFilename + ':', metadata);
 
+          // Read valid render.json parameters, if present
           if (metadata.hasOwnProperty('state')) {
             scanState = metadata.state;
           }
           if (metadata.hasOwnProperty('version')) {
             scanState.brdfVersion = metadata.version;
+          }
+          if (metadata.hasOwnProperty('cameraPositionX')) {
+            camera.position.x = metadata.cameraPositionX;
+          }
+          if (metadata.hasOwnProperty('cameraPositionY')) {
+            camera.position.y = metadata.cameraPositionY;
+          }
+          if (metadata.hasOwnProperty('cameraPositionZ')) {
+            camera.position.z = metadata.cameraPositionZ;
+          }
+          if (metadata.hasOwnProperty('controlsMinDistance')) {
+            controls.minDistance = metadata.controlsMinDistance;
+          }
+          if (metadata.hasOwnProperty('controlsMaxDistance')) {
+            controls.maxDistance = metadata.controlsMaxDistance;
           }
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
