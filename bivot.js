@@ -380,6 +380,7 @@ function Bivot(options) {
   function getUrlFlags() {
     // FIXME: Replace with URL API to reduce security risk.
     // https://developer.mozilla.org/en-US/docs/Web/API/URL
+    // Validate all untrusted input from query string before using.
     var dict = {};
 
     var flags = window.location.href.split('?')[1];
