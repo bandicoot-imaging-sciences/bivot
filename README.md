@@ -43,6 +43,27 @@ You can embed Bivot into a web page, if the viewer is hosted on another site, fo
     https://www.bandicootimaging.com.au/samples/bandicoot-sample-kimono-j.zip
 * Edit `bivot-renders.json` to add the new `<texture-name>` to the `scans` variable.
 
+## Configuration
+
+Bivot has several variables that control initialisation and display:
+
+1. `config`: Global configuration applied before the first texture is loaded
+2. `state`: Display state, set when each texture is loaded and updated using the viewer controls
+3. `camera`: Camera position, updated using the viewer controls
+4. `controls`: Additional camera controls
+
+See the source code for the default values for the parameters in each variable.
+
+Bivot has a multiple level configuration and control system:
+
+1. `Bivot()` function parameters: set file paths and HTML element IDs
+2. `bivot-config.json`: Intialise `config` and set the initial `state`
+3. `bivot-renders.json`: List of textures to render, with `camera`, `controls` and `state` parameters to use
+   when each texture is loaded
+4. `render.json`: subset of `state` parameters derived from texture generation
+5. Interface: slider controls for `state` and `camera`, only displayed if `config.showInterface` is `true`
+6. Mouse control and device tilt: control camera and light positions
+
 ## Tilt control on iOS
 
 In iOS 13, Safari allows web pages to ask the user for permission to access tilt controls. When Bivot detects

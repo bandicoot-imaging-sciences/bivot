@@ -7,9 +7,11 @@ supported:
 
 Materials are stored in a `textures` folder, with sub-folders for each material. Textures are 1k, 2k or 4k
 square. The texture file formats supported are:
-* 16 bit half float EXR, RGB channel names
 * 8 bit PNG, RGB channels
 * 8 bit JPEG, RGB channels
+* 16 bit half float stored in a pair of 8 bit PNG images, RGB channels (one image each for low 8 and high 8
+  bits)
+* 16 bit half float EXR, RGB channel names
 
 ## Metal/roughness model
 
@@ -26,10 +28,24 @@ Each material sub-folder contains the following files (EXR format):
     1. Channel 1: Specular roughness (0 to 1 range)
     2. Channel 2: Metallic (0 to 1 range)
     3. Channel 3: Empty
-4. `brdf-mesh.obj` - Mesh (decimated, distances are in metres)
+4. `brdf-mesh.obj` - Mesh in Wavefront OBJ format (decimated, distances are in metres)
 
-For PNG format, the filenames are in the form `brdf-basecolor_cropu8_hi.png`, and for JPEG format
-`brdf-basecolor_cropu8_hi.jpg`.
+For other file formats, the filenames are in the following forms:
+
+* 8 bit PNG: `brdf-basecolor_cropu8_hi.png`
+* 8 bit JPEG: `brdf-basecolor_cropu8_hi.jpg`
+* 16 bit PNG: `brdf-basecolor_cropu8_lo.png` and `brdf-basecolor_cropu8_hi.png`
+
+## Texture render settings
+
+Each texture folder also contains a `render.json` file, which includes key parameters from texture generation,
+including:
+
+* `brdfModel`: BRDF model (integer: `1` for metal/roughness)
+* `brdfVersion`: version of model (integer)
+* `illumL`: detected scan illumination level in sensor counts (float)
+* `yFlip`: y-axis flipping (boolean, default is `false`)
+
 
 # References
 
