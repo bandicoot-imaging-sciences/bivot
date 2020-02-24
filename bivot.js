@@ -288,9 +288,9 @@ function Bivot(options) {
   }
 
   function arrayToVector(input, vecType) {
-    // If the input is an Array, convert it to the specified vector type (either THREE.Vector2 or
-    // THREE.Vector3).
-    console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3);
+    // If the input is an Array, convert it to the specified vector type (either THREE.Vector2,
+    // THREE.Vector3, or THREE.Color).
+    console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3 || vecType == THREE.Color);
     let output = null;
     if (Array.isArray(input)) {
       output = new vecType();
@@ -305,6 +305,13 @@ function Bivot(options) {
   {
     getJSON(configFilename,
       function(err, data) {
+        // Load these keys as the corresponding vector type
+        let vector_keys = {
+          "lightColor": THREE.Color,
+          "lightPosition": THREE.Vector3,
+          "lightPositionOffset": THREE.Vector2
+        };
+
         if (err == null) {
           console.log('Loaded:', configFilename);
           var json_config = JSON.parse(data);
@@ -312,7 +319,12 @@ function Bivot(options) {
           for (var k in json_config) {
             if (k == 'initialState') {
               for (var s in json_config[k]) {
-                config.initialState[s] = json_config[k][s];
+                let t = vector_keys[s];
+                if (t == undefined) {
+                  config.initialState[s] = json_config[k][s];
+                } else {
+                  config.initialState[s] = arrayToVector(json_config[k][s], t);
+                }
               }
             } else {
               config[k] = json_config[k];
@@ -323,9 +335,6 @@ function Bivot(options) {
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
-
-          state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
-          state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -1032,7 +1041,7 @@ function Bivot(options) {
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
         }
-        
+
         // Read valid bivot-renders.json parameters, if present
         if (scans[state.scan].hasOwnProperty('cameraPositionX')) {
           camera.position.x = scans[state.scan].cameraPositionX;
