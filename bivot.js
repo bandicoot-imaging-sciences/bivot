@@ -1079,15 +1079,13 @@ function Bivot(options) {
           controls.maxDistance = scans[state.scan].controlsMaxDistance;
         }
         if (scans[state.scan].hasOwnProperty('state')) {
-          bivotState = scans[state.scan].state;
+          jsonToState(scans[state.scan].state, bivotState);
         }
         if (scans[state.scan].hasOwnProperty('version')) {
           bivotState.brdfVersion = scans[state.scan].version;
         }
 
         mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
-        state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
-        state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         updateControlPanel();
 
         console.log('  BRDF model: ', state.brdfModel);
