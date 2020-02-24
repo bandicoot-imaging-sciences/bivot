@@ -67,6 +67,7 @@ function Bivot(options) {
     areaLightWidth: 5.0,
     areaLightHeight: 0.2,
     lightMotion: 'mouse',
+    lightColor: new THREE.Color(1, 1, 1),
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightPositionOffset: new THREE.Vector2(0, 0), // Offset light controls by this vector.
     lightNumber: 1,
@@ -105,7 +106,7 @@ function Bivot(options) {
     mouseCamControlsPan: true,
     // Enables touch control for phones and tablet, but disables scrolling the page for touch-drags inside the
     // Bivot canvas.
-    useTouch: true, 
+    useTouch: true,
     initCamZ: 0.9,
     minCamZ: 0.4, // Initial value, state is changed via controls object.
     maxCamZ: 2.0, // Initial value, state is changed via controls object.
@@ -204,7 +205,7 @@ function Bivot(options) {
     if (config.hasOwnProperty('textureFormat') && typeof config.textureFormat === 'string') {
       config.textureFormat = config.textureFormat.toUpperCase();
     }
-    
+
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -317,12 +318,12 @@ function Bivot(options) {
               config[k] = json_config[k];
             }
           }
-          
+
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
-          
+
           state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
           state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         } else {
@@ -654,13 +655,16 @@ function Bivot(options) {
       scene.remove(lights45);
     }
     // Our custom shader assumes the light colour is grey or white.
-    const color = 0xFFFFFF;
+    const color =
+        Math.round(127.5 * state.lightColor.r) * 0x10000 +
+        Math.round(127.5 * state.lightColor.g) * 0x100 +
+        Math.round(127.5 * state.lightColor.b);
     const totalIntensity = 1;
     let totalLights = state.lightNumber**2;
     if (state.light45) {
       totalLights *= 2;
     }
-    const lightIntensity = totalIntensity/(totalLights);
+    const lightIntensity = totalIntensity/(totalLights) * 2; // Doubled because color is halved (to allow colour range 0..2)
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
 
@@ -741,7 +745,7 @@ function Bivot(options) {
     }
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
-      let camVec = xy_to_3d_direction(xy, state._camPositionOffset, cam_sensitivity, 
+      let camVec = xy_to_3d_direction(xy, state._camPositionOffset, cam_sensitivity,
         state.camTiltLimitDegrees);
       camera.position.copy(camVec.multiplyScalar(camera.position.length()));
       requestRender();
@@ -763,10 +767,10 @@ function Bivot(options) {
     if (lights && state.tiltZeroOnMouseOut) {
       state.lightPosition.set(state.lightPositionOffset.x, state.lightPositionOffset.y, 1);
       state.lightPosition.copy(
-        xy_to_3d_direction(new THREE.Vector2(0, 0), state.lightPositionOffset, state.lightTiltWithMousePos, 
+        xy_to_3d_direction(new THREE.Vector2(0, 0), state.lightPositionOffset, state.lightTiltWithMousePos,
           state.lightTiltLimitDegrees)
         );
-  
+
       updateLightingGrid();
     }
 
@@ -856,6 +860,9 @@ function Bivot(options) {
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
+    lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).name('light R');
+    lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).name('light G');
+    lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).name('light B');
     lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
     lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
     lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
