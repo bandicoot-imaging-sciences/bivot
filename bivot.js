@@ -135,7 +135,7 @@ function Bivot(options) {
   let fov = null;
   let camera = null;
   let controls = null;
-  let stats = new Stats();
+  let stats = null;
   let ambientLight = null;
   let exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
   let gyroDetected = false;
@@ -882,6 +882,7 @@ function Bivot(options) {
     sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
     sceneGui.add(state, 'tiltZeroOnMouseOut').listen();
 
+    stats = new Stats();
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
   }
@@ -1161,7 +1162,9 @@ function Bivot(options) {
   function render() {
     renderRequested = undefined;
 
-    stats.begin();
+    if (stats) {
+      stats.begin();
+    }
     if (resizeRendererToDisplaySize(renderer)) {
       const canvas = renderer.domElement;
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
@@ -1187,7 +1190,9 @@ function Bivot(options) {
     uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
 
     composer.render();
-    stats.end();
+    if (stats) {
+      stats.end();
+    }
   }
 
   // Request a render frame only if a request is not already pending.
