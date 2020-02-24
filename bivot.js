@@ -120,6 +120,13 @@ function Bivot(options) {
     config.initialState[k] = state[k];
   }
 
+  // Define the keys in state which are vectors, and their type
+  let vector_keys = {
+    "lightColor": THREE.Color,
+    "lightPosition": THREE.Vector3,
+    "lightPositionOffset": THREE.Vector2
+  };
+
   let scans = {};
   let renderRequested = false;
   let lights = null;
@@ -277,12 +284,25 @@ function Bivot(options) {
   function mergeDictKeys(keys, out, first, second, third)
   {
     keys.forEach(function(item, index) {
+      let t = vector_keys[item];
       if (item in first) {
-        out[item] = first[item];
+        if (t == undefined) {
+          out[item] = first[item];
+        } else {
+          out[item].copy(first[item]);
+        }
       } else if (item in second) {
-        out[item] = second[item];
+        if (t == undefined) {
+          out[item] = second[item];
+        } else {
+          out[item].copy(second[item]);
+        }
       } else if (item in third) {
-        out[item] = third[item];
+        if (t == undefined) {
+          out[item] = third[item];
+        } else {
+          out[item].copy(third[item]);
+        }
       }
     });
   }
@@ -301,16 +321,23 @@ function Bivot(options) {
     return output;
   }
 
+  function jsonToState(in_dict, out_dict)
+  {
+    for (var key in in_dict) {
+      let t = vector_keys[key];
+      if (t == undefined) {
+        out_dict[key] = in_dict[key];
+      } else {
+        out_dict[key] = arrayToVector(in_dict[key], t);
+      }
+    }
+  }
+
   function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
       function(err, data) {
         // Load these keys as the corresponding vector type
-        let vector_keys = {
-          "lightColor": THREE.Color,
-          "lightPosition": THREE.Vector3,
-          "lightPositionOffset": THREE.Vector2
-        };
 
         if (err == null) {
           console.log('Loaded:', configFilename);
@@ -318,14 +345,7 @@ function Bivot(options) {
           // Merge items from the JSON config file into the initial state
           for (var k in json_config) {
             if (k == 'initialState') {
-              for (var s in json_config[k]) {
-                let t = vector_keys[s];
-                if (t == undefined) {
-                  config.initialState[s] = json_config[k][s];
-                } else {
-                  config.initialState[s] = arrayToVector(json_config[k][s], t);
-                }
-              }
+              jsonToState(json_config[k], config.initialState);
             } else {
               config[k] = json_config[k];
             }
@@ -869,9 +889,9 @@ function Bivot(options) {
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-    lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).name('light R');
-    lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).name('light G');
-    lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).name('light B');
+    lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light R');
+    lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light G');
+    lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light B');
     lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
     lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
     lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
@@ -1033,7 +1053,7 @@ function Bivot(options) {
 
           // Read valid render.json parameters, if present
           if (metadata.hasOwnProperty('state')) {
-            scanState = metadata.state;
+            jsonToState(metadata.state, scanState);
           }
           if (metadata.hasOwnProperty('version')) {
             scanState.brdfVersion = metadata.version;
