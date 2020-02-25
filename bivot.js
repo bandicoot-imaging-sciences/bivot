@@ -278,6 +278,7 @@ function Bivot(options) {
     firstRenderLoaded = true;
     baselineTiltSet = false;
 
+    updateLightingGrid();
     requestRender();
   };
 
