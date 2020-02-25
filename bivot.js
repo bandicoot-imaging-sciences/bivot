@@ -67,6 +67,7 @@ function Bivot(options) {
     areaLightWidth: 5.0,
     areaLightHeight: 0.2,
     lightMotion: 'mouse',
+    lightColor: new THREE.Color(1, 1, 1),
     lightPosition: new THREE.Vector3(0, 0, 1),
     lightPositionOffset: new THREE.Vector2(0, 0), // Offset light controls by this vector.
     lightNumber: 1,
@@ -105,7 +106,7 @@ function Bivot(options) {
     mouseCamControlsPan: true,
     // Enables touch control for phones and tablet, but disables scrolling the page for touch-drags inside the
     // Bivot canvas.
-    useTouch: true, 
+    useTouch: true,
     initCamZ: 0.9,
     minCamZ: 0.4, // Initial value, state is changed via controls object.
     maxCamZ: 2.0, // Initial value, state is changed via controls object.
@@ -118,6 +119,13 @@ function Bivot(options) {
   for (var k in state) {
     config.initialState[k] = state[k];
   }
+
+  // Define the keys in state which are vectors, and their type
+  let vector_keys = {
+    "lightColor": THREE.Color,
+    "lightPosition": THREE.Vector3,
+    "lightPositionOffset": THREE.Vector2
+  };
 
   let scans = {};
   let renderRequested = false;
@@ -135,7 +143,7 @@ function Bivot(options) {
   let fov = null;
   let camera = null;
   let controls = null;
-  let stats = new Stats();
+  let stats = null;
   let ambientLight = null;
   let exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
   let gyroDetected = false;
@@ -204,7 +212,7 @@ function Bivot(options) {
     if (config.hasOwnProperty('textureFormat') && typeof config.textureFormat === 'string') {
       config.textureFormat = config.textureFormat.toUpperCase();
     }
-    
+
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -270,26 +278,40 @@ function Bivot(options) {
     firstRenderLoaded = true;
     baselineTiltSet = false;
 
+    updateLightingGrid();
     requestRender();
   };
 
   function mergeDictKeys(keys, out, first, second, third)
   {
     keys.forEach(function(item, index) {
+      let t = vector_keys[item];
       if (item in first) {
-        out[item] = first[item];
+        if (t == undefined) {
+          out[item] = first[item];
+        } else {
+          out[item].copy(first[item]);
+        }
       } else if (item in second) {
-        out[item] = second[item];
+        if (t == undefined) {
+          out[item] = second[item];
+        } else {
+          out[item].copy(second[item]);
+        }
       } else if (item in third) {
-        out[item] = third[item];
+        if (t == undefined) {
+          out[item] = third[item];
+        } else {
+          out[item].copy(third[item]);
+        }
       }
     });
   }
 
   function arrayToVector(input, vecType) {
-    // If the input is an Array, convert it to the specified vector type (either THREE.Vector2 or
-    // THREE.Vector3).
-    console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3);
+    // If the input is an Array, convert it to the specified vector type (either THREE.Vector2,
+    // THREE.Vector3, or THREE.Color).
+    console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3 || vecType == THREE.Color);
     let output = null;
     if (Array.isArray(input)) {
       output = new vecType();
@@ -300,31 +322,40 @@ function Bivot(options) {
     return output;
   }
 
+  function jsonToState(in_dict, out_dict)
+  {
+    for (var key in in_dict) {
+      let t = vector_keys[key];
+      if (t == undefined) {
+        out_dict[key] = in_dict[key];
+      } else {
+        out_dict[key] = arrayToVector(in_dict[key], t);
+      }
+    }
+  }
+
   function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
       function(err, data) {
+        // Load these keys as the corresponding vector type
+
         if (err == null) {
           console.log('Loaded:', configFilename);
           var json_config = JSON.parse(data);
           // Merge items from the JSON config file into the initial state
           for (var k in json_config) {
             if (k == 'initialState') {
-              for (var s in json_config[k]) {
-                config.initialState[s] = json_config[k][s];
-              }
+              jsonToState(json_config[k], config.initialState);
             } else {
               config[k] = json_config[k];
             }
           }
-          
+
           // Store initial state from JSON into the live state
           for (var k in config.initialState) {
             state[k] = config.initialState[k];
           }
-          
-          state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
-          state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
@@ -655,13 +686,16 @@ function Bivot(options) {
       scene.remove(lights45);
     }
     // Our custom shader assumes the light colour is grey or white.
-    const color = 0xFFFFFF;
+    const color =
+        Math.round(127.5 * state.lightColor.r) * 0x10000 +
+        Math.round(127.5 * state.lightColor.g) * 0x100 +
+        Math.round(127.5 * state.lightColor.b);
     const totalIntensity = 1;
     let totalLights = state.lightNumber**2;
     if (state.light45) {
       totalLights *= 2;
     }
-    const lightIntensity = totalIntensity/(totalLights);
+    const lightIntensity = totalIntensity/(totalLights) * 2; // Doubled because color is halved (to allow colour range 0..2)
     const distanceLimit = 10;
     const decay = 2; // Set this to 2.0 for physical light distance falloff.
 
@@ -742,7 +776,7 @@ function Bivot(options) {
     }
     if (camera && cam_sensitivity != 0.0) {
       // Retain existing camera distance
-      let camVec = xy_to_3d_direction(xy, state._camPositionOffset, cam_sensitivity, 
+      let camVec = xy_to_3d_direction(xy, state._camPositionOffset, cam_sensitivity,
         state.camTiltLimitDegrees);
       camera.position.copy(camVec.multiplyScalar(camera.position.length()));
       requestRender();
@@ -764,10 +798,10 @@ function Bivot(options) {
     if (lights && state.tiltZeroOnMouseOut) {
       state.lightPosition.set(state.lightPositionOffset.x, state.lightPositionOffset.y, 1);
       state.lightPosition.copy(
-        xy_to_3d_direction(new THREE.Vector2(0, 0), state.lightPositionOffset, state.lightTiltWithMousePos, 
+        xy_to_3d_direction(new THREE.Vector2(0, 0), state.lightPositionOffset, state.lightTiltWithMousePos,
           state.lightTiltLimitDegrees)
         );
-  
+
       updateLightingGrid();
     }
 
@@ -857,6 +891,9 @@ function Bivot(options) {
     lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
     lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
+    lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light R');
+    lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light G');
+    lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light B');
     lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
     lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
     lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
@@ -883,6 +920,7 @@ function Bivot(options) {
     sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
     sceneGui.add(state, 'tiltZeroOnMouseOut').listen();
 
+    stats = new Stats();
     stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
     document.body.appendChild(stats.dom);
   }
@@ -1017,7 +1055,7 @@ function Bivot(options) {
 
           // Read valid render.json parameters, if present
           if (metadata.hasOwnProperty('state')) {
-            scanState = metadata.state;
+            jsonToState(metadata.state, scanState);
           }
           if (metadata.hasOwnProperty('version')) {
             scanState.brdfVersion = metadata.version;
@@ -1025,7 +1063,7 @@ function Bivot(options) {
         } else {
           console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
         }
-        
+
         // Read valid bivot-renders.json parameters, if present
         if (scans[state.scan].hasOwnProperty('cameraPositionX')) {
           camera.position.x = scans[state.scan].cameraPositionX;
@@ -1043,15 +1081,13 @@ function Bivot(options) {
           controls.maxDistance = scans[state.scan].controlsMaxDistance;
         }
         if (scans[state.scan].hasOwnProperty('state')) {
-          bivotState = scans[state.scan].state;
+          jsonToState(scans[state.scan].state, bivotState);
         }
         if (scans[state.scan].hasOwnProperty('version')) {
           bivotState.brdfVersion = scans[state.scan].version;
         }
 
         mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
-        state.lightPosition = arrayToVector(state.lightPosition, THREE.Vector3);
-        state.lightPositionOffset = arrayToVector(state.lightPositionOffset, THREE.Vector2);
         updateControlPanel();
 
         console.log('  BRDF model: ', state.brdfModel);
@@ -1162,7 +1198,9 @@ function Bivot(options) {
   function render() {
     renderRequested = undefined;
 
-    stats.begin();
+    if (stats) {
+      stats.begin();
+    }
     if (resizeRendererToDisplaySize(renderer)) {
       const canvas = renderer.domElement;
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
@@ -1188,7 +1226,9 @@ function Bivot(options) {
     uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
 
     composer.render();
-    stats.end();
+    if (stats) {
+      stats.end();
+    }
   }
 
   // Request a render frame only if a request is not already pending.
