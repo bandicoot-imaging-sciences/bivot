@@ -115,17 +115,15 @@ function Bivot(options) {
     initialState: {},
   };
 
-  // Store initial state in the config
-  for (var k in state) {
-    config.initialState[k] = state[k];
-  }
-
   // Define the keys in state which are vectors, and their type
   let vector_keys = {
     "lightColor": THREE.Color,
     "lightPosition": THREE.Vector3,
     "lightPositionOffset": THREE.Vector2
   };
+
+  // Store initial state in the config
+  copy_states_clone_vectors(state, config.initialState);
 
   let scans = {};
   let renderRequested = false;
@@ -334,12 +332,22 @@ function Bivot(options) {
     }
   }
 
+  function copy_states_clone_vectors(src, dst) {
+    for (var k in src) {
+      let t = vector_keys[k];
+      if (t == undefined) {
+        dst[k] = src[k];
+      } else {
+        // Ensure vector is copied as a new object
+        dst[k] = src[k].clone();
+      }
+    }
+  }
+
   function loadConfig(configFilename, renderFilename, configDone)
   {
     getJSON(configFilename,
       function(err, data) {
-        // Load these keys as the corresponding vector type
-
         if (err == null) {
           console.log('Loaded:', configFilename);
           var json_config = JSON.parse(data);
@@ -352,10 +360,8 @@ function Bivot(options) {
             }
           }
 
-          // Store initial state from JSON into the live state
-          for (var k in config.initialState) {
-            state[k] = config.initialState[k];
-          }
+          // Copy initial state from JSON into the live state
+          copy_states_clone_vectors(config.initialState, state);
         } else {
           console.log('Failed to load ' + configFilename + ': ' + err);
         }
