@@ -69,7 +69,8 @@ function Bivot(options) {
     lightMotion: 'mouse',
     lightColor: new THREE.Color(1, 1, 1),
     lightPosition: new THREE.Vector3(0, 0, 1),
-    lightPositionOffset: new THREE.Vector2(0, 0), // Offset light controls by this vector.
+    // Offset light controls by this vector. In screen co-ords: x-axis points right and y-axis points up.
+    lightPositionOffset: new THREE.Vector2(0, 0),
     lightNumber: 1,
     lightSpacing: 0.5,
     light45: false,
