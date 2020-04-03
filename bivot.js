@@ -36,12 +36,20 @@ Parts adapted from Threejsfundamentals:
     texturePath: relative or absolute URL for the folder containing the texture folders
 */
 function Bivot(options) {
+  const controlModes = {
+      FULL: 'full',
+      QA: 'qa',
+      MANAGE: 'manage',
+      NONE: 'none'
+  }
+
   let defaultOptions = {
     canvasID: 'bivot-canvas',
     overlayID: 'bivot-overlay',
     configPath: 'bivot-config.json',
     renderPath: 'bivot-renders.json',
-    texturePath: 'textures'
+    texturePath: 'textures',
+    controlMode: controlModes.FULL
   }
   let opts = {...defaultOptions, ...options};
 
@@ -162,7 +170,8 @@ function Bivot(options) {
   let loader = null;
   let firstRenderLoaded = false;
   let brdfTextures = null;
-  let gui = null;
+  let guiL = null;
+  let guiR = null;
 
   const canvas = document.getElementById(opts.canvasID);
   const overlay = document.getElementById(opts.overlayID);
@@ -194,6 +203,10 @@ function Bivot(options) {
   }
 
   let urlFlags = getUrlFlags(); // Get options from URL
+
+  if (Object.values(controlModes).indexOf(urlFlags.controls) > -1) {
+      opts.controlMode = urlFlags.controls;
+  }
 
   loadConfig(opts.configPath, opts.renderPath, function () {
     // After loading (or failing to load) the config, begin the initialisation sequence.
@@ -329,6 +342,20 @@ function Bivot(options) {
         out_dict[key] = in_dict[key];
       } else {
         out_dict[key] = arrayToVector(in_dict[key], t);
+      }
+    }
+  }
+
+  function stateToJson(in_dict, out_dict, fields_filter)
+  {
+    for (var key in in_dict) {
+      if (fields_filter.indexOf(key) > -1) {
+        let t = vector_keys[key];
+        if (t == undefined) {
+          out_dict[key] = in_dict[key];
+        } else {
+          out_dict[key] = Object.values(in_dict[key]);
+        }
       }
     }
   }
@@ -872,67 +899,177 @@ function Bivot(options) {
     }
   }
 
-  function addControlPanel() {
-    gui = new dat.GUI();
-    gui.close();
-    gui.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
-    gui.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
-
-    let renderGui = gui.addFolder('Render');
-    renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
-    renderGui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
-    renderGui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
-    renderGui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
-    renderGui.add(state, 'tint').onChange(requestRender).listen();
-    renderGui.add(state, 'fresnel').onChange(requestRender).listen();
-    renderGui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
-    renderGui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
-    renderGui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
-    renderGui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
-    renderGui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
-    renderGui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
-    renderGui.add(state, 'threeJsShader').onChange(requestRender);
-
-    let lightingGui = gui.addFolder('Lighting');
-    lightingGui.add(state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
-    lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
-    lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
-    lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-    lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light R');
-    lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light G');
-    lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light B');
-    lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
-    lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
-    lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
-    lightingGui.add(state.lightPositionOffset, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset x');
-    lightingGui.add(state.lightPositionOffset, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset y');
-    lightingGui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
-    lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
-    lightingGui.add(state, 'light45').onChange(updateLightingGrid);
-
-    let sceneGui = gui.addFolder('Scene');
-    sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('obj rotate (deg)');
-    sceneGui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
-    sceneGui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
-    sceneGui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
-    sceneGui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
-    sceneGui.add(controls, 'minDistance', 0.1, 2.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(controls, 'maxDistance', 0.1, 4.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(state, 'camTiltLimitDegrees', 0, 90, 1).onChange(updateCamTiltLimit).listen();
-    sceneGui.add(state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
-    sceneGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(requestRender).listen();
-    sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
-    sceneGui.add(state, 'tiltZeroOnMouseOut').listen();
-
-    stats = new Stats();
-    stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
-    document.body.appendChild(stats.dom);
+  function guiStateReset() {
+    console.log('Reset state');
   }
 
-  function updateControlPanel() {
+  function guiStateSave() {
+    var saveStateFields = [
+      'exposure',
+      'meshRotateZDegrees',
+      'background',
+      'roughness',
+      'bloom',
+      'lightType',
+      'areaLightWidth',
+      'areaLightHeight',
+      'lightPositionOffset',
+      'lightColor',
+      'ambient',
+      'camTiltWithMousePos',
+      'camTiltWithDeviceOrient',
+      'camTiltLimitDegrees',
+      'lightTiltWithMousePos',
+      'lightTiltWithDeviceOrient',
+      'lightTiltLimitDegrees'
+    ];
+    var saveConfig = {
+      'cameraPositionZ': camera.position['z'],
+      'controlsMinDistance': controls['minDistance'],
+      'controlsMaxDistance': controls['maxDistance'],
+      'state': {}
+    };
+    stateToJson(state, saveConfig['state'], saveStateFields);
+    var fullJson = {'renders': {[state['scan']]: saveConfig}};
+    var filename = 'bivot-renders-' + state['scan'] + '.json'
+    triggerDownload(filename, JSON.stringify(fullJson, null, 2));
+  }
+
+  function triggerDownload(filename, content) {
+    var uriContent = "data:text/plain," + encodeURIComponent(content);
+    var blob = new Blob([content], {type: "text/plain"});
+
+    var link = document.createElement("a");
+    link.download = filename;
+    link.href = URL.createObjectURL(blob);
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function addControlPanel() {
+    switch (opts.controlMode) {
+      case controlModes.FULL:
+        guiR = new dat.GUI();
+        guiR.close();
+        guiR.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
+        guiR.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
+
+        var renderGui = guiR.addFolder('Render');
+        renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
+        renderGui.add(state, 'diffuse', 0, 2, 0.01).onChange(requestRender).listen();
+        renderGui.add(state, 'specular', 0, 2, 0.01).onChange(requestRender).listen();
+        renderGui.add(state, 'roughness', 0, 2, 0.01).onChange(requestRender).listen();
+        renderGui.add(state, 'tint').onChange(requestRender).listen();
+        renderGui.add(state, 'fresnel').onChange(requestRender).listen();
+        renderGui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(requestRender).name('ambient').listen();
+        renderGui.add(state, 'fxaa').onChange(function(value){setFxaaResolution(); requestRender();}).listen();
+        renderGui.add(state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
+        renderGui.add(state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; requestRender();}).listen();
+        renderGui.add(state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); requestRender();}).listen();
+        renderGui.add(state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); requestRender();}).listen();
+        renderGui.add(state, 'threeJsShader').onChange(requestRender);
+
+        var lightingGui = guiR.addFolder('Lighting');
+        lightingGui.add(state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
+        lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
+        lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
+        lightingGui.add(state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
+        lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light R');
+        lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light G');
+        lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light B');
+        lightingGui.add(state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
+        lightingGui.add(state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
+        lightingGui.add(state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
+        lightingGui.add(state.lightPositionOffset, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset x');
+        lightingGui.add(state.lightPositionOffset, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset y');
+        lightingGui.add(state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
+        lightingGui.add(state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
+        lightingGui.add(state, 'light45').onChange(updateLightingGrid);
+
+        var sceneGui = guiR.addFolder('Scene');
+        sceneGui.add(state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('obj rotate (deg)');
+        sceneGui.add(state, 'focalLength', 30, 200, 10).onChange(updateFOV);
+        sceneGui.add(camera.position, 'x', -1, 1, 0.01).onChange(requestRender).listen().name('camera.x');
+        sceneGui.add(camera.position, 'y', -1, 1, 0.01).onChange(requestRender).listen().name('camera.y');
+        sceneGui.add(camera.position, 'z', 0.1, 2, 0.01).onChange(requestRender).listen().name('camera.z');
+        sceneGui.add(controls, 'minDistance', 0.1, 2.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(controls, 'maxDistance', 0.1, 4.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(state, 'camTiltLimitDegrees', 0, 90, 1).onChange(updateCamTiltLimit).listen();
+        sceneGui.add(state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(requestRender).listen();
+        sceneGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(requestRender).listen();
+        sceneGui.add(state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
+        sceneGui.add(state, 'tiltZeroOnMouseOut').listen();
+
+        stats = new Stats();
+        stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
+        document.body.appendChild(stats.dom);
+
+        break;
+
+      case controlModes.QA:
+      case controlModes.MANAGE:
+        guiL = new dat.GUI({ autoPlace: false });
+        var guiLContainer = document.getElementById('gui-L-container');
+        guiLContainer.appendChild(guiL.domElement);
+
+        var generalGui = guiL.addFolder('General');
+        generalGui.add(state, 'exposure', 0, 4, 0.1).name('Exposure').onChange(requestRender).listen();
+        generalGui.add(state, 'meshRotateZDegrees', -180, 180).name('Rotation (deg)').onChange(updateMeshRotation);
+
+        var renderGui = guiL.addFolder('Render');
+        renderGui.add(state, 'background', 0, 255, 1).name('Background level').onChange(updateBackground);
+        renderGui.add(state, 'roughness', 0, 2, 0.01).name('Roughness adjust').onChange(requestRender).listen();
+        renderGui.add(state, 'bloom', 0, 2, 0.01).name('Bloom amount').onChange(function(value){bloomPass.strength = Number(value); requestRender();}).listen();
+        renderGui.add(ambientLight, 'intensity', 0, 20, 0.1).name('Ambient level').onChange(requestRender).listen();
+
+        var cameraGui = guiL.addFolder('Camera');
+        cameraGui.add(camera.position, 'z', 0.1, 2, 0.01).name('Initial height (m)').onChange(requestRender).listen();
+        cameraGui.add(controls, 'minDistance', 0.1, 2.0, 0.1).name('Min height (m)').onChange(requestRender).listen();
+        cameraGui.add(controls, 'maxDistance', 0.1, 4.0, 0.1).name('Max height (m)').onChange(requestRender).listen();
+        cameraGui.add(state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).name('Mouse sensitivity').onChange(requestRender).listen();
+        cameraGui.add(state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).name('Tilt sensitivity').onChange(requestRender).listen();
+        cameraGui.add(state, 'camTiltLimitDegrees', 0, 90, 1).name('Tilt limit (deg)').onChange(updateCamTiltLimit).listen();
+
+        guiR = new dat.GUI();
+        var lightingGui = guiR.addFolder('Lighting');
+        lightingGui.add(state, 'lightType', lightTypeModes).name('Light type').onChange(updateLightingGrid);
+        lightingGui.add(state, 'areaLightWidth', 0.1, 10, 0.1).name('Area light width').onChange(updateLightingGrid);
+        lightingGui.add(state, 'areaLightHeight', 0.1, 10, 0.1).name('Area light height').onChange(updateLightingGrid);
+        lightingGui.add(state.lightColor, 'r', 0, 2, 0.01).name('Light color R').onChange(updateLightingGrid).listen();
+        lightingGui.add(state.lightColor, 'g', 0, 2, 0.01).name('Light color G').onChange(updateLightingGrid).listen();
+        lightingGui.add(state.lightColor, 'b', 0, 2, 0.01).name('Light color B').onChange(updateLightingGrid).listen();
+        lightingGui.add(state.lightPositionOffset, 'x', -1, 1, 0.01).name('Light offset X').onChange(updateLightingGrid).listen();
+        lightingGui.add(state.lightPositionOffset, 'y', -1, 1, 0.01).name('Light offset Y').onChange(updateLightingGrid).listen();
+        lightingGui.add(state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).name('Mouse sensitivity').onChange(requestRender).listen();
+        lightingGui.add(state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).name('Tilt sensitivity').onChange(requestRender).listen();
+        lightingGui.add(state, 'lightTiltLimitDegrees', 0, 90, 1).name('Tilt limit (deg)').onChange(requestRender).listen();
+
+        var adminGui = guiR.addFolder('Admin');
+        adminGui.add({reset: guiStateReset}, 'reset').name('Reset state');
+        adminGui.add({save: guiStateSave}, 'save').name('Save state');
+
+        generalGui.open();
+        renderGui.open();
+        cameraGui.open();
+        lightingGui.open();
+        adminGui.open();
+        guiL.open();
+        guiR.open();
+
+        break;
+
+      case controlModes.NONE:
+      default:
+        break;
+    }
+  }
+
+  function updateControlPanel(gui) {
     if (gui) {
       for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
         var key = Object.keys(gui.__folders)[i];
@@ -1095,7 +1232,8 @@ function Bivot(options) {
         }
 
         mergeDictKeys(keys, state, bivotState, scanState, config.initialState);
-        updateControlPanel();
+        updateControlPanel(guiL);
+        updateControlPanel(guiR);
 
         console.log('  BRDF model: ', state.brdfModel);
         console.log('  BRDF version: ', state.brdfVersion);
