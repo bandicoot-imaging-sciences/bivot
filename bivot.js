@@ -348,14 +348,14 @@ function Bivot(options) {
 
   function stateToJson(in_dict, out_dict, fields_filter)
   {
-    for (var key in in_dict) {
-      if (fields_filter.indexOf(key) > -1) {
-        let t = vector_keys[key];
-        if (t == undefined) {
-          out_dict[key] = in_dict[key];
-        } else {
-          out_dict[key] = Object.values(in_dict[key]);
-        }
+    fields_filter
+    for (var i = 0; i < fields_filter.length; i++) {
+      let key = fields_filter[i]
+      let t = vector_keys[key];
+      if (t == undefined) {
+        out_dict[key] = in_dict[key];
+      } else {
+        out_dict[key] = Object.values(in_dict[key]);
       }
     }
   }
@@ -905,6 +905,11 @@ function Bivot(options) {
 
   function guiStateSave() {
     var saveStateFields = [
+      'brdfModel',
+      'brdfVersion',
+      'illumL',
+      'yFlip',
+
       'exposure',
       'meshRotateZDegrees',
       'background',
@@ -1352,7 +1357,7 @@ function Bivot(options) {
       camera.updateProjectionMatrix();
       composer.setSize(canvas.width, canvas.height);
       setFxaaResolution();
-    }
+   }
 
     controls.update();
 
