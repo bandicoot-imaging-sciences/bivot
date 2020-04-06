@@ -934,9 +934,22 @@ function Bivot(options) {
       'controlsMaxDistance': controls['maxDistance'],
       'state': {}
     };
+    var scan_name = state['scan'];
+    var found = false;
+    for (var key in scans) {
+      if (key == scan_name) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // If scan name is unset or invalid, use the name of the first material
+      scan_name = Object.keys(scans)[0];
+    }
+
     stateToJson(state, saveConfig['state'], saveStateFields);
-    var fullJson = {'renders': {[state['scan']]: saveConfig}};
-    var filename = 'bivot-renders-' + state['scan'] + '.json'
+    var fullJson = {'renders': {[scan_name]: saveConfig}};
+    var filename = 'bivot-renders-' + scan_name + '.json'
     triggerDownload(filename, JSON.stringify(fullJson, null, 2));
   }
 
