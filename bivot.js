@@ -49,7 +49,8 @@ function Bivot(options) {
     configPath: 'bivot-config.json',
     renderPath: 'bivot-renders.json',
     texturePath: 'textures',
-    controlMode: controlModes.FULL
+    controlMode: controlModes.FULL,
+    useTouch: null
   }
   let opts = {...defaultOptions, ...options};
 
@@ -225,6 +226,7 @@ function Bivot(options) {
       config.textureFormat = config.textureFormat.toUpperCase();
     }
 
+    console.log('Options:', opts);
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -249,6 +251,9 @@ function Bivot(options) {
     window.addEventListener('resize', requestRender);
   });
 
+  if (opts.useTouch == true || opts.useTouch == false) {
+    config.useTouch = opts.useTouch;
+  }
 
   // ========== End mainline; functions follow ==========
 
