@@ -448,25 +448,39 @@ function Bivot(options) {
   };
 
   function getUrlFlags() {
-    // FIXME: Replace with URL API to reduce security risk.
-    // https://developer.mozilla.org/en-US/docs/Web/API/URL
-    // Validate all untrusted input from query string before using.
-    var dict = {};
+    const validFlags = {
+      controls: ['full', 'qa', 'manage', 'none'],
+      show: 'SAFE_STRING',
+      showcase: ['1'],
+      textureFormat: ['JPG', 'PNG', 'EXR']
+    };
 
-    var flags = window.location.href.split('?')[1];
+    const parsedUrl = new URL(window.location.href);
+    let dict = {};
 
-    if (flags) {
-      var params = flags.split('&');
-      var num_params = params.length;
-
-      for (var i = 0; i < num_params; i++) {
-        var key_value = params[i].split('=');
-        dict[key_value[0]] = key_value[1];
+    for (const [key, value] of parsedUrl.searchParams) {
+      if (validFlags.hasOwnProperty(key)) {
+        const validValues = validFlags[key];
+        if (Array.isArray(validValues)) {
+          if (validValues.includes(value)) {
+            dict[key] = value;
+          } else {
+            console.warn('Invalid query parameter value for key:', key);
+          }
+        } else if (validValues == 'SAFE_STRING') {
+          const re = /^[a-zA-Z0-9-_\s]*$/;
+          if (re.test(value)) {
+            dict[key] = value;
+          } else {
+            console.warn('Invalid characters in string value for key:', key);
+          }
+        }
+      } else {
+        console.warn('Invalid keys found in query parameters');
       }
     }
 
     console.log('URL flags:', dict);
-
     return dict;
   }
 
