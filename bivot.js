@@ -459,18 +459,19 @@ function Bivot(options) {
     let dict = {};
 
     for (const [key, value] of parsedUrl.searchParams) {
+      const decodeValue = decodeURI(value)
       if (validFlags.hasOwnProperty(key)) {
         const validValues = validFlags[key];
         if (Array.isArray(validValues)) {
-          if (validValues.includes(value)) {
-            dict[key] = value;
+          if (validValues.includes(decodeValue)) {
+            dict[key] = decodeValue;
           } else {
             console.warn('Invalid query parameter value for key:', key);
           }
         } else if (validValues == 'SAFE_STRING') {
           const re = /^[a-zA-Z0-9-_\s]*$/;
-          if (re.test(value)) {
-            dict[key] = value;
+          if (re.test(decodeValue)) {
+            dict[key] = decodeValue;
           } else {
             console.warn('Invalid characters in string value for key:', key);
           }
@@ -485,21 +486,11 @@ function Bivot(options) {
   }
 
   function processUrlFlags() {
-    // WARNING: load* flags are deprecated.
-    if (urlFlags.hasOwnProperty('loadJpeg')) {
-      config.loadJpeg = (decodeURI(urlFlags.loadJpeg) == 1);
-    }
-    if (urlFlags.hasOwnProperty('loadPng')) {
-      config.loadPng = (decodeURI(urlFlags.loadPng) == 1);
-    }
-    if (urlFlags.hasOwnProperty('loadExr')) {
-      config.loadExr = (decodeURI(urlFlags.loadExr) == 1);
-    }
     if (urlFlags.hasOwnProperty('show')) {
-      state.scan = decodeURI(urlFlags.show);
+      state.scan = urlFlags.show;
     }
     if (urlFlags.hasOwnProperty('textureFormat')) {
-      config.textureFormat = decodeURI(urlFlags.textureFormat);
+      config.textureFormat = urlFlags.textureFormat;
     }
   }
 
