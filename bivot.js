@@ -950,11 +950,12 @@ function Bivot(options) {
 
   function addControlPanel() {
     switch (opts.controlMode) {
+      // When changing UI defaults and limits, please adjust both the FULL and QA/MANAGE definitions.
       case controlModes.FULL:
         guiR = new dat.GUI();
         guiR.close();
         guiR.add(state, 'scan', Array.from(Object.keys(scans))).onChange(loadScan);
-        guiR.add(state, 'exposure', 0, 4, 0.1).onChange(requestRender).listen();
+        guiR.add(state, 'exposure', 0, 15, 0.1).onChange(requestRender).listen();
 
         var renderGui = guiR.addFolder('Render');
         renderGui.add(state, 'background', 0, 255, 1).onChange(updateBackground);
@@ -1018,7 +1019,7 @@ function Bivot(options) {
         guiLContainer.appendChild(guiL.domElement);
 
         var generalGui = guiL.addFolder('General');
-        generalGui.add(state, 'exposure', 0, 4, 0.1).name('Exposure').onChange(requestRender).listen();
+        generalGui.add(state, 'exposure', 0, 15, 0.1).name('Exposure').onChange(requestRender).listen();
         generalGui.add(state, 'meshRotateZDegrees', -180, 180).name('Rotation (deg)').onChange(updateMeshRotation);
 
         var renderGui = guiL.addFolder('Render');
