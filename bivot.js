@@ -49,7 +49,8 @@ function Bivot(options) {
     configPath: 'bivot-config.json',
     renderPath: 'bivot-renders.json',
     texturePath: 'textures',
-    controlMode: controlModes.FULL
+    controlMode: controlModes.FULL,
+    useTouch: null
   }
   let opts = {...defaultOptions, ...options};
 
@@ -225,6 +226,7 @@ function Bivot(options) {
       config.textureFormat = config.textureFormat.toUpperCase();
     }
 
+    console.log('Options:', opts);
     console.log('Config:', config);
     console.log('State:', state);
     console.log('Renders:', scans)
@@ -249,6 +251,9 @@ function Bivot(options) {
     window.addEventListener('resize', requestRender);
   });
 
+  if (opts.useTouch == true || opts.useTouch == false) {
+    config.useTouch = opts.useTouch;
+  }
 
   // ========== End mainline; functions follow ==========
 
@@ -348,14 +353,14 @@ function Bivot(options) {
 
   function stateToJson(in_dict, out_dict, fields_filter)
   {
-    for (var key in in_dict) {
-      if (fields_filter.indexOf(key) > -1) {
-        let t = vector_keys[key];
-        if (t == undefined) {
-          out_dict[key] = in_dict[key];
-        } else {
-          out_dict[key] = Object.values(in_dict[key]);
-        }
+    fields_filter
+    for (var i = 0; i < fields_filter.length; i++) {
+      let key = fields_filter[i]
+      let t = vector_keys[key];
+      if (t == undefined) {
+        out_dict[key] = in_dict[key];
+      } else {
+        out_dict[key] = Object.values(in_dict[key]);
       }
     }
   }
@@ -443,44 +448,49 @@ function Bivot(options) {
   };
 
   function getUrlFlags() {
-    // FIXME: Replace with URL API to reduce security risk.
-    // https://developer.mozilla.org/en-US/docs/Web/API/URL
-    // Validate all untrusted input from query string before using.
-    var dict = {};
+    const validFlags = {
+      controls: ['full', 'qa', 'manage', 'none'],
+      show: 'SAFE_STRING',
+      showcase: ['1'],
+      textureFormat: ['JPG', 'PNG', 'EXR']
+    };
 
-    var flags = window.location.href.split('?')[1];
+    const parsedUrl = new URL(window.location.href);
+    let dict = {};
 
-    if (flags) {
-      var params = flags.split('&');
-      var num_params = params.length;
-
-      for (var i = 0; i < num_params; i++) {
-        var key_value = params[i].split('=');
-        dict[key_value[0]] = key_value[1];
+    for (const [key, value] of parsedUrl.searchParams) {
+      const decodeValue = decodeURI(value)
+      if (validFlags.hasOwnProperty(key)) {
+        const validValues = validFlags[key];
+        if (Array.isArray(validValues)) {
+          if (validValues.includes(decodeValue)) {
+            dict[key] = decodeValue;
+          } else {
+            console.warn('Invalid query parameter value for key:', key);
+          }
+        } else if (validValues == 'SAFE_STRING') {
+          const re = /^[a-zA-Z0-9-_\s]*$/;
+          if (re.test(decodeValue)) {
+            dict[key] = decodeValue;
+          } else {
+            console.warn('Invalid characters in string value for key:', key);
+          }
+        }
+      } else {
+        console.warn('Invalid keys found in query parameters');
       }
     }
 
     console.log('URL flags:', dict);
-
     return dict;
   }
 
   function processUrlFlags() {
-    // WARNING: load* flags are deprecated.
-    if (urlFlags.hasOwnProperty('loadJpeg')) {
-      config.loadJpeg = (decodeURI(urlFlags.loadJpeg) == 1);
-    }
-    if (urlFlags.hasOwnProperty('loadPng')) {
-      config.loadPng = (decodeURI(urlFlags.loadPng) == 1);
-    }
-    if (urlFlags.hasOwnProperty('loadExr')) {
-      config.loadExr = (decodeURI(urlFlags.loadExr) == 1);
-    }
     if (urlFlags.hasOwnProperty('show')) {
-      state.scan = decodeURI(urlFlags.show);
+      state.scan = urlFlags.show;
     }
     if (urlFlags.hasOwnProperty('textureFormat')) {
-      config.textureFormat = decodeURI(urlFlags.textureFormat);
+      config.textureFormat = urlFlags.textureFormat;
     }
   }
 
@@ -905,6 +915,11 @@ function Bivot(options) {
 
   function guiStateSave() {
     var saveStateFields = [
+      'brdfModel',
+      'brdfVersion',
+      'illumL',
+      'yFlip',
+
       'exposure',
       'meshRotateZDegrees',
       'background',
@@ -929,9 +944,22 @@ function Bivot(options) {
       'controlsMaxDistance': controls['maxDistance'],
       'state': {}
     };
+    var scan_name = state['scan'];
+    var found = false;
+    for (var key in scans) {
+      if (key == scan_name) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // If scan name is unset or invalid, use the name of the first material
+      scan_name = Object.keys(scans)[0];
+    }
+
     stateToJson(state, saveConfig['state'], saveStateFields);
-    var fullJson = {'renders': {[state['scan']]: saveConfig}};
-    var filename = 'bivot-renders-' + state['scan'] + '.json'
+    var fullJson = {'renders': {[scan_name]: saveConfig}};
+    var filename = 'bivot-renders-' + scan_name + '.json'
     triggerDownload(filename, JSON.stringify(fullJson, null, 2));
   }
 
@@ -1353,7 +1381,7 @@ function Bivot(options) {
       camera.updateProjectionMatrix();
       composer.setSize(canvas.width, canvas.height);
       setFxaaResolution();
-    }
+   }
 
     controls.update();
 
