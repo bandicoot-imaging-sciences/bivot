@@ -51,7 +51,7 @@
     "prettier": "^2.0.4",
     "react": "file:example/node_modules/react",
     "react-dom": "file:example/node_modules/react-dom",
-    "react-scripts": "^3.4.1"
+    "react-scripts": "^3.4.3"
   },
   "files": [
     "dist"
