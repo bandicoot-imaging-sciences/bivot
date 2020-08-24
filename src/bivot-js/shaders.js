@@ -1,32 +1,35 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
 'use strict';
 
-let uniforms = THREE.UniformsUtils.merge([
-    THREE.UniformsLib.lights,
-    {
-      // Set textures to null here and assign later to avoid duplicating texture data.
-      'diffuseMap': {value: null},
-      'normalMap': {value: null}, // Three.js shader chunks assume normal map is called normalMap.
-      'specularMap': {value: null},
-      'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
-      'uExposure': {value: 1.0},
-      'uDiffuse': {value: 1.0},
-      'uSpecular': {value: 1.0},
-      'uRoughness': {value: 1.0},
-      'uTint': {value: true},
-      'uFresnel': {value: false},
-      'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
-      'uThreeJsShader': {value: false},
-      'uBrdfVersion': {value: 2.0},
-      'uLoadExr': {value: false},
-      'uDual8Bit': {value: false},
-      'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
-      'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
-      'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
-      'ltc_1': {value: null}, // Linearly Transformed Cosines look-up table 1 for area lighting
-      'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
-    }
-  ]);
+export default function getShaders() {
+  const uniforms = THREE.UniformsUtils.merge([
+      THREE.UniformsLib.lights,
+      {
+        // Set textures to null here and assign later to avoid duplicating texture data.
+        'diffuseMap': {value: null},
+        'normalMap': {value: null}, // Three.js shader chunks assume normal map is called normalMap.
+        'specularMap': {value: null},
+        'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
+        'uExposure': {value: 1.0},
+        'uDiffuse': {value: 1.0},
+        'uSpecular': {value: 1.0},
+        'uRoughness': {value: 1.0},
+        'uTint': {value: true},
+        'uFresnel': {value: false},
+        'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
+        'uThreeJsShader': {value: false},
+        'uBrdfVersion': {value: 2.0},
+        'uLoadExr': {value: false},
+        'uDual8Bit': {value: false},
+        'diffuseMapLow': {value: null},  // Low byte when dual 8-bit textures are loaded
+        'normalMapLow': {value: null},   // Low byte when dual 8-bit textures are loaded
+        'specularMapLow': {value: null}, // Low byte when dual 8-bit textures are loaded
+        'ltc_1': {value: null}, // Linearly Transformed Cosines look-up table 1 for area lighting
+        'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
+        'uBrightness': {value: 1.0},
+        'uContrast': {value: 0.5},
+      }
+    ]);
 
   const glsl = x => x.toString(); // No-op to trigger GLSL syntax highlighting in VS Code with glsl-literal extension.
   const vertexShader = glsl`
@@ -64,6 +67,8 @@ let uniforms = THREE.UniformsUtils.merge([
     uniform sampler2D specularMapLow;
 
     uniform float uExposure;
+    uniform float uBrightness;
+    uniform float uContrast;
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
@@ -192,7 +197,7 @@ let uniforms = THREE.UniformsUtils.merge([
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
         vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
         vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor);
-        gl_FragColor = vec4(outgoingLight, diffuseColor.a);
+        gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, diffuseColor.a);
       } else {
         vec3 macroNormal = normalize(vNormal);
         //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
@@ -254,7 +259,10 @@ let uniforms = THREE.UniformsUtils.merge([
         vec3 outgoingLight = white_L * uExposure *
             (ambientContrib + uDiffuse*totalDiffuseLight + totalSpecularLight);
 
-        gl_FragColor = vec4(outgoingLight, 1.0);
+        gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, 1.0);
       }
     }
-    `;
+  `;
+
+  return { uniforms, vertexShader, fragmentShader };
+}

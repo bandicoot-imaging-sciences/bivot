@@ -1,0 +1,22 @@
+{
+  "name": "bivot-js",
+  "homepage": ".",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "source": "./index.js",
+  "scripts": {
+    "build": "microbundle-crl --no-sourcemap --format esm"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "microbundle-crl": "^0.13.11"
+  },
+  "eslintConfig": {},
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}
