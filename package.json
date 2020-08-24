@@ -1,12 +1,12 @@
 {
-  "name": "@bandicoot-imaging-sciences/bivot-react",
-  "version": "0.7.0",
-  "description": "Bivot viewer and editor, as a React component",
+  "name": "@bandicoot-imaging-sciences/bivot",
+  "version": "0.1.0",
+  "description": "Bivot material viewer and editor, as a React component and pure JS library",
   "author": "volrak",
-  "license": "",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bandicoot-imaging-sciences/bivot-react.git"
+    "url": "https://github.com/bandicoot-imaging-sciences/bivot.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
