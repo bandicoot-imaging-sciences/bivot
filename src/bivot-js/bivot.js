@@ -429,7 +429,7 @@ class bivotJs {
       if (renderFilename) {
         const jsonRender = await loadJsonFile(renderFilename);
         if (jsonRender) {
-          console.log('Loaded:', jsonRender);
+          console.log(`Loaded ${renderFilename}:`, jsonRender);
           if (urlFlags.showcase == 1) {
             for (let r in jsonRender.renders) {
               if (jsonRender.renders.hasOwnProperty(r)) {
@@ -1151,7 +1151,6 @@ class bivotJs {
               if (metadata.hasOwnProperty('version')) {
                 scanState.brdfVersion = metadata.version;
               }
-              mergeMetadata(scanState, keys);
             } catch(e) {
               err = 1;
             }
@@ -1160,6 +1159,7 @@ class bivotJs {
             console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
           }
 
+          mergeMetadata(scanState, keys);
           loadScanFilenames(loadManager, texturePath);
         }
       );
