@@ -1,10 +1,19 @@
 
-export function rgbHexValToColorObj(hexVal) {
-  const rgb = {
-    'r': (hexVal & 0xFF0000) / 0x10000,
-    'g': (hexVal & 0x00FF00) / 0x100,
-    'b': (hexVal & 0x0000FF)
+function rgbHexValToRgbObj(hexVal) {
+  return {
+    r: (hexVal & 0xFF0000) / 0x10000,
+    g: (hexVal & 0x00FF00) / 0x100,
+    b: (hexVal & 0x0000FF)
   };
+}
+
+export function colStringToObj(colStr) {
+  const hexVal = parseInt(colStr.replace('#', '0x'));
+  return rgbHexValToRgbObj(hexVal);
+}
+
+export function rgbHexValToColorObj(hexVal) {
+  const rgb = rgbHexValToRgbObj(hexVal);
   const hex = rgbToHexStr(rgb.r, rgb.g, rgb.b);
   return { rgb, hex };
 }

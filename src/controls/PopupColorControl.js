@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { Grid, Typography, Tooltip, Button, Popover } from '@material-ui/core';
 import { ChromePicker } from 'react-color';
 
-function colStringToObj(col) {
-  const val = parseInt(col.replace('#', '0x'));
-  return {
-    r: (val & 0xFF0000) / 0x10000,
-    g: (val & 0x00FF00) / 0x100,
-    b: (val & 0x0000FF)
-  };
-}
+import { colStringToObj } from '../utils/colorLib';
 
 function PopupColorControl({ label, description, value, onChange }) {
   const [showPopup, setShowPopup] = useState(false);
