@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
 import Bivot from './bivot-js/bivot';
