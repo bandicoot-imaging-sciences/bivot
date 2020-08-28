@@ -85,8 +85,9 @@ function BivotReact(props) {
   const canvasID = `${id}-canvas`;
   const overlayID = `${id}-overlay`;
 
-  const windowLongLength = width > height ? width : height;
-  const windowShortLength = width <= height ? width : height;
+  const propsPortrait = height >= width;
+  const windowLongLength = propsPortrait ? height : width;
+  const windowShortLength = propsPortrait ? width : height;
 
   const [initialState, _setInitialState] = useState({});
   const [state, _setState] = useState({
@@ -95,9 +96,7 @@ function BivotReact(props) {
     contrast: 0.5,
     lightType: 'point',
     meshRotateZDegrees: 0,
-    portrait: false,
-    canvasWidth: 0,
-    canvasHeight: 0,
+    portrait: propsPortrait,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -150,6 +149,7 @@ function BivotReact(props) {
     jsonToState(config.initialState, state);
   }
 
+  // Set from props after loading config
   if (autoRotate) {
     state['autoRotatePeriodMs'] = 8000;
   }
@@ -168,7 +168,7 @@ function BivotReact(props) {
   const [contrast, setContrast] = useState(state.contrast);
   const [lightType, setLightType] = useState(state.lightType);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
-  const [portrait, setPortrait] = useState(false); // Only update portrait after bivot loads
+  const [portrait, setPortrait] = useState(propsPortrait);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -196,13 +196,29 @@ function BivotReact(props) {
     }
   }
 
+  // Load bivot once script dependencies are loaded externally or externally
   useEffect(() => {
-    // Load bivot once script dependencies are loaded externally or externally
     if (scriptsLoaded || scriptsLoadedInternal) {
       onLoad();
     }
   }, [scriptsLoaded, scriptsLoadedInternal]);
 
+  // Update bivot when the whole material changes
+  useEffect(() => {
+    // FIXME: Test whether this succeeds in the scenario wher
+    //        bivot has started loading but not finished loading
+    if (bivot.current) {
+      bivot.current.shutdown();
+      onLoad();
+    }
+  }, [material]);
+
+  useEffect(() => {
+    // Todo: Update canvas size
+  }, [width, height]);
+
+
+  // Shut down bivot when the component closes
   useEffect(() => {
     return () => {
       if (bivot.current) {
@@ -396,10 +412,10 @@ function BivotReact(props) {
     } else {
       toPortrait = event.target.checked;
     }
-
-    if (toPortrait != portrait) {
+    var context = canvasRef.current.getContext('webgl');
+    const canvasPortrait = (context.canvas.height > context.canvas.width);
+    if (toPortrait != canvasPortrait) {
       setPortrait(toPortrait);
-      let context = canvasRef.current.getContext('webgl');
       context.canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
       context.canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
       renderFrame(true);
