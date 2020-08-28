@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Typography, Tooltip, Button, Popover } from '@material-ui/core';
 import { ChromePicker } from 'react-color';
 
@@ -8,6 +8,11 @@ function PopupColorControl({ label, description, value, onChange }) {
   const [showPopup, setShowPopup] = useState(false);
   const [color, setColor] = useState(colStringToObj(value));
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // Update swatch colour if value property updates
+  useEffect(() => {
+    setColor(colStringToObj(value));
+  }, [value]);
 
   function handleClick(event) {
     setAnchorEl(event.currentTarget);
