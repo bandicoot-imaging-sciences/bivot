@@ -1480,16 +1480,18 @@ class bivotJs {
 
   // Update all rendering dimensions to conform with canvas.width and canvas.height
   updateCanvas() {
-    const pixelRatio = window.devicePixelRatio || 1;
+    if (this.canvas) {
+      const pixelRatio = window.devicePixelRatio || 1;
 
-    this.canvas.style.width = this.canvas.width / pixelRatio + 'px';
-    this.canvas.style.height = this.canvas.height / pixelRatio + 'px';
+      this.canvas.style.width = this.canvas.width / pixelRatio + 'px';
+      this.canvas.style.height = this.canvas.height / pixelRatio + 'px';
 
-    this.renderer.setSize(this.canvas.width, this.canvas.height, false);
-    this.camera.aspect = this.canvas.width / this.canvas.height;
-    this.camera.updateProjectionMatrix();
-    this.composer.setSize(this.canvas.width, this.canvas.height);
-    this.setFxaaResolution();
+      this.renderer.setSize(this.canvas.width, this.canvas.height, false);
+      this.camera.aspect = this.canvas.width / this.canvas.height;
+      this.camera.updateProjectionMatrix();
+      this.composer.setSize(this.canvas.width, this.canvas.height);
+      this.setFxaaResolution();
+    }
   }
 
   getBgColorFromState(state) {
