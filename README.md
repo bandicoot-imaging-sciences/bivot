@@ -17,6 +17,8 @@ You can embed Bivot into a web page, if the viewer is hosted on another site, fo
 
 ```
 
+However, there are [limitations on using iframes with titlt control on iOS](#Tilt-control-on-iOS).
+
 ## Install
 
 * Clone the bivot repository.
@@ -69,7 +71,7 @@ Bivot has a multiple level configuration and control system:
 In iOS 13, Safari allows web pages to ask the user for permission to access tilt controls. When Bivot detects
 iOS 13 (or higher), a button is displayed to enable tilt control. When the user presses the button, iOS will
 then request access to the motion sensor. If the user clicks Allow, then tilt control is activated. Bivot must
-be served over HTTPS for this to work.
+be served over HTTPS for this to work. Tilt control is blocked by iOS in cross-domain iframes.
 
 Tilt control in Safari was disabled for all web pages by default in iOS 12.2 - 12.4 (starting March 2019). To
 work around this issue:
