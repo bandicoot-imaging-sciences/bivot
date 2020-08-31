@@ -1642,7 +1642,7 @@ class bivotJs {
 
       this.controls.update();
 
-      if (this.state.autoRotatePeriodMs) {
+      if (this.state.autoRotatePeriodMs && _self.state.lightMotion == 'mouse') {
         this.updateAutoRotate((timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs);
       }
 
