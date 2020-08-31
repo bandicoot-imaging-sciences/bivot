@@ -60,6 +60,10 @@ class bivotJs {
       configPath: 'bivot-config.json',
       renderPath: 'bivot-renders.json',
       texturePath: 'textures',
+      config: null,
+      material: null,
+      textures: null,
+      materialSet: null,
       controlMode: this.controlModes.FULL,
       useTouch: null,
       width: 0,
@@ -177,6 +181,7 @@ class bivotJs {
     console.assert(this.overlay != null, 'overlay div element ID not found:', this.opts.overlayID);
 
     this.scans = {};
+    this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
     this.stats = null;
     this.renderRequested = false;
@@ -310,8 +315,15 @@ class bivotJs {
     // ========== End mainline; functions follow ==========
 
     async function initConfig() {
-      await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
-      _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
+      if (_self.opts.materialSet) {
+        _self.scans = await loadMaterialSet(_self.opts.materialSet);
+      }
+      if (!_self.scans) {
+        // materials not provided or failed to load
+        await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
+        _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
+      }
+
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
         // If the scan state isn't a scan in the list, use the first scan in the list
         _self.state.scan = Object.keys(_self.scans)[0];
@@ -390,6 +402,45 @@ class bivotJs {
           }
         }
       });
+    }
+
+    async function loadMaterialSet(filename) {
+      console.log('loadMaterialSet(): Loading material set file:', filename);
+      const materialSet = {};
+      if (filename) {
+        const jsonMaterialSet = await loadJsonFile(filename);
+        if (jsonMaterialSet) {
+          const numMaterials = jsonMaterialSet.materials.length;
+          for (var i = 0; i < numMaterials; i++) {
+            const galleryMats = jsonMaterialSet.materials[i].gallery;
+            const galleryMat = galleryMats[galleryMats.length - 1];
+            const render = galleryMat.config.renders[galleryMat.name];
+            var bivotMat = {};
+            for (var key in galleryMat) {
+              if (key != 'config' && galleryMat.hasOwnProperty(key)) {
+                bivotMat[key] = galleryMat[key];
+              }
+            }
+            bivotMat['config'] = {
+              renders: {
+                [galleryMat.name]: {
+                  state: {}
+                }
+              }
+            };
+            const bivotMatRender = bivotMat.config.renders[galleryMat.name];
+            for (var key in render) {
+              if (key != 'state' && render.hasOwnProperty(key)) {
+                bivotMatRender[key] = render[key];
+              }
+            }
+            jsonToState(render['state'], bivotMatRender['state']);
+            materialSet[bivotMat.name] = bivotMat;
+          }
+        }
+      }
+      console.log('materialSet loaded: ', materialSet);
+      return materialSet;
     }
 
     async function loadConfig(configFilename, config, state, optsConfig, vectorKeys) {
@@ -1020,6 +1071,14 @@ class bivotJs {
 
       brdfTextures = new Map();
 
+      // If a materialSet was provided, set the texture format directly from the texture file extensions
+      if (_self.opts.materialSet) {
+        for (var [key, value] of brdfTexturePaths) {
+          _self.config.textureFormat = value.path.split('.').pop().toUpperCase();
+          break;
+        }
+      }
+
       if (_self.config.textureFormat == 'EXR') {
         loader = new THREE.EXRLoader(loadManager);
       } else{
@@ -1107,12 +1166,24 @@ class bivotJs {
 
       // List of keys to merge between the 3 states.
       const keys = Object.keys(_self.config.initialState);
-      if (_self.opts.textures && _self.opts.material) {
+      keys.push('zoom'); // Necessary because zoom is omitted from initialState to support legacy galleries
+      if (_self.opts.materialSet) {
+        const material = _self.scans[_self.state.scan];
+        loadScanFromMaterial(loadManager, material, keys);
+      } else if (_self.opts.textures && _self.opts.material) {
         loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
       } else {
         const tex_dir = _self.opts.texturePath + '/' + _self.state.scan;
         loadScanMetadata(loadManager, tex_dir, keys);
       }
+    }
+
+    function loadScanFromMaterial(loadManager, material, keys) {
+      const textures = {};
+      for (var key in material.textures) {
+        textures[key] = `${material.location}/${material.textures[key]}`;
+      }
+      return loadScanFromTextures(loadManager, textures, material, keys);
     }
 
     function loadScanFromTextures(loadManager, textures, material, keys) {
