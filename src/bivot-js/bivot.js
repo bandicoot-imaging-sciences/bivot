@@ -203,6 +203,7 @@ class bivotJs {
     this.mouseY = 0;
 
     // Tracking to handle cleanup
+    this.shuttingDown = false;
     this.timeouts = [];
     this.listeners = [];
     this.elements = [];
@@ -1629,7 +1630,9 @@ class bivotJs {
   }
 
   render(timeMs) {
-    if (this.controls && this.composer) {
+    if (this.shuttingDown) {
+      this.doShutdown();
+    } else if (this.controls && this.composer) {
       if (this.stats) {
         this.stats.begin();
       }
@@ -1701,26 +1704,31 @@ class bivotJs {
   }
 
   shutdown() {
+    this.shuttingDown = true;
+  }
+
+  doShutdown() {
     for (var i = 0; i < this.timeouts.length; i++) {
       clearTimeout(this.timeouts[i]);
     }
-    this.timeouts = null;
+    this.timeouts = [];
 
     for (var i = 0; i < this.listeners.length; i++) {
       const { object, type, listener } = this.listeners[i];
       object.removeEventListener(type, listener);
     }
-    this.listeners = null;
+    this.listeners = [];
 
     for (var i = 0; i < this.elements.length; i++) {
       const elem = this.elements[i];
       elem.parentNode.removeChild(elem);
     }
-    this.elements = null;
+    this.elements = [];
 
     this.canvas = null;
     this.overlay = null;
   }
 }
+
 
 export default bivotJs;
