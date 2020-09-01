@@ -28,6 +28,7 @@ Parts adapted from Threejsfundamentals:
 'use strict';
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
+import { isEmpty } from '../utils/objLib.js';
 import { jsonToState, stateToJson, copyStatesCloneVectors } from '../utils/stateUtils.js';
 
 /*
@@ -318,12 +319,11 @@ class bivotJs {
       if (_self.opts.materialSet) {
         _self.scans = await loadMaterialSet(_self.opts.materialSet);
       }
-      if (!_self.scans) {
+      if (!_self.scans || isEmpty(_self.scans)) {
         // materials not provided or failed to load
         await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
-
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
         // If the scan state isn't a scan in the list, use the first scan in the list
         _self.state.scan = Object.keys(_self.scans)[0];
