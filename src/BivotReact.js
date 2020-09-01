@@ -13,6 +13,7 @@ import SaveButton from './controls/SaveButton';
 import ResetButton from './controls/ResetButton';
 import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
+import AutoRotateControl from './controls/AutoRotateControl';
 
 import { useWindowSize, useScripts } from './utils/hooksLib';
 import { jsonToState, copyStateFields } from './utils/stateUtils';
@@ -161,8 +162,12 @@ function BivotReact(props) {
     jsonToState(config.initialState, state);
   }
 
-  // Set from props after loading config
-  state.autoRotatePeriodMs = autoRotate ? 8000 : 0;
+  // If autoRotate is set in props, then override state after loading config
+  if (autoRotate === true) {
+    state.autoRotatePeriodMs = 8000;
+  } else if (autoRotate === false) {
+    state.autoRotatePeriodMs = 0;
+  }
 
   const windowSize = useWindowSize(onWindowSizeChanged);
 
@@ -186,6 +191,7 @@ function BivotReact(props) {
   const [lightColorBivot, setLightColorBivot] = useState(state.lightColor);
   const [lightColorControls, setLightColorControls] = useState(rgbArrayToHexString(state.lightColor));
   const [backgroundColor, setBackgroundColor] = useState(state.backgroundColor);
+  const [autoRotatePeriodMs, setAutoRotatePeriodMs] = useState(state.autoRotatePeriodMs);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -197,6 +203,7 @@ function BivotReact(props) {
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
   state.backgroundColor = backgroundColor;
+  state.autoRotatePeriodMs = autoRotatePeriodMs;
 
   async function onLoad() {
     loadBivot();
@@ -320,7 +327,8 @@ function BivotReact(props) {
       lightType,
       zoom,
       lightColor,
-      backgroundColor
+      backgroundColor,
+      autoRotatePeriodMs
     } = stateFields;
 
     updateExposure(exposure);
@@ -333,6 +341,7 @@ function BivotReact(props) {
     setCurrentZoom(zoom[1]);
     updateLightColor(rgbArrayToColorObj(lightColor));
     updateBackgroundColor({ hex: backgroundColor });
+    updateAutoRotate(autoRotatePeriodMs);
 
     if (bivot.current) {
       renderFrame(true);
@@ -353,15 +362,22 @@ function BivotReact(props) {
     const galleryMat = gallery[gallery.length - 1];
     const config = galleryMat.config.renders['0'];
 
-    config.state.exposure = exposure;
-    config.state.brightness = brightness;
-    config.state.contrast = contrast;
-    config.state.lightType = lightType;
-    config.state.meshRotateZDegrees = rotation;
-    config.state.portrait = portrait;
-    config.state.zoom = zoom;
-    config.state.lightColor = lightColorBivot;
-    config.state.backgroundColor = backgroundColor;
+    const {
+      camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
+      lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+     } = state;
+
+    const savedState = {
+      exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor,
+      meshRotateZDegrees: rotation,
+      lightColor: lightColorBivot,
+      camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
+      lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
+      autoRotatePeriodMs, autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+    }
+
+    config.state = { ...config.state, ...savedState };
 
     const { userId, materialId } = material;
     const success = writeState(userId, materialId, materialSet);
@@ -478,6 +494,11 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function updateAutoRotate(val) {
+    setAutoRotatePeriodMs(val);
+    renderFrame(true);
+  }
+
   function orientationAwareWidth(isPortrait) {
     return isPortrait ? windowShortLength : windowLongLength;
   }
@@ -510,6 +531,7 @@ function BivotReact(props) {
               <ZoomControl value={zoom} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
+              <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
               <Grid container spacing={2}>
                 <SaveButton onChange={stateSave} />
                 <ResetButton onChange={stateReset} />
