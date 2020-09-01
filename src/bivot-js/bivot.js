@@ -1429,6 +1429,9 @@ class bivotJs {
   }
 
   isMouseInCanvas() {
+    if (!this.canvas) {
+      return false;
+    }
     const rect = this.canvas.getBoundingClientRect();
     return (this.mouseX >= rect.left && this.mouseX < rect.right &&
             this.mouseY >= rect.top  && this.mouseY < rect.bottom);
