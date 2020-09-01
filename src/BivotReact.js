@@ -102,6 +102,18 @@ function BivotReact(props) {
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
+
+    // State to be saved for the bivot render for which there aren't controls
+    camTiltWithMousePos: -0.2,
+    camTiltWithDeviceOrient: 0.6,
+    camTiltLimitDegrees: 0.0,
+    lightTiltWithMousePos: 1.0,
+    lightTiltWithDeviceOrient: 1.0,
+    lightTiltLimitDegrees: 0.0,
+    autoRotatePeriodMs: 8000,
+    autoRotateFps: 30,
+    autoRotateCamFactor: 0.5,
+    autoRotateLightFactor: 0.9,
     // focalLength: 85,
     // diffuse: 1.0,
     // specular: 1.0,
@@ -150,9 +162,7 @@ function BivotReact(props) {
   }
 
   // Set from props after loading config
-  if (autoRotate) {
-    state['autoRotatePeriodMs'] = 8000;
-  }
+  state.autoRotatePeriodMs = autoRotate ? 8000 : 0;
 
   const windowSize = useWindowSize(onWindowSizeChanged);
 
