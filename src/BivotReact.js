@@ -369,12 +369,12 @@ function BivotReact(props) {
      } = state;
 
     const savedState = {
-      exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor,
+      exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor, autoRotatePeriodMs,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
-      autoRotatePeriodMs, autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
     }
 
     config.state = { ...config.state, ...savedState };
