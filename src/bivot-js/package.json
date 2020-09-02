@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "source": "./index.js",
   "scripts": {
-    "build": "microbundle-crl --no-sourcemap --format esm"
+    "build": "microbundle-crl --no-sourcemap --format esm --css-modules false"
   },
   "dependencies": {},
   "devDependencies": {
