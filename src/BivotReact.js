@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
 import Bivot from './bivot-js/bivot';
+import './bivot-js/bivot.css';
+
 import IntensityControl from './controls/IntensityControl';
 import BrightnessControl from './controls/BrightnessControl';
 import ContrastControl from './controls/ContrastControl';
