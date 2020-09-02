@@ -1,0 +1,80 @@
+<!-- Bivot material viewer -->
+<!-- https://github.com/bandicoot-imaging-sciences/bivot -->
+<!-- Copyright (C) Bandicoot Imaging Sciences 2020 -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <!-- Disable favicon request until we make an icon -->
+    <link rel="icon" href="data:,">
+    <!-- This viewport tag is recommended for Bivot. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bivot material viewer</title>
+
+    <!-- bivot.css is required for Bivot. -->
+    <!-- Prefix the address with https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@x.x.x/
+    to use a specific released version x.x.x of Bivot -->
+    <!-- Or prefix the address with https://bandicoot-imaging-sciences.github.io/bivot/ to use the
+    latest version checked into Github -->
+    <!-- The bivot.js and shaders.js addresses below will also need the same prefix -->
+    <link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.6/src/bivot-js/bivot.css" rel="stylesheet" type="text/css"/>
+
+  <style>
+      body {
+        margin: 0;
+      }
+      /* This ID should match the canvas element ID used below. */
+      #bivot-canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Bivot elements -->
+
+    <!-- The IDs can be changed using options in the Bivot() call. -->
+    <!-- However, the class names shown below should be included verbatim. -->
+
+    <!-- An overlay div is required to display Bivot progress and status text. -->
+    <div id="bivot-overlay" class="bivot-overlay" style="width: 800px; height: 600px;">
+      <!-- Use a canvas inside the overlay div to place Bivot on the page. -->
+      <canvas id="bivot-canvas" class="bivot-canvas"></canvas>
+      <div id="gui-L-container" style="position: absolute; top: 0em; left: 0em;"></div>
+    </div>
+  </body>
+  <!-- The following Three.js components are required for Bivot. -->
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/EXRLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/WebGL.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/libs/stats.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/AdaptiveToneMappingPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/FXAAShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/ToneMapShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/GammaCorrectionShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/BokehShader2.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/lights/RectAreaLightUniformsLib.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/dataarts/dat.gui@v0.7.6/build/dat.gui.min.js"></script>
+  <!-- Finally, import and start Bivot, pegged to the specified version -->
+  <script type="module">
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.6/src/bivot-js/dist/index.js";
+    const materialSet = "material-set.json"; // Specifies the material to view.  Can be any material set file, local or remote
+    const options = { materialSet, configPath: null, renderPath: null };
+    import(bivSrc).then(module => {
+      const bivot = new module.newBivot(options);
+      bivot.checkWebGL();
+      bivot.startRender();
+    });
+  </script>
+</html>
