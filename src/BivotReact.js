@@ -25,11 +25,11 @@ import { rgbArrayToColorObj, rgbArrayToHexString, rgbHexValToColorObj } from './
 
 
 const styles = {
-  bivotOverlay: {
+  bivotGridOverlay: {
     textAlign: "center",
     margin: "0.5em",
   },
-  loadingOverlay: {
+  loadingGridOverlay: {
     position: "absolute",
     bottom: "50%",
     left: "50%",
@@ -518,7 +518,7 @@ function BivotReact(props) {
     <div
       ref={overlayRef}
       id={overlayID}
-      style={styles.bivotOverlay}
+      style={styles.bivotGridOverlay}
     >
       <Grid container spacing={2}>
         {showEditor && (
@@ -543,7 +543,7 @@ function BivotReact(props) {
         )}
         <Grid item>
           {loading && (
-            <div style={styles.loadingOverlay}><CircularProgress /></div>
+            <div style={styles.loadingGridOverlay}><CircularProgress /></div>
           )}
           <canvas
             ref={canvasRef}
