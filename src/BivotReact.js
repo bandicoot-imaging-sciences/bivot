@@ -92,6 +92,7 @@ function BivotReact(props) {
   const windowLongLength = propsPortrait ? height : width;
   const windowShortLength = propsPortrait ? width : height;
 
+  // FIXME: Find a sensible way to not have to duplicate the initial / default state object
   const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
@@ -116,51 +117,32 @@ function BivotReact(props) {
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
-    // focalLength: 85,
-    // diffuse: 1.0,
-    // specular: 1.0,
-    // roughness: 1.0,
-    // tint: true,
-    // fresnel: false,
-    // ambient: 1.0,
-    // fxaa: true,
-    // bloom: 0.1,
-    // adaptiveToneMap: false,
-    // toneMapDarkness: 0.04,
-    // gammaCorrect: true,
-    // threeJsShader: true,
-    // areaLightWidth: 5.0,
-    // areaLightHeight: 0.2,
-    // lightMotion: 'mouse',
-    // lightColor: new THREE.Color(1, 1, 1),
-    // lightPosition: new THREE.Vector3(0, 0, 1),
-    // // Offset light controls by this vector. In screen co-ords: x-axis points right and y-axis points up.
-    // lightPositionOffset: new THREE.Vector2(0, 0),
-    // lightNumber: 1,
-    // lightSpacing: 0.5,
-    // light45: false,
-    // scan: 'kimono 2k',
-    // brdfModel: 1,
-    // brdfVersion: 2,
-    // yFlip: true,
-    // background: 0x05,
-    // camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
-    // camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
-    // camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
-    // lightTiltWithMousePos: 1.0,  // Factor to tilt light based on mouse position
-    // lightTiltWithDeviceOrient: 1.0,  // Factor to tilt light based on device orientation
-    // lightTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the light can tilt to.
-    // // Speed of device baseline drift towards current tilt, when current tilt elevation is lower than
-    // // camTiltLimitDegrees or lightTiltLimitDegrees.
-    // tiltDriftSpeed: 1.0,
-    // tiltZeroOnMouseOut: false, // If true, reset the tilt to zero when the mouse moves out of the window.
-    // _camPositionOffset: new THREE.Vector2(0, 0),
-    // _meshRotateZDegreesPrevious: 0,
-    // _statusText: ''
   };
-  const stateCopy = {};
-  copyStateFields(defaultState, stateCopy);
-  const [state, _setState] = useState(stateCopy);
+  const [state, _setState] = useState({
+    exposure: 1.0,
+    brightness: 0.5,
+    contrast: 0.5,
+    lightType: 'point',
+    meshRotateZDegrees: 0,
+    portrait: propsPortrait,
+    dirty: false, // For bivot internal only, to know when to update render
+    zoom: [0.2, 0.3, 0.36],
+    currentZoom: 0.3,
+    lightColor: [255, 255, 255],
+    backgroundColor: '#FFFFFF',
+
+    // State to be saved for the bivot render for which there aren't controls
+    camTiltWithMousePos: -0.2,
+    camTiltWithDeviceOrient: 0.6,
+    camTiltLimitDegrees: 0.0,
+    lightTiltWithMousePos: 1.0,
+    lightTiltWithDeviceOrient: 1.0,
+    lightTiltLimitDegrees: 0.0,
+    autoRotatePeriodMs: 8000,
+    autoRotateFps: 30,
+    autoRotateCamFactor: 0.5,
+    autoRotateLightFactor: 0.9,
+  });
   const [checkpointState, _setCheckpointState] = useState({});
 
   if (config) {
@@ -282,6 +264,9 @@ function BivotReact(props) {
       const fileUserPaths = { 'ms': materialUserPath };
       const url = await fetchFiles(userId, fileUserPaths);
       const ms = await loadJsonFile(url['ms']);
+      if (!ms) {
+        return false;
+      }
       galleryMat = getMatFromMatSet(ms)
       setMaterialSet(ms);
 
