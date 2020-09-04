@@ -1,6 +1,6 @@
 {
   "name": "@bandicoot-imaging-sciences/bivot",
-  "version": "0.2.6",
+  "version": "0.2.9",
   "description": "Bivot material viewer and editor, as a React component and pure JS library",
   "author": "volrak",
   "license": "MIT",
@@ -18,8 +18,8 @@
     "node": ">=10"
   },
   "scripts": {
-    "build": "microbundle-crl --no-sourcemap --no-compress --format cjs",
-    "start": "microbundle-crl watch --no-sourcemap --no-compress --format cjs",
+    "build": "microbundle-crl --no-sourcemap --no-compress --format cjs --css-modules false",
+    "start": "microbundle-crl watch --no-sourcemap --no-compress --format cjs --css-modules false",
     "prepare": "run-s build",
     "test": "run-s test:unit test:lint test:build",
     "test:build": "run-s build",
