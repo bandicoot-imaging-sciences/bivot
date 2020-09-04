@@ -7,6 +7,12 @@ Features:
 * Control lighting using mouse position or device tilt.
 * Supports most modern browsers and devices (rendering is implemented using WebGL).
 
+## Usage
+
+See `src/bivot-js/example/embed-bivot-js.html` for sample code to add a pure JavaScript Bivot viewer into a web page.
+
+See `example` for a sample app using Bivot as a React component.
+
 ## Embedding
 
 You can embed Bivot into a web page, if the viewer is hosted on another site, for example:
@@ -22,13 +28,16 @@ However, there are [limitations on using iframes with titlt control on iOS](#Til
 ## Install
 
 * Clone the bivot repository.
-* Create a folder called `textures` inside the `bivot` folder, and put your texture folders inside that (see
-  "Adding a new dataset" below).
-* Copy `bivot-config-sample.json` to `bivot-config.json` and modify to suit your needs.
-* Copy `bivot-renders-sample.json` to `bivot-renders.json` and modify to suit your needs.
-* Serve `index.html` using HTTPS to ensure tilt control works on mobile devices (see below).
+* Inside the `src/bivot-js` folder:
+  * Create a folder called `textures` inside the `bivot` folder, and put your texture folders inside that (see
+    "Adding a new dataset" below).
+  * Copy `bivot-config-sample.json` to `bivot-config.json` and modify to suit your needs.
+  * Copy `bivot-renders-sample.json` to `bivot-renders.json` and modify to suit your needs.
+  * Serve `index.html` using HTTPS to ensure tilt control works on mobile devices (see below).
 
 ## Use with local web server
+Inside the `src/bivot-js` folder:
+
 * Set up a local web server:
   * Install local web server, e.g. webfs if using Windows Subsystem for Linux / Ubuntu Linux:
     * `$ sudo apt install webfs`
@@ -38,7 +47,7 @@ However, there are [limitations on using iframes with titlt control on iOS](#Til
 
 ## Adding a new dataset
 
-* Copy textures to a new folder `<texture-name>` inside the `bivot/textures`
+* Copy textures to a new folder `<texture-name>` inside the `src/bivot-js/textures`
   folder. 
   * See `README-textures.md` for details on the texture folder format.
   * You can download a working Bivot folder including a sample texture folder from

@@ -22,6 +22,7 @@ yarn-error.log*
 /local-certs
 /textures
 /example/public/textures
+/src/bivot-js/textures
 /tx-*
 /third_party
 /.vscode/.ropeproject

@@ -1,5 +1,12 @@
-This example was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Example app using Bivot React component
 
-It is linked to the bivot-react package in the parent directory for development purposes.
+This is an example of how to use the Bivot React component.
 
-You can run `npm install` and then `npm start` to test your package.
+To set up and run this example app (paths relative to the root of the checkout):
+
+1. In `.` run `npm install`
+2. In `example` run `npm install`
+3. Add a `textures` folder in `example/public` containing a Bivot textures folder layout (see the Bivot `README.md` for
+   more details )
+4. Edit `example/public/bivot-config.json` and `example/public/bivot-renders.json` to match your textures folder
+5. In `example` run `npm start`
