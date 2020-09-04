@@ -21,6 +21,7 @@ yarn-error.log*
 # misc local
 /local-certs
 /textures
+/example/public/textures
 /tx-*
 /third_party
 /.vscode/.ropeproject
