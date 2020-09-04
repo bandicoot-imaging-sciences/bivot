@@ -90,8 +90,7 @@ function BivotReact(props) {
   const windowLongLength = propsPortrait ? height : width;
   const windowShortLength = propsPortrait ? width : height;
 
-  const [initialState, _setInitialState] = useState({});
-  const [state, _setState] = useState({
+  const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
     contrast: 0.5,
@@ -156,10 +155,14 @@ function BivotReact(props) {
     // _camPositionOffset: new THREE.Vector2(0, 0),
     // _meshRotateZDegreesPrevious: 0,
     // _statusText: ''
-  });
+  };
+  const stateCopy = {};
+  copyStateFields(defaultState, stateCopy);
+  const [state, _setState] = useState(stateCopy);
+  const [checkpointState, _setCheckpointState] = useState({});
 
   if (config) {
-    jsonToState(config.initialState, state);
+    jsonToState(config.initialState, defaultState);
   }
 
   // If autoRotate is set in props, then override state after loading config
@@ -222,12 +225,16 @@ function BivotReact(props) {
 
   // Update bivot when the whole material changes
   useEffect(() => {
-    // FIXME: Test whether this succeeds in the scenario wher
+    // FIXME: Test whether this succeeds in the scenario where
     //        bivot has started loading but not finished loading
-    if (bivot.current) {
-      bivot.current.shutdown();
-      onLoad();
+    async function onChangeMaterial() {
+      if (bivot.current) {
+        bivot.current.shutdown();
+        updateStateFields(defaultState);
+        onLoad();
+      }
     }
+    onChangeMaterial();
   }, [material]);
 
   useEffect(() => {
@@ -312,7 +319,7 @@ function BivotReact(props) {
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
     bivot.current.startRender();
-    copyStateFields(state, initialState);
+    copyStateFields(state, checkpointState);
     setLoading(false);
   }
 
@@ -354,7 +361,7 @@ function BivotReact(props) {
   //
   async function stateLoadCallback(loadedState) {
     updateStateFields(loadedState);
-    copyStateFields(loadedState, initialState);
+    copyStateFields(loadedState, checkpointState);
   }
 
   function stateSave() {
@@ -383,14 +390,14 @@ function BivotReact(props) {
     const success = writeState(userId, materialId, materialSet);
     if (success) {
       alert("Material saved");
-      copyStateFields(config.state, initialState);
+      copyStateFields(config.state, checkpointState);
     } else {
       alert("Something went wrong.  The Material might not have been saved.");
     }
   }
 
   function stateReset() {
-    updateStateFields(initialState);
+    updateStateFields(checkpointState);
   }
 
   function renderFrame(stateDirty) {
