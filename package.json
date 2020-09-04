@@ -30,7 +30,9 @@
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {
-    "react": ">=16.8.0"
+    "@material-ui/core": "^4.11.0",
+    "react": ">=16.8.0",
+    "react-dom": "^16.13.1"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.3",
@@ -49,15 +51,12 @@
     "microbundle-crl": "^0.13.10",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.0.4",
-    "react": "file:example/node_modules/react",
-    "react-dom": "file:example/node_modules/react-dom",
     "react-scripts": "^3.4.3"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "@material-ui/core": "^4.11.0",
     "@material-ui/icons": "^4.9.1",
     "aws-sdk": "^2.713.0",
     "lodash.debounce": "^4.0.8",

@@ -5,7 +5,7 @@ import Box from '@material-ui/core/Box';
 import clsx from 'clsx';
 import { withStyles } from '@material-ui/core/styles';
 
-import { Bivot, useScripts, bivotScripts } from 'bivot-react'
+import { Bivot, useScripts, bivotScripts } from '@bandicoot-imaging-sciences/bivot';
 
 
 const styles = {
