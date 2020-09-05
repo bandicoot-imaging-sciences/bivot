@@ -24,7 +24,7 @@
     border: solid #fff;
 }
 
-#bivot-loading {
+.bivot-loading {
     position: absolute;
     top: 0;
     left: 0;
@@ -34,21 +34,21 @@
     justify-content: center;
     align-items: center;
 }
-#bivot-progress {
+.bivot-progress {
     background-color: rgba(100, 100, 100, 1.0);
     opacity: 0.9;
     margin: 1.5em;
     border: 1px solid white;
     width: 50vw;
 }
-#bivot-progressbar {
+.bivot-progressbar {
     margin: 2px;
     background: white;
     height: 1em;
     transform-origin: top left;
     transform: scaleX(0);
 }
-#bivot-subtitle {
+.bivot-subtitle {
     position: absolute;
     top: 45%;
     width: 100%;
@@ -57,12 +57,12 @@
     align-items: center;
     text-align: center;
 }
-#bivot-subtitle-background {
+.bivot-subtitle-background {
     background-color: rgba(100, 100, 100, 1.0);
     opacity: 0.9;
     width: 75vw;
 }
-#bivot-subtitle-text {
+.bivot-subtitle-text {
   display: inline-block;
   margin: 0.2em;
   padding: 0.2em;

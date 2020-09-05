@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
 import Bivot from './bivot-js/bivot';
-import './bivot-js/bivot.css';
 
 import IntensityControl from './controls/IntensityControl';
 import BrightnessControl from './controls/BrightnessControl';
@@ -509,7 +508,6 @@ function BivotReact(props) {
   return (
     <div
       ref={overlayRef}
-      id={overlayID}
       style={styles.bivotGridOverlay}
     >
       <Grid container spacing={2}>
@@ -537,13 +535,15 @@ function BivotReact(props) {
           {loading && (
             <div style={styles.loadingGridOverlay}><CircularProgress /></div>
           )}
-          <canvas
-            ref={canvasRef}
-            id={canvasID}
-            className='bivot-canvas'
-            width={pixelRatio * orientationAwareWidth(state.portrait)}
-            height={pixelRatio * orientationAwareHeight(state.portrait)}
-          />
+          <div id={overlayID} className="bivot-overlay" style={styles.bivotOverlay}>
+            <canvas
+              ref={canvasRef}
+              id={canvasID}
+              className='bivot-canvas'
+              width={pixelRatio * orientationAwareWidth(state.portrait)}
+              height={pixelRatio * orientationAwareHeight(state.portrait)}
+            />
+          </div>
         </Grid>
       </Grid>
     </div>

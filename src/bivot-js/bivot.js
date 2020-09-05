@@ -571,21 +571,21 @@ class bivotJs {
 
     function initialiseOverlays(overlay) {
       let loadingDiv = _self.registerElement(document, 'div');
-      loadingDiv.id = 'bivot-loading';
+      loadingDiv.className += 'bivot-loading';
       let progressDiv = _self.registerElement(document, 'div');
-      progressDiv.id = 'bivot-progress';
+      progressDiv.className += 'bivot-progress';
       let progressBarDiv = _self.registerElement(document, 'div');
-      progressBarDiv.id = 'bivot-progressbar';
+      progressBarDiv.className += 'bivot-progressbar';
       overlay.appendChild(loadingDiv);
       loadingDiv.appendChild(progressDiv);
       progressDiv.appendChild(progressBarDiv);
 
       let subtitleDiv = _self.registerElement(document, 'div');
-      subtitleDiv.id = 'bivot-subtitle';
+      subtitleDiv.className += 'bivot-subtitle';
       let subtitleBGDiv = _self.registerElement(document, 'div');
-      subtitleBGDiv.id = 'bivot-subtitle-background';
+      subtitleBGDiv.className += 'bivot-subtitle-background';
       let subtitleTextP = _self.registerElement(document, 'p');
-      subtitleTextP.id = 'bivot-subtitle-text';
+      subtitleTextP.className += 'bivot-subtitle-text';
       overlay.appendChild(subtitleDiv);
       subtitleDiv.appendChild(subtitleBGDiv);
       subtitleBGDiv.appendChild(subtitleTextP);

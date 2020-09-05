@@ -1,11 +1,13 @@
-import './index.css'
-
-import React from 'react'
-import ReactDOM from 'react-dom'
-import App from './App'
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider } from '@material-ui/core/styles';
+
 import theme from './theme';
+import './index.css';
+import '../node_modules/@bandicoot-imaging-sciences/bivot/dist/index.css';
+
 
 ReactDOM.render(
   <ThemeProvider theme={theme}>
