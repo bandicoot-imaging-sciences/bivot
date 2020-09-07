@@ -4,9 +4,10 @@ import App from './App';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider } from '@material-ui/core/styles';
 
+import '@bandicoot-imaging-sciences/bivot/dist/index.css';
+
 import theme from './theme';
 import './index.css';
-import '../node_modules/@bandicoot-imaging-sciences/bivot/dist/index.css';
 
 
 ReactDOM.render(
