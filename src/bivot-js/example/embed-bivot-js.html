@@ -18,7 +18,7 @@
     <!-- Or prefix the address with https://bandicoot-imaging-sciences.github.io/bivot/ to use the
     latest version checked into Github -->
     <!-- The bivot.js and shaders.js addresses below will also need the same prefix -->
-    <link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.8/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
+    <link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.9/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
 
   <style>
       body {
@@ -68,7 +68,7 @@
   <script src="https://cdn.jsdelivr.net/gh/dataarts/dat.gui@v0.7.6/build/dat.gui.min.js"></script>
   <!-- Finally, import and start Bivot, pegged to the specified version -->
   <script type="module">
-    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.8/src/bivot-js/dist/index.js";
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.0.9/src/bivot-js/dist/index.js";
     const materialSet = "material-set.json"; // Specifies the material to view.  Can be any material set file, local or remote
     const options = { materialSet, configPath: null, renderPath: null };
     import(bivSrc).then(module => {
