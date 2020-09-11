@@ -295,10 +295,11 @@ class bivotJs {
       // if (this.config.showInterface) {
       //   addControlPanel();
       // }
+      this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
       THREE.RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.renderer = this.initialiseRenderer();
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
-      this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
+      this.updateCanvas();
 
       loadScan();
 
@@ -1382,8 +1383,9 @@ class bivotJs {
     const pixelRatio = window.devicePixelRatio || 1;
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
+    canvas.style.width = canvas.width / pixelRatio + 'px';
+    canvas.style.height = canvas.height / pixelRatio + 'px';
 
-    this.updateCanvas();
   }
 
   initialiseRenderer() {
