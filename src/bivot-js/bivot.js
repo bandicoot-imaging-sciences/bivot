@@ -1389,7 +1389,7 @@ class bivotJs {
   }
 
   initialiseRenderer() {
-    var renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+    var renderer = new THREE.WebGLRenderer({ canvas: this.canvas, preserveDrawingBuffer: true });
     renderer.physicallyCorrectLights = true;
 
     renderer.gammaInput = true;

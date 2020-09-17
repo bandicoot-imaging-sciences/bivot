@@ -77,6 +77,7 @@ function BivotReact(props) {
     writeState,
     scriptsLoaded,
     onClick,
+    onSaveScreenshot,
     autoRotate
   } = props;
 
@@ -350,7 +351,12 @@ function BivotReact(props) {
     copyStateFields(loadedState, checkpointState);
   }
 
-  function stateSave() {
+  async function stateSave(callback) {
+    if (callback) {
+      // Grab a capture of the canvas and send it to the callback
+      canvasRef.current.toBlob(callback, 'image/jpeg');
+    }
+
     const { gallery } = materialSet.materials[0]
     const galleryMat = gallery[gallery.length - 1];
     const config = galleryMat.config.renders['0'];
@@ -373,7 +379,7 @@ function BivotReact(props) {
     config.state = { ...config.state, ...savedState };
 
     const { userId, materialId } = material;
-    const success = writeState(userId, materialId, materialSet);
+    const success = await writeState(userId, materialId, materialSet);
     if (success) {
       alert("Material saved");
       copyStateFields(config.state, checkpointState);
@@ -525,7 +531,7 @@ function BivotReact(props) {
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
               <Grid container spacing={2}>
-                <SaveButton onChange={stateSave} />
+                <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
                 <ResetButton onChange={stateReset} />
               </Grid>
             </Paper>
