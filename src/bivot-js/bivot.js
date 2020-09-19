@@ -98,6 +98,11 @@ class bivotJs {
       lightType: 'point',
       areaLightWidth: 5.0,
       areaLightHeight: 0.2,
+      // Control modes are set using lightMotion:
+      // mouse - control using mouse position and mouse buttons (auto-rotate when outside canvas)
+      // gyro - control using device tilt (auto rotate always off)
+      // sliders - control using DAT.gui UI sliders (auto rotate always off) (note: DAT.gui has been removed)
+      // animate - automated control (auto rotate always on)
       lightMotion: 'mouse',
       lightColor: [255, 255, 255],
       lightPosition: new THREE.Vector3(0, 0, 1),
@@ -199,8 +204,9 @@ class bivotJs {
     this.gammaCorrectPass = null;
     this.composer = null;
     this.controls = null;
-    this.mouseX = 0;
-    this.mouseY = 0;
+    // Start false so that auto-rotate is always active until the mouse moves, even if the mouse starts over
+    // the canvas.
+    this.mouseInCanvas = false;
 
     // Tracking to handle cleanup
     this.shuttingDown = false;
@@ -754,32 +760,44 @@ class bivotJs {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         _self.registerEventListener(document, 'mousemove', onDocumentMouseMove, false);
         _self.registerEventListener(document, 'mouseout', onDocumentMouseOut, false);
+        _self.registerEventListener(_self.canvas, 'mouseover', onCanvasMouseOver, false);
+        _self.registerEventListener(_self.canvas, 'mouseout', onCanvasMouseOut, false);
       } else if (_self.state.lightMotion == 'gyro') {
         _self.registerEventListener(window, 'deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-      } else {
-        console.assert(_self.state.lightMotion == 'sliders');
+        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);
+      } else if (_self.state.lightMotion == 'sliders') {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
+        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);
         if (_self.lights) {
           _self.state.lightPosition.set(0, 0, 1);
           _self.updateLightingGrid();
         }
+      } else {
+        console.assert(_self.state.lightMotion == 'animate');
+        window.removeEventListener('deviceorientation', onDeviceOrientation, false);
+        document.removeEventListener('mousemove', onDocumentMouseMove, false);
+        document.removeEventListener('mouseout', onDocumentMouseOut, false);
+        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);        
       }
     }
 
     function onDocumentMouseMove(event) {
       // Update cams and lights using relative mouse co-ords between -1 and 1 within the canvas
       event.preventDefault();
-      _self.mouseX = event.clientX;
-      _self.mouseY = event.clientY;
-      if (_self.isMouseInCanvas()) {
+      const viewPortX = event.clientX;
+      const viewPortY = event.clientY;
+      if (_self.isViewPortCoordInCanvas(viewPortX, viewPortY)) {
         const rect = _self.canvas.getBoundingClientRect();
         const xy = new THREE.Vector2(
-          ((_self.mouseX - rect.left) / (rect.right - rect.left)) * 2 - 1,
-          -((_self.mouseY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
+          ((viewPortX - rect.left) / (rect.right - rect.left)) * 2 - 1,
+          -((viewPortY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
         );
         _self.updateCamsAndLightsFromXY(xy, _self.state.lightTiltWithMousePos, _self.state.camTiltWithMousePos);
       }
@@ -801,9 +819,18 @@ class bivotJs {
         _self.camera.position.set(0, 0, _self.camera.position.length());
       }
 
-      if (_self.state.autoRotatePeriodMs && _self.state.lightMotion == 'mouse') {
+      if (_self.state.autoRotatePeriodMs 
+        && (_self.state.lightMotion == 'mouse' || _self.state.lightMotion == 'animate')) {
         _self.requestRender();
       }
+    }
+
+    function onCanvasMouseOver(event) {
+      _self.mouseInCanvas = true;
+    }
+
+    function onCanvasMouseOut(event) {
+      _self.mouseInCanvas = false;
     }
 
     function getOrientation(event) {
@@ -1431,13 +1458,13 @@ class bivotJs {
     return composer;
   }
 
-  isMouseInCanvas() {
+  isViewPortCoordInCanvas(x, y) {
     if (!this.canvas) {
       return false;
     }
     const rect = this.canvas.getBoundingClientRect();
-    return (this.mouseX >= rect.left && this.mouseX < rect.right &&
-            this.mouseY >= rect.top  && this.mouseY < rect.bottom);
+    return (x >= rect.left && x < rect.right &&
+            y >= rect.top  && y < rect.bottom);
   }
 
   updateLightingGrid() {
@@ -1612,15 +1639,15 @@ class bivotJs {
   }
 
   updateAutoRotate(loopValue) {
-    if (!this.isMouseInCanvas()) {
+    if (!this.mouseInCanvas || this.state.lightMotion == 'animate') {
       // loopValue is between 0 and 1
       const angle = 2 * Math.PI * loopValue;
       const xy = new THREE.Vector2(
         -Math.sin(angle),
         Math.cos(angle)
       );
-      const lightSensitivity = this.state.lightTiltWithMousePos * this.state.autoRotateLightFactor;
-      const camSensitivity = this.state.camTiltWithMousePos * this.state.autoRotateCamFactor;
+      const camSensitivity = -0.3 * this.state.autoRotateCamFactor;
+      const lightSensitivity = 1.0 * this.state.autoRotateLightFactor;
 
       this.timeouts.push(
         setTimeout(
@@ -1650,7 +1677,8 @@ class bivotJs {
 
       this.controls.update();
 
-      if (this.state.autoRotatePeriodMs && this.state.lightMotion == 'mouse') {
+      if (this.state.autoRotatePeriodMs 
+        && (this.state.lightMotion == 'mouse' || this.state.lightMotion == 'animate')) {
         this.updateAutoRotate((timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs);
       }
 
