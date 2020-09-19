@@ -59,7 +59,6 @@ export const externalScripts = [
   "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityHighPassShader.js",
   "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/GammaCorrectionShader.js",
   "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/lights/RectAreaLightUniformsLib.js",
-  "https://cdn.jsdelivr.net/gh/dataarts/dat.gui@v0.7.6/build/dat.gui.min.js",
 ];
 
 var zoomIndex = -1; // Index of the current zoom slider being moved
