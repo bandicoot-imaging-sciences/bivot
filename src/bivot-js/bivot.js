@@ -98,6 +98,10 @@ class bivotJs {
       lightType: 'point',
       areaLightWidth: 5.0,
       areaLightHeight: 0.2,
+      // Control modes are set using lightMotion:
+      // mouse - control using mouse position and mouse buttons (auto-rotate when outside canvas)
+      // gyro - control using device tilt (auto rotate always off)
+      // animate - automated control (auto rotate always on)
       lightMotion: 'mouse',
       lightColor: [255, 255, 255],
       lightPosition: new THREE.Vector3(0, 0, 1),
@@ -199,8 +203,9 @@ class bivotJs {
     this.gammaCorrectPass = null;
     this.composer = null;
     this.controls = null;
-    this.mouseX = 0;
-    this.mouseY = 0;
+    // Start false so that auto-rotate is always active until the mouse moves, even if the mouse starts over
+    // the canvas.
+    this.mouseInCanvas = false;
 
     // Tracking to handle cleanup
     this.shuttingDown = false;
@@ -218,20 +223,9 @@ class bivotJs {
     let touchDetected = detectTouch();
     let baselineTilt = new THREE.Vector2(0, 0);
     let baselineTiltSet = false;
-    let lightMotionModes = [
-      'gyro',
-      'mouse',
-      'sliders',
-    ]
-    let lightTypeModes = [
-      'point',
-      'area',
-    ]
     let loader = null;
     let firstRenderLoaded = false;
     let brdfTextures = null;
-    let guiL = null;
-    let guiR = null;
 
     let loadingElem = null;
     let progressBarElem = null;
@@ -754,32 +748,34 @@ class bivotJs {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         _self.registerEventListener(document, 'mousemove', onDocumentMouseMove, false);
         _self.registerEventListener(document, 'mouseout', onDocumentMouseOut, false);
+        _self.registerEventListener(_self.canvas, 'mouseover', onCanvasMouseOver, false);
+        _self.registerEventListener(_self.canvas, 'mouseout', onCanvasMouseOut, false);
       } else if (_self.state.lightMotion == 'gyro') {
         _self.registerEventListener(window, 'deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
+        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);
       } else {
-        console.assert(_self.state.lightMotion == 'sliders');
+        console.assert(_self.state.lightMotion == 'animate');
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-        if (_self.lights) {
-          _self.state.lightPosition.set(0, 0, 1);
-          _self.updateLightingGrid();
-        }
+        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);        
       }
     }
 
     function onDocumentMouseMove(event) {
       // Update cams and lights using relative mouse co-ords between -1 and 1 within the canvas
       event.preventDefault();
-      _self.mouseX = event.clientX;
-      _self.mouseY = event.clientY;
-      if (_self.isMouseInCanvas()) {
+      const viewPortX = event.clientX;
+      const viewPortY = event.clientY;
+      if (_self.isViewPortCoordInCanvas(viewPortX, viewPortY)) {
         const rect = _self.canvas.getBoundingClientRect();
         const xy = new THREE.Vector2(
-          ((_self.mouseX - rect.left) / (rect.right - rect.left)) * 2 - 1,
-          -((_self.mouseY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
+          ((viewPortX - rect.left) / (rect.right - rect.left)) * 2 - 1,
+          -((viewPortY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
         );
         _self.updateCamsAndLightsFromXY(xy, _self.state.lightTiltWithMousePos, _self.state.camTiltWithMousePos);
       }
@@ -801,9 +797,18 @@ class bivotJs {
         _self.camera.position.set(0, 0, _self.camera.position.length());
       }
 
-      if (_self.state.autoRotatePeriodMs && _self.state.lightMotion == 'mouse') {
+      if (_self.state.autoRotatePeriodMs 
+        && (_self.state.lightMotion == 'mouse' || _self.state.lightMotion == 'animate')) {
         _self.requestRender();
       }
+    }
+
+    function onCanvasMouseOver(event) {
+      _self.mouseInCanvas = true;
+    }
+
+    function onCanvasMouseOut(event) {
+      _self.mouseInCanvas = false;
     }
 
     function getOrientation(event) {
@@ -853,207 +858,6 @@ class bivotJs {
       _self.state._meshRotateZDegreesPrevious = 0;
       _self.updateMeshRotation();
     }
-
-    // function guiStateReset() {
-    //   console.log('Reset state');
-    // }
-
-    // function guiStateSave() {
-    //   var saveStateFields = [
-    //     'brdfModel',
-    //     'brdfVersion',
-    //     'illumL',
-    //     'yFlip',
-
-    //     'exposure',
-    //     'meshRotateZDegrees',
-    //     'background',
-    //     'roughness',
-    //     'bloom',
-    //     'lightType',
-    //     'areaLightWidth',
-    //     'areaLightHeight',
-    //     'lightPositionOffset',
-    //     'lightColor',
-    //     'ambient',
-    //     'camTiltWithMousePos',
-    //     'camTiltWithDeviceOrient',
-    //     'camTiltLimitDegrees',
-    //     'lightTiltWithMousePos',
-    //     'lightTiltWithDeviceOrient',
-    //     'lightTiltLimitDegrees'
-    //   ];
-    //   var saveConfig = {
-    //     'cameraPositionZ': this.camera.position['z'],
-    //     'controlsMinDistance': this.controls['minDistance'],
-    //     'controlsMaxDistance': this.controls['maxDistance'],
-    //     'state': {}
-    //   };
-    //   var scan_name = this.state['scan'];
-    //   var found = false;
-    //   for (var key in this.scans) {
-    //     if (key == scan_name) {
-    //       found = true;
-    //       break;
-    //     }
-    //   }
-    //   if (!found) {
-    //     // If scan name is unset or invalid, use the name of the first material
-    //     scan_name = Object.keys(this.scans)[0];
-    //   }
-
-    //   stateToJson(this.state, saveConfig['state'], saveStateFields, this.vectorKeys);
-    //   var fullJson = {'renders': {[scan_name]: saveConfig}};
-    //   var filename = 'bivot-renders-' + scan_name + '.json'
-    //   triggerDownload(filename, JSON.stringify(fullJson, null, 2));
-    // }
-
-    // function triggerDownload(filename, content) {
-    //   var uriContent = "data:text/plain," + encodeURIComponent(content);
-    //   var blob = new Blob([content], {type: "text/plain"});
-
-    //   var link = document.createElement("a");
-    //   link.download = filename;
-    //   link.href = URL.createObjectURL(blob);
-    //   link.style.display = "none";
-    //   document.body.appendChild(link);
-    //   link.click();
-    //   document.body.removeChild(link);
-    // }
-
-    // function addControlPanel() {
-    //   switch (this.opts.controlMode) {
-    //     // When changing UI defaults and limits, please adjust both the FULL and QA/MANAGE definitions.
-    //     case this.controlModes.FULL:
-    //       guiR = new dat.GUI();
-    //       guiR.close();
-    //       guiR.add(this.state, 'scan', Array.from(Object.keys(this.scans))).onChange(loadScan);
-    //       guiR.add(this.state, 'exposure', 0, 15, 0.1).onChange(this.requestRender).listen();
-
-    //       var renderGui = guiR.addFolder('Render');
-    //       renderGui.add(this.state, 'background', 0, 255, 1).onChange(updateBackground);
-    //       renderGui.add(this.state, 'diffuse', 0, 2, 0.01).onChange(this.requestRender).listen();
-    //       renderGui.add(this.state, 'specular', 0, 2, 0.01).onChange(this.requestRender).listen();
-    //       renderGui.add(this.state, 'roughness', 0, 2, 0.01).onChange(this.requestRender).listen();
-    //       renderGui.add(this.state, 'tint').onChange(this.requestRender).listen();
-    //       renderGui.add(this.state, 'fresnel').onChange(this.requestRender).listen();
-    //       renderGui.add(ambientLight, 'intensity', 0, 2, 0.01).onChange(this.requestRender).name('ambient').listen();
-    //       renderGui.add(this.state, 'fxaa').onChange(function(value){this.setFxaaResolution(); this.requestRender();}).listen();
-    //       renderGui.add(this.state, 'bloom', 0, 2, 0.01).onChange(function(value){bloomPass.strength = Number(value); this.requestRender();}).listen();
-    //       renderGui.add(this.state, 'gammaCorrect').onChange(function(value){gammaCorrectPass.enabled = value; this.requestRender();}).listen();
-    //       renderGui.add(this.state, 'adaptiveToneMap').onChange(function(value){toneMappingPass.setAdaptive(value); this.requestRender();}).listen();
-    //       renderGui.add(this.state, 'toneMapDarkness', 0, 0.2, 0.01).onChange(function(value){updateToneMapParams(); this.requestRender();}).listen();
-    //       renderGui.add(this.state, 'threeJsShader').onChange(this.requestRender);
-
-    //       var lightingGui = guiR.addFolder('Lighting');
-    //       lightingGui.add(this.state, 'lightType', lightTypeModes).onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'areaLightWidth', 0.1, 10, 0.1).onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'areaLightHeight', 0.1, 10, 0.1).onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'lightMotion', lightMotionModes).onChange(updateLightMotion).listen();
-    //       lightingGui.add(this.state.lightColor, 'r', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light R');
-    //       lightingGui.add(this.state.lightColor, 'g', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light G');
-    //       lightingGui.add(this.state.lightColor, 'b', 0, 2, 0.01).onChange(updateLightingGrid).listen().name('light B');
-    //       lightingGui.add(this.state.lightPosition, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light x');
-    //       lightingGui.add(this.state.lightPosition, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light y');
-    //       lightingGui.add(this.state.lightPosition, 'z', 0.1, 3, 0.01).onChange(updateLightingGrid).listen().name('light z');
-    //       lightingGui.add(this.state.lightPositionOffset, 'x', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset x');
-    //       lightingGui.add(this.state.lightPositionOffset, 'y', -1, 1, 0.01).onChange(updateLightingGrid).listen().name('light offset y');
-    //       lightingGui.add(this.state, 'lightNumber', 1, 10, 1).onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'lightSpacing', 0.01, 5, 0.01).onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'light45').onChange(updateLightingGrid);
-
-    //       var sceneGui = guiR.addFolder('Scene');
-    //       sceneGui.add(this.state, 'meshRotateZDegrees', -180, 180).onChange(updateMeshRotation).name('obj rotate (deg)');
-    //       sceneGui.add(this.state, 'focalLength', 30, 200, 10).onChange(updateFOV);
-    //       sceneGui.add(this.camera.position, 'x', -1, 1, 0.01).onChange(this.requestRender).listen().name('camera.x');
-    //       sceneGui.add(this.camera.position, 'y', -1, 1, 0.01).onChange(this.requestRender).listen().name('camera.y');
-    //       sceneGui.add(this.camera.position, 'z', 0.1, 2, 0.01).onChange(this.requestRender).listen().name('camera.z');
-    //       sceneGui.add(this.controls, 'minDistance', 0.1, 2.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.controls, 'maxDistance', 0.1, 4.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'camTiltLimitDegrees', 0, 90, 1).onChange(updateCamTiltLimit).listen();
-    //       sceneGui.add(this.state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'lightTiltLimitDegrees', 0, 90, 1).onChange(this.requestRender).listen();
-    //       sceneGui.add(this.state, 'tiltDriftSpeed', 0, 1.0, 0.1).listen();
-    //       sceneGui.add(this.state, 'tiltZeroOnMouseOut').listen();
-
-    //       this.stats = new Stats();
-    //       this.stats.showPanel(0); // 0: fps, 1: ms / frame, 2: MB RAM, 3+: custom
-    //       document.body.appendChild(this.stats.dom);
-
-    //       break;
-
-    //     case this.controlModes.QA:
-    //     case this.controlModes.MANAGE:
-    //       guiL = new dat.GUI({ autoPlace: false });
-    //       var guiLContainer = document.getElementById('gui-L-container');
-    //       guiLContainer.appendChild(guiL.domElement);
-
-    //       var generalGui = guiL.addFolder('General');
-    //       generalGui.add(this.state, 'exposure', 0, 15, 0.1).name('Exposure').onChange(this.requestRender).listen();
-    //       generalGui.add(this.state, 'meshRotateZDegrees', -180, 180).name('Rotation (deg)').onChange(updateMeshRotation);
-
-    //       var renderGui = guiL.addFolder('Render');
-    //       renderGui.add(this.state, 'background', 0, 255, 1).name('Background level').onChange(updateBackground);
-    //       renderGui.add(this.state, 'roughness', 0, 2, 0.01).name('Roughness adjust').onChange(this.requestRender).listen();
-    //       renderGui.add(this.state, 'bloom', 0, 2, 0.01).name('Bloom amount').onChange(function(value){bloomPass.strength = Number(value); this.requestRender();}).listen();
-    //       renderGui.add(ambientLight, 'intensity', 0, 20, 0.1).name('Ambient level').onChange(this.requestRender).listen();
-
-    //       var cameraGui = guiL.addFolder('Camera');
-    //       cameraGui.add(this.camera.position, 'z', 0.1, 2, 0.01).name('Initial height (m)').onChange(this.requestRender).listen();
-    //       cameraGui.add(this.controls, 'minDistance', 0.1, 2.0, 0.1).name('Min height (m)').onChange(this.requestRender).listen();
-    //       cameraGui.add(this.controls, 'maxDistance', 0.1, 4.0, 0.1).name('Max height (m)').onChange(this.requestRender).listen();
-    //       cameraGui.add(this.state, 'camTiltWithMousePos', -2.0, 2.0, 0.1).name('Mouse sensitivity').onChange(this.requestRender).listen();
-    //       cameraGui.add(this.state, 'camTiltWithDeviceOrient', -2.0, 2.0, 0.1).name('Tilt sensitivity').onChange(this.requestRender).listen();
-    //       cameraGui.add(this.state, 'camTiltLimitDegrees', 0, 90, 1).name('Tilt limit (deg)').onChange(updateCamTiltLimit).listen();
-
-    //       guiR = new dat.GUI();
-    //       var lightingGui = guiR.addFolder('Lighting');
-    //       lightingGui.add(this.state, 'lightType', lightTypeModes).name('Light type').onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'areaLightWidth', 0.1, 10, 0.1).name('Area light width').onChange(updateLightingGrid);
-    //       lightingGui.add(this.state, 'areaLightHeight', 0.1, 10, 0.1).name('Area light height').onChange(updateLightingGrid);
-    //       lightingGui.add(this.state.lightColor, 'r', 0, 2, 0.01).name('Light color R').onChange(updateLightingGrid).listen();
-    //       lightingGui.add(this.state.lightColor, 'g', 0, 2, 0.01).name('Light color G').onChange(updateLightingGrid).listen();
-    //       lightingGui.add(this.state.lightColor, 'b', 0, 2, 0.01).name('Light color B').onChange(updateLightingGrid).listen();
-    //       lightingGui.add(this.state.lightPositionOffset, 'x', -1, 1, 0.01).name('Light offset X').onChange(updateLightingGrid).listen();
-    //       lightingGui.add(this.state.lightPositionOffset, 'y', -1, 1, 0.01).name('Light offset Y').onChange(updateLightingGrid).listen();
-    //       lightingGui.add(this.state, 'lightTiltWithMousePos', -2.0, 2.0, 0.1).name('Mouse sensitivity').onChange(this.requestRender).listen();
-    //       lightingGui.add(this.state, 'lightTiltWithDeviceOrient', -2.0, 2.0, 0.1).name('Tilt sensitivity').onChange(this.requestRender).listen();
-    //       lightingGui.add(this.state, 'lightTiltLimitDegrees', 0, 90, 1).name('Tilt limit (deg)').onChange(this.requestRender).listen();
-
-    //       var adminGui = guiR.addFolder('Admin');
-    //       adminGui.add({reset: guiStateReset}, 'reset').name('Reset state');
-    //       adminGui.add({save: guiStateSave}, 'save').name('Save state');
-
-    //       generalGui.open();
-    //       renderGui.open();
-    //       cameraGui.open();
-    //       lightingGui.open();
-    //       adminGui.open();
-    //       guiL.open();
-    //       guiR.open();
-
-    //       break;
-
-    //     case this.controlModes.NONE:
-    //     default:
-    //       break;
-    //   }
-    // }
-
-    // function updateControlPanel(gui) {
-    //   if (gui) {
-    //     for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
-    //       var key = Object.keys(gui.__folders)[i];
-    //       for (var j = 0; j < gui.__folders[key].__controllers.length; j++ )
-    //       {
-    //           gui.__folders[key].__controllers[j].updateDisplay();
-    //       }
-    //     }
-    //   }
-    // }
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
       var objLoader = new THREE.OBJLoader(loadManager);
@@ -1266,8 +1070,6 @@ class bivotJs {
       }
 
       mergeDictKeys(keys, _self.state, bivotState, scanState, _self.config.initialState, _self.vectorKeys);
-      // updateControlPanel(guiL);
-      // updateControlPanel(guiR);
 
       console.log('  BRDF model: ', _self.state.brdfModel);
       console.log('  BRDF version: ', _self.state.brdfVersion);
@@ -1431,13 +1233,13 @@ class bivotJs {
     return composer;
   }
 
-  isMouseInCanvas() {
+  isViewPortCoordInCanvas(x, y) {
     if (!this.canvas) {
       return false;
     }
     const rect = this.canvas.getBoundingClientRect();
-    return (this.mouseX >= rect.left && this.mouseX < rect.right &&
-            this.mouseY >= rect.top  && this.mouseY < rect.bottom);
+    return (x >= rect.left && x < rect.right &&
+            y >= rect.top  && y < rect.bottom);
   }
 
   updateLightingGrid() {
@@ -1612,15 +1414,15 @@ class bivotJs {
   }
 
   updateAutoRotate(loopValue) {
-    if (!this.isMouseInCanvas()) {
+    if (!this.mouseInCanvas || this.state.lightMotion == 'animate') {
       // loopValue is between 0 and 1
       const angle = 2 * Math.PI * loopValue;
       const xy = new THREE.Vector2(
         -Math.sin(angle),
         Math.cos(angle)
       );
-      const lightSensitivity = this.state.lightTiltWithMousePos * this.state.autoRotateLightFactor;
-      const camSensitivity = this.state.camTiltWithMousePos * this.state.autoRotateCamFactor;
+      const camSensitivity = -0.3 * this.state.autoRotateCamFactor;
+      const lightSensitivity = 1.0 * this.state.autoRotateLightFactor;
 
       this.timeouts.push(
         setTimeout(
@@ -1650,7 +1452,8 @@ class bivotJs {
 
       this.controls.update();
 
-      if (this.state.autoRotatePeriodMs && this.state.lightMotion == 'mouse') {
+      if (this.state.autoRotatePeriodMs 
+        && (this.state.lightMotion == 'mouse' || this.state.lightMotion == 'animate')) {
         this.updateAutoRotate((timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs);
       }
 
