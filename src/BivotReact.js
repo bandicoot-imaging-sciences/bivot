@@ -381,10 +381,7 @@ function BivotReact(props) {
     const { userId, materialId } = material;
     const success = await writeState(userId, materialId, materialSet);
     if (success) {
-      alert("Material saved");
       copyStateFields(config.state, checkpointState);
-    } else {
-      alert("Something went wrong.  The Material might not have been saved.");
     }
   }
 
