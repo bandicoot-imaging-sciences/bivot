@@ -26,6 +26,25 @@ Parts adapted from Threejsfundamentals:
 */
 
 'use strict';
+
+// The Three.js import paths in bivot.js and shaers.js need to match.
+
+import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/build/three.module.js';
+
+import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/controls/OrbitControls.js';
+import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/OBJLoader.js';
+import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/WebGL.js';
+import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/lights/RectAreaLightUniformsLib.js';
+
+
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
@@ -188,7 +207,6 @@ class bivotJs {
     this.scans = {};
     this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
-    this.stats = null;
     this.renderRequested = false;
     this.scene = new THREE.Scene();
     this.camera = null;
@@ -290,8 +308,8 @@ class bivotJs {
       //   addControlPanel();
       // }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
-      THREE.RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.renderer = this.initialiseRenderer();
+      RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
 
@@ -637,7 +655,7 @@ class bivotJs {
     }
 
     function initialiseControls(camera, canvas, config, tiltLimit) {
-      var controls = new THREE.OrbitControls(camera, canvas);
+      var controls = new OrbitControls(camera, canvas);
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
       controls.panSpeed = 0.3;
@@ -860,7 +878,7 @@ class bivotJs {
     }
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
-      var objLoader = new THREE.OBJLoader(loadManager);
+      var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
           console.log('Loaded mesh object:', meshPath);
@@ -886,7 +904,7 @@ class bivotJs {
       }
 
       if (_self.config.textureFormat == 'EXR') {
-        loader = new THREE.EXRLoader(loadManager);
+        loader = new EXRLoader(loadManager);
       } else{
         loader = new THREE.TextureLoader(loadManager);
       }
@@ -1206,12 +1224,12 @@ class bivotJs {
   }
 
   initialiseComposer(renderer, updateToneMapParams) {
-    var composer = new THREE.EffectComposer(renderer);
+    var composer = new EffectComposer(renderer);
 
-    this.renderPass = new THREE.RenderPass(this.scene, this.camera);
+    this.renderPass = new RenderPass(this.scene, this.camera);
     composer.addPass(this.renderPass);
 
-    this.bloomPass = new THREE.UnrealBloomPass(
+    this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
       this.state.bloom, // strength
       0.4, // radius
@@ -1219,14 +1237,14 @@ class bivotJs {
     );
     composer.addPass(this.bloomPass);
 
-    this.fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+    this.fxaaPass = new ShaderPass(FXAAShader);
     this.setFxaaResolution();
     composer.addPass(this.fxaaPass);
 
-    this.gammaCorrectPass = new THREE.ShaderPass(THREE.GammaCorrectionShader);
+    this.gammaCorrectPass = new ShaderPass(GammaCorrectionShader);
     composer.addPass(this.gammaCorrectPass);
 
-    this.toneMappingPass = new THREE.AdaptiveToneMappingPass(true, 256);
+    this.toneMappingPass = new AdaptiveToneMappingPass(true, 256);
     updateToneMapParams();
     composer.addPass(this.toneMappingPass);
 
@@ -1437,10 +1455,6 @@ class bivotJs {
     if (this.shuttingDown) {
       this.doShutdown();
     } else if (this.controls && this.composer) {
-      if (this.stats) {
-        this.stats.begin();
-      }
-
       if (this.state.dirty) {
         this.state.dirty = false;
         this.updateBackground();
@@ -1475,9 +1489,6 @@ class bivotJs {
 
       this.composer.render();
 
-      if (this.stats) {
-        this.stats.end();
-      }
       this.renderRequested = false;
     }
   }
@@ -1491,8 +1502,8 @@ class bivotJs {
   }
 
   checkWebGL() {
-    if (THREE.WEBGL.isWebGLAvailable() === false) {
-      document.body.appendChild(THREE.WEBGL.getWebGLErrorMessage());
+    if (WEBGL.isWebGLAvailable() === false) {
+      document.body.appendChild(WEBGL.getWebGLErrorMessage());
     }
   }
 
