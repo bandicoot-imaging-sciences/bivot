@@ -35,14 +35,14 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sci
 import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/EXRLoader.js';
 import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/OBJLoader.js';
 import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/WebGL.js';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/RenderPass.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/postprocessing/AdaptiveToneMappingPass.js';
-import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/js/lights/RectAreaLightUniformsLib.js';
+import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 
 import getShaders from './shaders.js';
