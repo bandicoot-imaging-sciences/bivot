@@ -48,7 +48,7 @@ import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
-import { jsonToState, stateToJson, copyStatesCloneVectors } from '../utils/stateUtils.js';
+import { jsonToState, copyStatesCloneVectors } from '../utils/stateUtils.js';
 
 /*
   The options object is optional and can include the following:
