@@ -47,7 +47,8 @@
   </body>
   <!-- Finally, import and start Bivot, pegged to the specified version -->
   <script type="module">
-    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@area-light-fix/src/bivot-js/dist/index.js";
+    const bivSrc = "../dist/index.js";
+    // const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@0cc85898340fa7c37df3dff8f10e68a90fb31e19/src/bivot-js/dist/index.js";
     const materialSet = "https://shop-storage-dev-publish-qky7rq3y5ipl.s3-ap-southeast-2.amazonaws.com/1a6c4623/biv_gallery/material-set.json"; // Specifies the material to view.  Can be any material set file, local or remote
     // const materialSet = "material-set.json"; // Specifies the material to view.  Can be any material set file, local or remote
     const options = { materialSet, configPath: null, renderPath: null };

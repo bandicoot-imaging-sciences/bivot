@@ -29,21 +29,21 @@ Parts adapted from Threejsfundamentals:
 
 // The Three.js import paths in bivot.js and shaers.js need to match.
 
-import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/build/three.module.js';
+// Somewhere in between r116 and r117 our lighting broke.
+import * as THREE from '../../../three.js/build/three.module.js';
 
-import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/controls/OrbitControls.js';
-import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/EXRLoader.js';
-import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/loaders/OBJLoader.js';
-import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/WebGL.js';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
-import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@rectarea-halffloat/examples/jsm/lights/RectAreaLightUniformsLib.js';
-
+import { OrbitControls } from '../../../three.js/examples/jsm/controls/OrbitControls.js';
+import { EXRLoader } from '../../../three.js/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from '../../../three.js/examples/jsm/loaders/OBJLoader.js';
+import { WEBGL } from '../../../three.js/examples/jsm/WebGL.js';
+import { EffectComposer } from '../../../three.js/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '../../../three.js/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from '../../../three.js/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from '../../../three.js/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from '../../../three.js/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from '../../../three.js/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from '../../../three.js/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from '../../../three.js/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
@@ -112,7 +112,6 @@ class bivotJs {
       bloom: 0.1,
       adaptiveToneMap: false,
       toneMapDarkness: 0.04,
-      gammaCorrect: true,
       threeJsShader: true,
       lightType: 'point',
       areaLightWidth: 5.0,
@@ -174,7 +173,6 @@ class bivotJs {
       minCamZ: 0.4, // Initial value, state is changed via controls object.
       maxCamZ: 2.0, // Initial value, state is changed via controls object.
       linearFilter: true, // Applied during texture loading.
-      gamma: 1.8, // Initial value, cannot be changed after renderer is initialised.
       initialState: {},
     };
 
@@ -883,6 +881,11 @@ class bivotJs {
         function(object) {
           console.log('Loaded mesh object:', meshPath);
           _self.mesh = object;
+          _self.mesh.traverse(function(child) {
+            if (child instanceof THREE.Mesh) {
+              child.geometry.computeVertexNormals();
+            }
+          });
           newMeshRotation();
         },
         function (xhr) {},
@@ -1212,14 +1215,6 @@ class bivotJs {
     var renderer = new THREE.WebGLRenderer({ canvas: this.canvas, preserveDrawingBuffer: true });
     renderer.physicallyCorrectLights = true;
 
-    renderer.gammaInput = true;
-    renderer.gammaOutput = false;
-    renderer.gammaFactor = this.config.gamma;
-    // The gamma cannot be changed after the renderer is initialised:
-    // https://github.com/mrdoob/three.js/issues/12831
-    // A work around would be to implement our own version of GammaCorrectionShader
-    // with an adjustable gamma uniform.
-
     return renderer;
   }
 
@@ -1241,12 +1236,15 @@ class bivotJs {
     this.setFxaaResolution();
     composer.addPass(this.fxaaPass);
 
-    this.gammaCorrectPass = new ShaderPass(GammaCorrectionShader);
-    composer.addPass(this.gammaCorrectPass);
-
     this.toneMappingPass = new AdaptiveToneMappingPass(true, 256);
     updateToneMapParams();
     composer.addPass(this.toneMappingPass);
+
+    // The effective gamma is hard-coded by the linear to sRGB mapping inside GammaCorrectionShader.
+    // To implement adjustable gamma, we could implement our own GammaCorrectionShader.
+    this.gammaCorrectPass = new ShaderPass(GammaCorrectionShader);
+    composer.addPass(this.gammaCorrectPass);
+
 
     return composer;
   }
@@ -1302,8 +1300,6 @@ class bivotJs {
           rectLight.position.copy(upVector);
           rectLight.position.add(offset);
           lights.add(rectLight);
-          //var rectLightHelper = new THREE.RectAreaLightHelper( rectLight );
-          //rectLight.add( rectLightHelper );
         } else {
           let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
           light.position.copy(upVector);

@@ -1,3 +1,4 @@
+import * as THREE from '../../../three.js/build/three.module.js';
 
 // TODO: Share this code from bivot.js instead of duplicating
 
