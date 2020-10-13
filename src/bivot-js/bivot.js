@@ -1172,10 +1172,12 @@ class bivotJs {
     }
 
     function addControlPanel() {
-      if (_self.opts.controlMode != _self.controlModes.NONE) {
-        _self.gui = new dat.GUI();
-        // _self.gui.add(_self.state, 'scan', Array.from(Object.keys(_self.scans))).onChange(loadScan);
-        _self.gui.add(_self.state, 'exposure', 0, 8, 0.1).onChange(_self.requestRender).listen();
+      if (typeof dat !== 'undefined') {
+        if (_self.opts.controlMode != _self.controlModes.NONE) {
+          _self.gui = new dat.GUI();
+          // _self.gui.add(_self.state, 'scan', Array.from(Object.keys(_self.scans))).onChange(loadScan);
+          _self.gui.add(_self.state, 'exposure', 0, 8, 0.1).onChange(_self.requestRender).listen();
+        }
       }
     }
 
