@@ -226,6 +226,7 @@ class bivotJs {
     let loader = null;
     let firstRenderLoaded = false;
     let brdfTextures = null;
+    let gui = null;
 
     let loadingElem = null;
     let progressBarElem = null;
@@ -286,9 +287,9 @@ class bivotJs {
       initialiseLighting(this.getBgColorFromState(this.state), this.scene);
       this.camera = initialiseCamera(this.state.focalLength, this.config.initCamZ);
       this.controls = initialiseControls(this.camera, this.canvas, this.config, this.state.camTiltLimitDegrees);
-      // if (this.config.showInterface) {
-      //   addControlPanel();
-      // }
+      if (this.config.showInterface) {
+        addControlPanel();
+      }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
       THREE.RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.renderer = this.initialiseRenderer();
@@ -860,6 +861,7 @@ class bivotJs {
     }
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
+      updateControlPanel(gui);
       var objLoader = new THREE.OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
@@ -1167,6 +1169,26 @@ class bivotJs {
       _self.camera.fov = fov;
       _self.camera.updateProjectionMatrix();
       _self.requestRender();
+    }
+
+    function addControlPanel() {
+      if (_self.opts.controlMode != _self.controlModes.NONE) {
+        _self.gui = new dat.GUI();
+        // _self.gui.add(_self.state, 'scan', Array.from(Object.keys(_self.scans))).onChange(loadScan);
+        _self.gui.add(_self.state, 'exposure', 0, 8, 0.1).onChange(_self.requestRender).listen();
+      }
+    }
+
+    function updateControlPanel(gui) {
+      if (gui) {
+        for (var i = 0; i < Object.keys(gui.__folders).length; i++) {
+          var key = Object.keys(gui.__folders)[i];
+          for (var j = 0; j < gui.__folders[key].__controllers.length; j++ )
+          {
+              gui.__folders[key].__controllers[j].updateDisplay();
+          }
+        }
+      }
     }
   }
 
