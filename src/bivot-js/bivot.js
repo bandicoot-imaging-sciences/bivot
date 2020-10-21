@@ -307,7 +307,7 @@ class bivotJs {
       // }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
       this.renderer = this.initialiseRenderer();
-      RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
+      RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
 
