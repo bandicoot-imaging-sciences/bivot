@@ -303,11 +303,11 @@ class bivotJs {
       this.camera = initialiseCamera(this.state.focalLength, this.config.initCamZ);
       this.controls = initialiseControls(this.camera, this.canvas, this.config, this.state.camTiltLimitDegrees);
       // if (this.config.showInterface) {
-      //   addControlPanel();
-      // }
+        //   addControlPanel();
+        // }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
-      this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
+      this.renderer = this.initialiseRenderer();
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
 
