@@ -192,8 +192,7 @@ function BivotReact(props) {
   async function onLoad() {
     loadBivot();
     if (onClick) {
-      const context = canvasRef.current.getContext('webgl');
-      context.canvas.addEventListener('click', onClick, false);
+      canvasRef.current.addEventListener('click', onClick, false);
     }
   }
 
@@ -424,12 +423,12 @@ function BivotReact(props) {
     } else {
       toPortrait = event.target.checked;
     }
-    var context = canvasRef.current.getContext('webgl');
-    const canvasPortrait = (context.canvas.height > context.canvas.width);
+    const canvas = canvasRef.current;
+    const canvasPortrait = (canvas.height > canvas.width);
     if (toPortrait != canvasPortrait) {
       setPortrait(toPortrait);
-      context.canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
-      context.canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
+      canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
+      canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
       renderFrame(true);
     }
   }
