@@ -26,10 +26,30 @@ Parts adapted from Threejsfundamentals:
 */
 
 'use strict';
+
+// The Three.js import paths in src/bivot-js/bivot.js, src/bivot-js/shaders.js and src/utils/stateUtils.js
+// need to match.
+
+// Somewhere in between r116 and r117 our lighting broke.
+import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/build/three.module.js';
+
+import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/controls/OrbitControls.js';
+import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/OBJLoader.js';
+import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/WebGL.js';
+import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/lights/RectAreaLightUniformsLib.js';
+
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
-import { jsonToState, stateToJson, copyStatesCloneVectors } from '../utils/stateUtils.js';
+import { jsonToState, copyStatesCloneVectors } from '../utils/stateUtils.js';
 
 /*
   The options object is optional and can include the following:
@@ -93,7 +113,6 @@ class bivotJs {
       bloom: 0.1,
       adaptiveToneMap: false,
       toneMapDarkness: 0.04,
-      gammaCorrect: true,
       threeJsShader: true,
       lightType: 'point',
       areaLightWidth: 5.0,
@@ -155,7 +174,6 @@ class bivotJs {
       minCamZ: 0.4, // Initial value, state is changed via controls object.
       maxCamZ: 2.0, // Initial value, state is changed via controls object.
       linearFilter: true, // Applied during texture loading.
-      gamma: 1.8, // Initial value, cannot be changed after renderer is initialised.
       initialState: {},
     };
 
@@ -188,7 +206,6 @@ class bivotJs {
     this.scans = {};
     this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
-    this.stats = null;
     this.renderRequested = false;
     this.scene = new THREE.Scene();
     this.camera = null;
@@ -291,8 +308,8 @@ class bivotJs {
         addControlPanel();
       }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
-      THREE.RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.renderer = this.initialiseRenderer();
+      RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
 
@@ -638,7 +655,7 @@ class bivotJs {
     }
 
     function initialiseControls(camera, canvas, config, tiltLimit) {
-      var controls = new THREE.OrbitControls(camera, canvas);
+      var controls = new OrbitControls(camera, canvas);
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
       controls.panSpeed = 0.3;
@@ -862,11 +879,19 @@ class bivotJs {
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
       updateControlPanel(gui);
-      var objLoader = new THREE.OBJLoader(loadManager);
+      var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
           console.log('Loaded mesh object:', meshPath);
           _self.mesh = object;
+          // START: work around for https://github.com/mrdoob/three.js/issues/20492
+          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+          _self.mesh.traverse(function(child) {
+            if (child instanceof THREE.Mesh) {
+              child.geometry.computeVertexNormals();
+            }
+          });
+          // END work around.
           newMeshRotation();
         },
         function (xhr) {},
@@ -888,7 +913,7 @@ class bivotJs {
       }
 
       if (_self.config.textureFormat == 'EXR') {
-        loader = new THREE.EXRLoader(loadManager);
+        loader = new EXRLoader(loadManager);
       } else{
         loader = new THREE.TextureLoader(loadManager);
       }
@@ -1218,24 +1243,16 @@ class bivotJs {
     var renderer = new THREE.WebGLRenderer({ canvas: this.canvas, preserveDrawingBuffer: true });
     renderer.physicallyCorrectLights = true;
 
-    renderer.gammaInput = true;
-    renderer.gammaOutput = false;
-    renderer.gammaFactor = this.config.gamma;
-    // The gamma cannot be changed after the renderer is initialised:
-    // https://github.com/mrdoob/three.js/issues/12831
-    // A work around would be to implement our own version of GammaCorrectionShader
-    // with an adjustable gamma uniform.
-
     return renderer;
   }
 
   initialiseComposer(renderer, updateToneMapParams) {
-    var composer = new THREE.EffectComposer(renderer);
+    var composer = new EffectComposer(renderer);
 
-    this.renderPass = new THREE.RenderPass(this.scene, this.camera);
+    this.renderPass = new RenderPass(this.scene, this.camera);
     composer.addPass(this.renderPass);
 
-    this.bloomPass = new THREE.UnrealBloomPass(
+    this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
       this.state.bloom, // strength
       0.4, // radius
@@ -1243,16 +1260,19 @@ class bivotJs {
     );
     composer.addPass(this.bloomPass);
 
-    this.fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+    this.fxaaPass = new ShaderPass(FXAAShader);
     this.setFxaaResolution();
     composer.addPass(this.fxaaPass);
 
-    this.gammaCorrectPass = new THREE.ShaderPass(THREE.GammaCorrectionShader);
-    composer.addPass(this.gammaCorrectPass);
-
-    this.toneMappingPass = new THREE.AdaptiveToneMappingPass(true, 256);
+    this.toneMappingPass = new AdaptiveToneMappingPass(true, 256);
     updateToneMapParams();
     composer.addPass(this.toneMappingPass);
+
+    // The effective gamma is hard-coded by the linear to sRGB mapping inside GammaCorrectionShader.
+    // To implement adjustable gamma, we could implement our own GammaCorrectionShader.
+    this.gammaCorrectPass = new ShaderPass(GammaCorrectionShader);
+    composer.addPass(this.gammaCorrectPass);
+
 
     return composer;
   }
@@ -1308,8 +1328,6 @@ class bivotJs {
           rectLight.position.copy(upVector);
           rectLight.position.add(offset);
           lights.add(rectLight);
-          //var rectLightHelper = new THREE.RectAreaLightHelper( rectLight );
-          //rectLight.add( rectLightHelper );
         } else {
           let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
           light.position.copy(upVector);
@@ -1461,10 +1479,6 @@ class bivotJs {
     if (this.shuttingDown) {
       this.doShutdown();
     } else if (this.controls && this.composer) {
-      if (this.stats) {
-        this.stats.begin();
-      }
-
       if (this.state.dirty) {
         this.state.dirty = false;
         this.updateBackground();
@@ -1499,9 +1513,6 @@ class bivotJs {
 
       this.composer.render();
 
-      if (this.stats) {
-        this.stats.end();
-      }
       this.renderRequested = false;
     }
   }
@@ -1515,8 +1526,8 @@ class bivotJs {
   }
 
   checkWebGL() {
-    if (THREE.WEBGL.isWebGLAvailable() === false) {
-      document.body.appendChild(THREE.WEBGL.getWebGLErrorMessage());
+    if (WEBGL.isWebGLAvailable() === false) {
+      document.body.appendChild(WEBGL.getWebGLErrorMessage());
     }
   }
 
