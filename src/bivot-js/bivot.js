@@ -27,29 +27,27 @@ Parts adapted from Threejsfundamentals:
 
 'use strict';
 
-// The Three.js import paths in src/bivot-js/bivot.js, src/bivot-js/shaders.js and src/utils/stateUtils.js
-// need to match.
+// The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-// Somewhere in between r116 and r117 our lighting broke.
-import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/build/three.module.js';
+import * as THREE from '@bandicoot-imaging-sciences/three';
 
-import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/controls/OrbitControls.js';
-import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/EXRLoader.js';
-import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/OBJLoader.js';
-import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/WebGL.js';
-import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
-import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
+import { EXRLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/OBJLoader.js';
+import { WEBGL } from '@bandicoot-imaging-sciences/three/examples/jsm/WebGL.js';
+import { EffectComposer } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from '@bandicoot-imaging-sciences/three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
-import { jsonToState, copyStatesCloneVectors } from '../utils/stateUtils.js';
+import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
 /*
   The options object is optional and can include the following:

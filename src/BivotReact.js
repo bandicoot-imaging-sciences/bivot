@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
 import Bivot from './bivot-js/bivot';
+import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
 import BrightnessControl from './controls/BrightnessControl';
@@ -17,7 +18,6 @@ import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 
 import { useWindowSize, useScripts } from './utils/hooksLib';
-import { jsonToState, copyStateFields } from './utils/stateUtils';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString, rgbHexValToColorObj } from './utils/colorLib';

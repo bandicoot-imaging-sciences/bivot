@@ -10,6 +10,7 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@bandicoot-imaging-sciences/three": "^0.121.101",
     "microbundle-crl": "^0.13.11"
   },
   "eslintConfig": {},
