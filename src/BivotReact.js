@@ -74,7 +74,6 @@ function BivotReact(props) {
     showEditor,
     fetchFiles,
     writeState,
-    scriptsLoaded,
     onClick,
     onSaveScreenshot,
     autoRotate
@@ -159,7 +158,6 @@ function BivotReact(props) {
 
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSet, setMaterialSet] = useState({});
-  const [scriptsLoadedInternal, setScriptsLoadedInternal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
@@ -199,12 +197,10 @@ function BivotReact(props) {
     }
   }
 
-  // Load bivot once script dependencies are loaded externally or externally
+  // Load bivot
   useEffect(() => {
-    if (scriptsLoaded || scriptsLoadedInternal) {
-      onLoad();
-    }
-  }, [scriptsLoaded, scriptsLoadedInternal]);
+    onLoad();
+  }, []);
 
   // Update bivot when the whole material changes
   useEffect(() => {
@@ -234,11 +230,6 @@ function BivotReact(props) {
       }
     };
   }, []);
-
-  if (scriptsLoaded !== true && scriptsLoaded !== false) {
-    console.log('Loading scripts internally');
-    useScripts(externalScripts, () => setScriptsLoadedInternal(true));
-  }
 
   function getMatFromMatSet(materialSet, materialIndex=0) {
     const gallery = materialSet.materials[materialIndex].gallery;
