@@ -30,20 +30,20 @@ Parts adapted from Threejsfundamentals:
 // The Three.js import paths in bivot.js and shaers.js need to match.
 
 // Somewhere in between r116 and r117 our lighting broke.
-import * as THREE from '../../../three.js/build/three.module.js';
+import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/build/three.module.js';
 
-import { OrbitControls } from '../../../three.js/examples/jsm/controls/OrbitControls.js';
-import { EXRLoader } from '../../../three.js/examples/jsm/loaders/EXRLoader.js';
-import { OBJLoader } from '../../../three.js/examples/jsm/loaders/OBJLoader.js';
-import { WEBGL } from '../../../three.js/examples/jsm/WebGL.js';
-import { EffectComposer } from '../../../three.js/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from '../../../three.js/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from '../../../three.js/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from '../../../three.js/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from '../../../three.js/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
-import { FXAAShader } from '../../../three.js/examples/jsm/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from '../../../three.js/examples/jsm/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from '../../../three.js/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/controls/OrbitControls.js';
+import { EXRLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/loaders/OBJLoader.js';
+import { WEBGL } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/WebGL.js';
+import { EffectComposer } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
@@ -306,8 +306,8 @@ class bivotJs {
         //   addControlPanel();
         // }
       this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
-      RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.renderer = this.initialiseRenderer();
+      RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
 
