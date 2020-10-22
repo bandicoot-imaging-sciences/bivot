@@ -1,10 +1,9 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
 'use strict';
 
-// The Three.js import paths in src/bivot-js/bivot.js, src/bivot-js/shaders.js and src/utils/stateUtils.js
-// need to match.
+// The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/build/three.module.js';
+import * as THREE from '@bandicoot-imaging-sciences/three';
 
 export default function getShaders() {
   const uniforms = THREE.UniformsUtils.merge([
