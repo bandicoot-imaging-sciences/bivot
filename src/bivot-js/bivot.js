@@ -27,7 +27,8 @@ Parts adapted from Threejsfundamentals:
 
 'use strict';
 
-// The Three.js import paths in bivot.js and shaers.js need to match.
+// The Three.js import paths in src/bivot-js/bivot.js, src/bivot-js/shaders.js and src/utils/stateUtils.js
+// need to match.
 
 // Somewhere in between r116 and r117 our lighting broke.
 import * as THREE from 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/three.js@ddd1af2abc1217f3ecab597f951becf74bf0190c/build/three.module.js';
@@ -881,11 +882,14 @@ class bivotJs {
         function(object) {
           console.log('Loaded mesh object:', meshPath);
           _self.mesh = object;
+          // START: work around for https://github.com/mrdoob/three.js/issues/20492
+          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
           _self.mesh.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
               child.geometry.computeVertexNormals();
             }
           });
+          // END work around.
           newMeshRotation();
         },
         function (xhr) {},
