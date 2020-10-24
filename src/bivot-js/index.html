@@ -45,32 +45,12 @@
       <div id="gui-L-container" style="position: absolute; top: 0em; left: 0em;"></div>
     </div>
   </body>
-  <!-- The following Three.js components are required for Bivot. -->
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/EXRLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/OBJLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/WebGL.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/libs/stats.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/EffectComposer.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/RenderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/ShaderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/UnrealBloomPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/AdaptiveToneMappingPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/CopyShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/FXAAShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/ToneMapShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityHighPassShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/GammaCorrectionShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/BokehShader2.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/lights/RectAreaLightUniformsLib.js"></script>
 
   <!-- Finally, import and start Bivot. -->
   <!-- Use an absolute JSDelivr URL if you want a specific version of Bivot (see bivot.css comments above). -->
   <script type="module">
-    //const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@1.6.2/src/bivot-js/dist/index.js";
-    const bivSrc = "./index.js";
+    //const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.2.1/src/bivot-js/dist/index.js";
+    const bivSrc = "./dist/index.js";
     import(bivSrc).then(module => {
       const options = {};
       const bivot = new module.newBivot(options);
