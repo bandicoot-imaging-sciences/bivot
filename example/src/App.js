@@ -23,9 +23,6 @@ const styles = {
 
 
 function App(props) {
-  const [scriptsLoaded, setScriptsLoaded] = useState(false);
-  useScripts(bivotScripts, () => setScriptsLoaded(true));
-
   const { classes, className, /* children, ...other */ } = props;
   return (
     <>
@@ -40,7 +37,6 @@ function App(props) {
       <Bivot
         width="350"
         height="200"
-        scriptsLoaded={scriptsLoaded}
         showEditor={true}
         id={1}
         autoRotate={true}
@@ -51,7 +47,6 @@ function App(props) {
       <Bivot
         width="700"
         height="400"
-        scriptsLoaded={scriptsLoaded}
         showEditor={true}
         id={2}
         // config={config}

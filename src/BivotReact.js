@@ -74,7 +74,6 @@ function BivotReact(props) {
     showEditor,
     fetchFiles,
     writeState,
-    scriptsLoaded,
     onClick,
     onSaveScreenshot,
     autoRotate
@@ -159,7 +158,6 @@ function BivotReact(props) {
 
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSet, setMaterialSet] = useState({});
-  const [scriptsLoadedInternal, setScriptsLoadedInternal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
@@ -194,17 +192,14 @@ function BivotReact(props) {
   async function onLoad() {
     loadBivot();
     if (onClick) {
-      const context = canvasRef.current.getContext('webgl');
-      context.canvas.addEventListener('click', onClick, false);
+      canvasRef.current.addEventListener('click', onClick, false);
     }
   }
 
-  // Load bivot once script dependencies are loaded externally or externally
+  // Load bivot
   useEffect(() => {
-    if (scriptsLoaded || scriptsLoadedInternal) {
-      onLoad();
-    }
-  }, [scriptsLoaded, scriptsLoadedInternal]);
+    onLoad();
+  }, []);
 
   // Update bivot when the whole material changes
   useEffect(() => {
@@ -234,11 +229,6 @@ function BivotReact(props) {
       }
     };
   }, []);
-
-  if (scriptsLoaded !== true && scriptsLoaded !== false) {
-    console.log('Loading scripts internally');
-    useScripts(externalScripts, () => setScriptsLoadedInternal(true));
-  }
 
   function getMatFromMatSet(materialSet, materialIndex=0) {
     const gallery = materialSet.materials[materialIndex].gallery;
@@ -433,12 +423,12 @@ function BivotReact(props) {
     } else {
       toPortrait = event.target.checked;
     }
-    var context = canvasRef.current.getContext('webgl');
-    const canvasPortrait = (context.canvas.height > context.canvas.width);
+    const canvas = canvasRef.current;
+    const canvasPortrait = (canvas.height > canvas.width);
     if (toPortrait != canvasPortrait) {
       setPortrait(toPortrait);
-      context.canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
-      context.canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
+      canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
+      canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
       renderFrame(true);
     }
   }
