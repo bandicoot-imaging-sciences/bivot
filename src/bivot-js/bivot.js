@@ -688,6 +688,7 @@ class bivotJs {
 
     function detectGyro(event) {
       if (event.alpha || event.beta || event.gamma) {
+        console.log('Gyro detected');
         gyroDetected = true;
         window.removeEventListener('deviceorientation', detectGyro, false);
 
