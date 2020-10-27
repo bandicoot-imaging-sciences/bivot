@@ -40,27 +40,6 @@ const styles = {
   },
 };
 
-export const externalScripts = [
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/build/three.min.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/controls/OrbitControls.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/EXRLoader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/loaders/OBJLoader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/WebGL.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/libs/stats.min.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/EffectComposer.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/RenderPass.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/ShaderPass.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/UnrealBloomPass.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/postprocessing/AdaptiveToneMappingPass.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/CopyShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/FXAAShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/ToneMapShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/LuminosityHighPassShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/shaders/GammaCorrectionShader.js",
-  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r108/examples/js/lights/RectAreaLightUniformsLib.js",
-];
-
 var zoomIndex = -1; // Index of the current zoom slider being moved
 var zoomInitialVal = [0, 0, 0]; // [min, initial, max] zoom at the beginning of the current slider move
 
