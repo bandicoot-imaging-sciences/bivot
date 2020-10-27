@@ -461,7 +461,8 @@ class bivotJs {
         if (jsonConfig) {
           console.log('Loaded:', configFilename);
 
-          // Merge items from the JSON config file into the initial state
+          // Copy JSON config file into config.
+          // For the initialState we do a merge instead of a plain copy.
           for (var k in jsonConfig) {
             if (k == 'initialState') {
               jsonToState(jsonConfig[k], config.initialState, vectorKeys);
@@ -687,12 +688,18 @@ class bivotJs {
     }
 
     function detectGyro(event) {
+      // This can be called at a different point in the config and texture loading sequence, depending on
+      // whether we are waiting for the user to grant permission, or if the browser already has permission.
       if (event.alpha || event.beta || event.gamma) {
         console.log('Gyro detected');
         gyroDetected = true;
         window.removeEventListener('deviceorientation', detectGyro, false);
 
+        // This gets overwritten by initialState if a texture config is loaded after detectGyro().
         _self.state.lightMotion = 'gyro';
+        // This resolves the overwriting problem above, but in turn may still get overwritten by a texture
+        // config if that config sets lightMotion and is loaded after detectGyro().
+        _self.config.initialState.lightMotion = 'gyro';
         updateLightMotion();
       }
     }
