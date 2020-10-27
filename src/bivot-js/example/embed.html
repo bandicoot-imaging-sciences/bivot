@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.1/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
+  </head>
+  <body><div id="bivot-overlay" class="bivot-overlay" style="width: 800px; height: 400px;"><canvas id="bivot-canvas" class="bivot-canvas"></canvas></div></body>
+  <script type="module">
+    const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.1/src/bivot-js/dist/index.js';
+    const materialSet = 'https://INSERT-URL-HERE/material-set.json';
+    const options = { materialSet, configPath: null, renderPath: null };
+    import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
+  </script>
+</html>
