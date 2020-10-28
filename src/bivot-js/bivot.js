@@ -451,8 +451,14 @@ class bivotJs {
           }
         }
       }
-      console.log('materialSet loaded: ', materialSet);
-      return materialSet;
+
+      if (Object.keys(materialSet).length === 0) {
+        console.log('Failed to load materialSet file: ', materialSet);
+        return null;
+      } else {
+        console.log('materialSet loaded: ', materialSet);
+        return materialSet;
+      }
     }
 
     async function loadConfig(configFilename, config, state, optsConfig, vectorKeys) {
