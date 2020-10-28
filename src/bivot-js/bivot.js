@@ -333,6 +333,8 @@ class bivotJs {
       }
       if (!_self.scans || isEmpty(_self.scans)) {
         // materials not provided or failed to load
+        console.log('(Unsetting materialSet option)');
+        _self.opts.materialSet = null;
         await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
@@ -453,7 +455,7 @@ class bivotJs {
       }
 
       if (Object.keys(materialSet).length === 0) {
-        console.log('Failed to load materialSet file: ', materialSet);
+        console.log('Failed to load materialSet file: ', filename);
         return null;
       } else {
         console.log('materialSet loaded: ', materialSet);
