@@ -426,6 +426,7 @@ class bivotJs {
         if (jsonMaterialSet) {
           const numMaterials = jsonMaterialSet.materials.length;
           for (var i = 0; i < numMaterials; i++) {
+            // General construction of config data
             const galleryMats = jsonMaterialSet.materials[i].gallery;
             const galleryMat = galleryMats[galleryMats.length - 1];
             const render = galleryMat.config.renders[galleryMat.name];
@@ -448,6 +449,21 @@ class bivotJs {
                 bivotMatRender[key] = render[key];
               }
             }
+
+            // Handle the case where the material set file has no state.zoom field
+            // but it does have zoom settings in config
+            if (!render['state'].zoom &&
+              bivotMatRender.hasOwnProperty('cameraPositionZ') &&
+              bivotMatRender.hasOwnProperty('controlsMinDistance') &&
+              bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
+              render['state'].zoom = [
+                bivotMatRender['controlsMinDistance'],
+                bivotMatRender['cameraPositionZ'],
+                bivotMatRender['controlsMaxDistance']
+              ];
+            }
+
+            // Finalise the state structures
             jsonToState(render['state'], bivotMatRender['state']);
             materialSet[bivotMat.name] = bivotMat;
           }
