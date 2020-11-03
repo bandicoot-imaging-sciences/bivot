@@ -338,8 +338,21 @@ class bivotJs {
         await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
+      if (_self.opts.hasOwnProperty('show')) {
+        var s = _self.opts.show
+        const n = Number(s)
+        if (Number.isInteger(n)) {
+          const keys = Object.keys(_self.scans)
+          if (n >= 0 && n < keys.length) {
+            s = keys[n]
+          }
+        }
+        console.log(`Setting starting scan to ${s}`)
+        // Set starting scan based on the options, if provided
+        _self.state.scan = s;
+      }
+      // Use the first scan in the list if no valid starting scan has been provided
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
-        // If the scan state isn't a scan in the list, use the first scan in the list
         _self.state.scan = Object.keys(_self.scans)[0];
       }
     }
@@ -1036,15 +1049,18 @@ class bivotJs {
       } else if (_self.opts.textures && _self.opts.material) {
         loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
       } else {
-        const tex_dir = _self.opts.texturePath + '/' + _self.state.scan;
+        const tex_dir = _self.opts.texturePath + '/' + _self.state.scan + '/';
         loadScanMetadata(loadManager, tex_dir, keys);
       }
     }
 
     function loadScanFromMaterial(loadManager, material, keys) {
+      if (!material.location.endsWith('/')) {
+        material.location += '/';
+      }
       const textures = {};
       for (var key in material.textures) {
-        textures[key] = `${material.location}/${material.textures[key]}`;
+        textures[key] = `${material.location}${material.textures[key]}`;
       }
       return loadScanFromTextures(loadManager, textures, material, keys);
     }
@@ -1068,7 +1084,7 @@ class bivotJs {
     }
 
     function loadScanMetadata(loadManager, texturePath, keys) {
-      const jsonFilename = texturePath + '/render.json';
+      const jsonFilename = texturePath + 'render.json';
 
       getJSON(jsonFilename,
         function(err, data) {
@@ -1151,26 +1167,26 @@ class bivotJs {
       let paths = new Map();
       console.assert(['JPG', 'PNG', 'EXR'].includes(_self.config.textureFormat));
       if (_self.config.textureFormat == 'EXR') {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
       } else {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
         if (_self.config.dual8Bit) {
-          paths.set('diffuse_low', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('normals_low', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('specular_low', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
+          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
+          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
+          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
         }
       }
 
-      loadScansImpl(paths, texDir + '/brdf-mesh.obj', loadManager);
+      loadScansImpl(paths, texDir + 'brdf-mesh.obj', loadManager);
     }
 
     function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
