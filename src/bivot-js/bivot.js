@@ -89,6 +89,7 @@ class bivotJs {
       height: 0,
       state: null,
       stateLoadCallback: null,
+      loadingCompleteCallback: null,
       setZoomCallback: null,
     }
     this.opts = {...defaultOptions, ...options};
@@ -921,21 +922,29 @@ class bivotJs {
     }
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
+      var meshLoaded = false;
+      var texsLoaded = 0;
+
       updateControlPanel(gui);
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
           console.log('Loaded mesh object:', meshPath);
           _self.mesh = object;
-          // START: work around for https://github.com/mrdoob/three.js/issues/20492
-          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+
           _self.mesh.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
-              child.geometry.computeVertexNormals();
+              _self.geometry = child.geometry;
             }
           });
+          _self.geometry.computeBoundingBox();
+
+          // START: work around for https://github.com/mrdoob/three.js/issues/20492
+          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+          _self.geometry.computeVertexNormals();
           // END work around.
           newMeshRotation();
+          meshLoaded = true;
         },
         function (xhr) {},
         function (error) {
@@ -1020,6 +1029,13 @@ class bivotJs {
             // texture.repeat.set(matxs/padxs, matxs/padys);
             console.log('Loaded:', key, value.path);
             brdfTextures.set(key, texture);
+
+            texsLoaded += 1;
+            if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
+              if (_self.opts.loadingCompleteCallback) {
+                _self.opts.loadingCompleteCallback();
+              }
+            }
           }
         );
       }
@@ -1577,6 +1593,16 @@ class bivotJs {
     }
   }
 
+  getDiag() {
+    const box = this.geometry.boundingBox;
+    if (box) {
+      const x = box.max.x - box.min.x;
+      const y = box.max.y - box.min.y;
+      return Math.sqrt(x * x + y * y);
+    } else {
+      return 0;
+    }
+  }
 
   registerEventListener(object, type, listener, ...args) {
     object.addEventListener(type, listener, ...args);

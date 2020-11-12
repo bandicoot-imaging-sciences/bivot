@@ -138,6 +138,7 @@ function BivotReact(props) {
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSet, setMaterialSet] = useState({});
   const [loading, setLoading] = useState(true);
+  const [diag, setDiag] = useState(0.25);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -266,6 +267,7 @@ function BivotReact(props) {
       config,
       state,
       stateLoadCallback,
+      loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
       canvasID,
       overlayID
@@ -317,6 +319,12 @@ function BivotReact(props) {
   async function stateLoadCallback(loadedState) {
     updateStateFields(loadedState);
     copyStateFields(loadedState, checkpointState);
+  }
+
+  // Called when bivot finishes loading the material.
+  async function loadingCompleteCallback() {
+    console.log('Bivot loading complete');
+    setDiag(bivot.current.getDiag());
   }
 
   async function stateSave(callback) {
@@ -491,7 +499,7 @@ function BivotReact(props) {
               <LightTypeControl value={lightType} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
               <OrientationControl value={portrait} onChange={updatePortrait} />
-              <ZoomControl value={zoom} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
+              <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
