@@ -17,10 +17,10 @@ import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 
-import { useWindowSize, useScripts } from './utils/hooksLib';
+import { useWindowSize } from './utils/hooksLib';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
-import { rgbArrayToColorObj, rgbArrayToHexString, rgbHexValToColorObj } from './utils/colorLib';
+import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 
 
 const styles = {
@@ -35,7 +35,7 @@ const styles = {
     zIndex: "999",
   },
   controlPanel: {
-    width: 320,
+    width: 325,
     padding: "0.5em",
   },
 };
