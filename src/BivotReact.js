@@ -330,7 +330,7 @@ function BivotReact(props) {
   async function stateSave(callback) {
     if (callback) {
       // Grab a capture of the canvas and send it to the callback
-      canvasRef.current.toBlob(callback, 'image/jpeg');
+      await canvasRef.current.toBlob(callback, 'image/jpeg');
     }
 
     const { gallery } = materialSet.materials[0]
