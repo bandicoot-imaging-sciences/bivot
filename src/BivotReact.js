@@ -349,6 +349,8 @@ function BivotReact(props) {
       exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor, autoRotatePeriodMs,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
+      dragControlsRotation: false, // Hard-coded, for now
+      dragControlsPanning: false,  // Hard-coded, for now
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
