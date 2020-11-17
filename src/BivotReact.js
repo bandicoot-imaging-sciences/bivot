@@ -109,6 +109,8 @@ function BivotReact(props) {
     backgroundColor: '#FFFFFF',
 
     // State to be saved for the bivot render for which there aren't controls
+    dragControlsRotation: false,
+    dragControlsPanning: false,
     camTiltWithMousePos: -0.2,
     camTiltWithDeviceOrient: 0.6,
     camTiltLimitDegrees: 0.0,
