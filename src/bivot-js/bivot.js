@@ -135,6 +135,8 @@ class bivotJs {
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
+      dragControlsRotation: undefined,
+      dragControlsPanning: undefined,
       camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
       camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
       camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
@@ -313,7 +315,7 @@ class bivotJs {
       this.updateCanvas();
 
       loadScan();
-
+      this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
 
       // Add listeners after finishing config and initialisation
@@ -713,6 +715,7 @@ class bivotJs {
         }
       }
       updateCamTiltLimit(controls, tiltLimit);
+      _self.updateControls(controls);
       _self.registerEventListener(controls, 'change', controlsChange);
       return controls;
     }
@@ -1492,6 +1495,17 @@ class bivotJs {
     this.requestRender();
   }
 
+  updateControls(controls) {
+    if (controls) {
+      if (this.state.dragControlsRotation != null) {
+        controls.enableRotate = this.state.dragControlsRotation;
+      }
+      if (this.state.dragControlsPanning != null) {
+        controls.enablePan = this.state.dragControlsPanning;
+      }
+    }
+  }
+
   updateZoom() {
     if (this.controls) {
       this.controls.minDistance = this.state.zoom[0];
@@ -1548,6 +1562,7 @@ class bivotJs {
         this.updateMeshRotation();
         this.updateCanvas();
         this.updateZoom();
+        this.updateControls(this.controls);
       }
 
       this.controls.update();
