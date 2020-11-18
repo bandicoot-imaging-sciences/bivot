@@ -1064,9 +1064,15 @@ class bivotJs {
       keys.push('zoom'); // Necessary because zoom is omitted from initialState to support legacy galleries
       if (_self.opts.materialSet) {
         const material = _self.scans[_self.state.scan];
-        const loc_parts = _self.opts.materialSet.split('/')
-        loc_parts.pop(); // Get material set base location
-        const location = loc_parts.join('/');
+        var location = ''
+        if (material.location.startsWith('http')) {
+          location = material.location;
+        } else {
+          // Handle relative texture paths
+          const loc_parts = _self.opts.materialSet.split('/')
+          loc_parts.pop(); // Get material set base location
+          location = loc_parts.join('/') + '/' + material.location;
+        }
         loadScanFromMaterial(loadManager, material, keys, location);
       } else if (_self.opts.textures && _self.opts.material) {
         loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
@@ -1076,16 +1082,13 @@ class bivotJs {
       }
     }
 
-    function loadScanFromMaterial(loadManager, material, keys, base_location) {
-      if (!material.location.endsWith('/')) {
-        material.location += '/';
-      }
-      if (!base_location.endsWith('/')) {
-        base_location += '/';
+    function loadScanFromMaterial(loadManager, material, keys, location) {
+      if (!location.endsWith('/')) {
+        location += '/';
       }
       const textures = {};
       for (var key in material.textures) {
-        textures[key] = `${base_location}${material.location}${material.textures[key]}`;
+        textures[key] = location + material.textures[key];
       }
       return loadScanFromTextures(loadManager, textures, material, keys);
     }
