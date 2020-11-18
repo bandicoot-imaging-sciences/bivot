@@ -69,12 +69,17 @@ function BivotReact(props) {
   const windowLongLength = propsPortrait ? height : width;
   const windowShortLength = propsPortrait ? width : height;
 
+  const referenceAreaLightWidth = 5;
+  const referenceAreaLightHeight = 0.2;
+
   // FIXME: Find a sensible way to not have to duplicate the initial / default state object
   const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
     contrast: 0.5,
     lightType: 'point',
+    areaLightWidth: referenceAreaLightWidth,
+    areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     portrait: propsPortrait,
     dirty: false, // For bivot internal only, to know when to update render
@@ -100,6 +105,8 @@ function BivotReact(props) {
     brightness: 0.5,
     contrast: 0.5,
     lightType: 'point',
+    areaLightWidth: referenceAreaLightWidth,
+    areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     portrait: propsPortrait,
     dirty: false, // For bivot internal only, to know when to update render
@@ -148,6 +155,8 @@ function BivotReact(props) {
   const [brightness, setBrightness] = useState(state.brightness);
   const [contrast, setContrast] = useState(state.contrast);
   const [lightType, setLightType] = useState(state.lightType);
+  const [areaLightWidth, setAreaLightWidth] = useState(state.areaLightWidth);
+  const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [portrait, setPortrait] = useState(propsPortrait);
   const [zoom, setZoom] = useState(state.zoom);
@@ -163,6 +172,8 @@ function BivotReact(props) {
   state.brightness = brightness;
   state.contrast = contrast;
   state.lightType = lightType;
+  state.areaLightWidth = areaLightWidth;
+  state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
   state.portrait = portrait;
   state.zoom = zoom;
@@ -291,6 +302,8 @@ function BivotReact(props) {
       portrait,
       meshRotateZDegrees,
       lightType,
+      areaLightWidth,
+      //areaLightHeight,
       zoom,
       lightColor,
       backgroundColor,
@@ -300,7 +313,7 @@ function BivotReact(props) {
     updateExposure(exposure);
     updateBrightness(brightness);
     updateContrast(contrast);
-    updateLightType(lightType);
+    updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
     updatePortrait(portrait);
     setZoom(zoom);
@@ -346,7 +359,8 @@ function BivotReact(props) {
      } = state;
 
     const savedState = {
-      exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor, autoRotatePeriodMs,
+      exposure, brightness, contrast, portrait, zoom, backgroundColor, autoRotatePeriodMs,
+      lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation: false, // Hard-coded, for now
@@ -393,8 +407,10 @@ function BivotReact(props) {
     renderFrame(false);
   }
 
-  function updateLightType(val) {
-    setLightType(val);
+  function updateLightType(type, size) {
+    setLightType(type);
+    setAreaLightWidth(referenceAreaLightWidth * size);
+    setAreaLightHeight(referenceAreaLightHeight * size);
     renderFrame(true);
   }
 
@@ -500,7 +516,7 @@ function BivotReact(props) {
               <IntensityControl value={exposure} onChange={updateExposure} />
               <BrightnessControl value={brightness} onChange={updateBrightness} />
               <ContrastControl value={contrast} onChange={updateContrast} />
-              <LightTypeControl value={lightType} onChange={updateLightType} />
+              <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
               <OrientationControl value={portrait} onChange={updatePortrait} />
               <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
