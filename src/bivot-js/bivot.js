@@ -65,13 +65,12 @@ class bivotJs {
       QA: 'qa',
       MANAGE: 'manage',
       NONE: 'none',
-    }
+    };
 
     const { uniforms, vertexShader, fragmentShader } = getShaders();
     this.uniforms = uniforms;
     this.vertexShader = vertexShader;
     this.fragmentShader = fragmentShader;
-
 
     let defaultOptions = {
       canvasID: 'bivot-canvas',
@@ -81,6 +80,7 @@ class bivotJs {
       texturePath: 'textures',
       config: null,
       material: null,
+      thumbnail: null,
       textures: null,
       materialSet: null,
       controlMode: this.controlModes.FULL,
@@ -91,7 +91,7 @@ class bivotJs {
       stateLoadCallback: null,
       loadingCompleteCallback: null,
       setZoomCallback: null,
-    }
+    };
     this.opts = {...defaultOptions, ...options};
 
     // Initial state and configuration.  This will likely get overridden by the config file,
@@ -330,6 +330,47 @@ class bivotJs {
     });
     // ========== End mainline; functions follow ==========
 
+    function setLoadingImage() {
+      if (!_self.opts.materialSet && !_self.opts.thumbnail) {
+        return; // No loading image available
+      }
+
+      if (_self.overlay) {
+        var img = document.createElement('img');
+        if (_self.opts.thumbnail) {
+          img.src = _self.opts.thumbnail;
+        } else if (_self.opts.materialSet) {
+          const loc_parts = _self.opts.materialSet.split('/')
+          loc_parts.pop();
+          img.src = loc_parts.join('/') + '/images/0.jpg';
+        }
+        const style = getComputedStyle(_self.overlay);
+        if (_self.opts.width) {
+          img.width = _self.opts.width;
+        } else if (style.width) {
+          img.width = parseInt(style.width, 10);
+        }
+        if (_self.opts.height) {
+          img.height = _self.opts.height;
+        } else if (style.height) {
+          img.height = parseInt(style.height, 10);
+        }
+
+        var content = document.createElement('div');
+        content.appendChild(img);
+        content.setAttribute('style', 'display: inline; position: absolute; top: 0px; left: 0px ');
+        content.id = 'bivotLoadingImage';
+        _self.overlay.appendChild(content);
+        _self.loadingDomElement = content;
+      }
+    }
+
+    function unsetLoadingImage() {
+      if (_self.loadingDomElement) {
+        _self.loadingDomElement.setAttribute('style', 'display: none');
+      }
+    }
+
     async function initConfig() {
       if (_self.opts.materialSet) {
         _self.scans = await loadMaterialSet(_self.opts.materialSet);
@@ -358,6 +399,8 @@ class bivotJs {
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
         _self.state.scan = Object.keys(_self.scans)[0];
       }
+
+      setLoadingImage();
     }
 
     function onLoad() {
@@ -1035,6 +1078,7 @@ class bivotJs {
 
             texsLoaded += 1;
             if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
+              unsetLoadingImage();
               if (_self.opts.loadingCompleteCallback) {
                 _self.opts.loadingCompleteCallback();
               }
