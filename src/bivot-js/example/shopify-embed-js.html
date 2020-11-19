@@ -1,50 +1,31 @@
 <p>INSERT PRODUCT DESCRIPTION.</p>
-<h5>Shimmer view</h5>
-<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.2.1/src/bivot-js/dist/index.css">
-<style><!--
-body {
-        margin: 0;
-      }
-      /* This ID should match the canvas element ID used below. */
-      #bivot-overlay{
-        width: 350px;
-        height: 234px;
-        display: block;
-      }
-@media only screen and (min-width: 600px) {
-body {
-        margin: 0;
-      }
-      /* This ID should match the canvas element ID used below. */
-      #bivot-overlay{
-        width: 300px;
-        height: 200px;
-        display: block;
-      }
-}
 
-@media only screen and (min-width: 1200px) {
-body {
-        margin: 0;
-      }
-      /* This ID should match the canvas element ID used below. */
-      #bivot-overlay{
-        width: 600px;
-        height: 400px;
-        display: block;
-      }
-}
---></style>
-<div class="bivot-overlay" id="bivot-overlay"><canvas class="bivot-canvas" id="bivot-canvas"></canvas>
-<div style="position: absolute; top: 0em; left: 0em;" id="gui-L-container"></div>
-</div>
-<script type="module">// <![CDATA[
-const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@2.2.1/src/bivot-js/dist/index.js";
-    const materialSet = "https://INSERT-URL-HERE/material-set.json"; 
-    const options = { materialSet, configPath: null, renderPath: null };
-    import(bivSrc).then(module => {
-      const bivot = new module.newBivot(options);
-      bivot.checkWebGL();
-      bivot.startRender();
-    });
-// ]]></script>
+<h5>Shimmer view</h5>
+
+<style>
+  #bivot-overlay{
+    width: 220px;
+    height: 220px;
+  }
+  @media only screen and (min-width: 600px) {
+    #bivot-overlay{
+      width: 300px;
+      height: 300px;
+    }
+  }
+  @media only screen and (min-width: 1200px) {
+    #bivot-overlay{
+      width: 600px;
+      height: 600px;
+    }
+  }
+</style>
+
+<link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.12/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
+<div id="bivot-overlay" class="bivot-overlay"><canvas id="bivot-canvas" class="bivot-canvas"></canvas></div>
+<script type="module">
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.12/src/bivot-js/dist/index.js';
+  const materialSet = 'https://publish.bandicootimaging.com.au/INSERT_HASH/biv_gallery/material-set.json';
+  const options = { materialSet, configPath: null, renderPath: null };
+  import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
+</script>
