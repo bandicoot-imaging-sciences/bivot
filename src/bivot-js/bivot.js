@@ -1118,9 +1118,14 @@ class bivotJs {
           location = material.location;
         } else {
           // Handle relative texture paths
-          const loc_parts = _self.opts.materialSet.split('/')
-          loc_parts.pop(); // Get material set base location
-          location = loc_parts.join('/') + '/' + material.location;
+          if (_self.opts.materialSet.includes('/')) {
+            // Use material set base location
+            const loc_parts = _self.opts.materialSet.split('/')
+            loc_parts.pop();
+            location = loc_parts.join('/') + '/' + material.location;
+          } else {
+            location = material.location;
+          }
         }
         loadScanFromMaterial(loadManager, material, keys, location);
       } else if (_self.opts.textures && _self.opts.material) {
