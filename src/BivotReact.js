@@ -350,8 +350,10 @@ function BivotReact(props) {
 
   // Called when bivot finishes loading the material.
   async function loadingCompleteCallback() {
-    console.log('Bivot loading complete');
-    setDiag(bivot.current.getDiag());
+    if (bivot.current) {
+      console.log('Bivot loading complete');
+      setDiag(bivot.current.getDiag());
+    }
   }
 
   async function stateSave(callback) {
