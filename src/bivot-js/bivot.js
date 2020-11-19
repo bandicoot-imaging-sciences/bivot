@@ -971,6 +971,15 @@ class bivotJs {
       var meshLoaded = false;
       var texsLoaded = 0;
 
+      function tryCompleteLoading() {
+        if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
+          unsetLoadingImage();
+          if (_self.opts.loadingCompleteCallback) {
+            _self.opts.loadingCompleteCallback();
+          }
+        }
+      }
+
       updateControlPanel(gui);
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
@@ -991,6 +1000,7 @@ class bivotJs {
           // END work around.
           newMeshRotation();
           meshLoaded = true;
+          tryCompleteLoading();
         },
         function (xhr) {},
         function (error) {
@@ -1077,12 +1087,7 @@ class bivotJs {
             brdfTextures.set(key, texture);
 
             texsLoaded += 1;
-            if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
-              unsetLoadingImage();
-              if (_self.opts.loadingCompleteCallback) {
-                _self.opts.loadingCompleteCallback();
-              }
-            }
+            tryCompleteLoading();
           }
         );
       }
