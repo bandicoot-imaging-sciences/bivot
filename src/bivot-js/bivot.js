@@ -47,6 +47,7 @@ import { RectAreaLightUniformsLib } from '@bandicoot-imaging-sciences/three/exam
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
+import { getBasePath } from '../utils/pathLib.js';
 import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
 /*
@@ -340,9 +341,7 @@ class bivotJs {
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
-          const loc_parts = _self.opts.materialSet.split('/')
-          loc_parts.pop();
-          img.src = loc_parts.join('/') + '/images/0.jpg';
+          img.src = getBasePath(_self.opts.materialSet) + '/images/0.jpg';
         }
         const style = getComputedStyle(_self.overlay);
         if (_self.opts.width) {
@@ -1117,15 +1116,7 @@ class bivotJs {
         if (material.location.startsWith('http')) {
           location = material.location;
         } else {
-          // Handle relative texture paths
-          if (_self.opts.materialSet.includes('/')) {
-            // Use material set base location
-            const loc_parts = _self.opts.materialSet.split('/')
-            loc_parts.pop();
-            location = loc_parts.join('/') + '/' + material.location;
-          } else {
-            location = material.location;
-          }
+          location = getBasePath(_self.opts.materialSet) + '/' + material.location;
         }
         loadScanFromMaterial(loadManager, material, keys, location);
       } else if (_self.opts.textures && _self.opts.material) {
