@@ -1,7 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Typography, Slider, Tooltip } from '@material-ui/core';
 
-function ZoomControl({ value, onChange, onChangeCommitted }) {
+import { Mapper } from '../utils/mappingLib';
+
+function ZoomControl({ value, onChange, onChangeCommitted, max }) {
+  const [mapper, setMapper] = useState(null);
+
+  useEffect(() => {
+    if (max && !Number.isNaN(max) && max != 1) {
+      setMapper(new Mapper(0, max, 0, 1));
+    }
+  }, [max]);
+
   return (
     <Grid container spacing={2}>
       <Grid item><Tooltip title="The min and max zoom of the material">
@@ -14,8 +24,8 @@ function ZoomControl({ value, onChange, onChangeCommitted }) {
           max={1}
           valueLabelDisplay="auto"
           step={0.01}
-          value={value}
-          onChange={(event, newValue) => onChange(newValue)}
+          value={mapper ? value.map(v => mapper.map(v)) : value}
+          onChange={(event, newValue) => onChange(mapper ? newValue.map(v => mapper.unmap(v)) : newValue)}
           onChangeCommitted={(event, newValue) => onChangeCommitted()}
         />
       </Grid>

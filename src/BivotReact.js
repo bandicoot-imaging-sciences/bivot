@@ -17,10 +17,10 @@ import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 
-import { useWindowSize, useScripts } from './utils/hooksLib';
+import { useWindowSize } from './utils/hooksLib';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
-import { rgbArrayToColorObj, rgbArrayToHexString, rgbHexValToColorObj } from './utils/colorLib';
+import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 
 
 const styles = {
@@ -35,7 +35,7 @@ const styles = {
     zIndex: "999",
   },
   controlPanel: {
-    width: 320,
+    width: 325,
     padding: "0.5em",
   },
 };
@@ -49,6 +49,7 @@ function BivotReact(props) {
     width,
     height,
     material,
+    thumbnail,
     config,
     showEditor,
     fetchFiles,
@@ -69,12 +70,17 @@ function BivotReact(props) {
   const windowLongLength = propsPortrait ? height : width;
   const windowShortLength = propsPortrait ? width : height;
 
+  const referenceAreaLightWidth = 5;
+  const referenceAreaLightHeight = 0.2;
+
   // FIXME: Find a sensible way to not have to duplicate the initial / default state object
   const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
     contrast: 0.5,
     lightType: 'point',
+    areaLightWidth: referenceAreaLightWidth,
+    areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     portrait: propsPortrait,
     dirty: false, // For bivot internal only, to know when to update render
@@ -100,6 +106,8 @@ function BivotReact(props) {
     brightness: 0.5,
     contrast: 0.5,
     lightType: 'point',
+    areaLightWidth: referenceAreaLightWidth,
+    areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     portrait: propsPortrait,
     dirty: false, // For bivot internal only, to know when to update render
@@ -109,6 +117,8 @@ function BivotReact(props) {
     backgroundColor: '#FFFFFF',
 
     // State to be saved for the bivot render for which there aren't controls
+    dragControlsRotation: false,
+    dragControlsPanning: false,
     camTiltWithMousePos: -0.2,
     camTiltWithDeviceOrient: 0.6,
     camTiltLimitDegrees: 0.0,
@@ -138,6 +148,7 @@ function BivotReact(props) {
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSet, setMaterialSet] = useState({});
   const [loading, setLoading] = useState(true);
+  const [diag, setDiag] = useState(0.25);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -145,6 +156,8 @@ function BivotReact(props) {
   const [brightness, setBrightness] = useState(state.brightness);
   const [contrast, setContrast] = useState(state.contrast);
   const [lightType, setLightType] = useState(state.lightType);
+  const [areaLightWidth, setAreaLightWidth] = useState(state.areaLightWidth);
+  const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [portrait, setPortrait] = useState(propsPortrait);
   const [zoom, setZoom] = useState(state.zoom);
@@ -160,6 +173,8 @@ function BivotReact(props) {
   state.brightness = brightness;
   state.contrast = contrast;
   state.lightType = lightType;
+  state.areaLightWidth = areaLightWidth;
+  state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
   state.portrait = portrait;
   state.zoom = zoom;
@@ -263,9 +278,11 @@ function BivotReact(props) {
       texturePath,
       textures,
       material: galleryMat,
+      thumbnail,
       config,
       state,
       stateLoadCallback,
+      loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
       canvasID,
       overlayID
@@ -287,6 +304,8 @@ function BivotReact(props) {
       portrait,
       meshRotateZDegrees,
       lightType,
+      areaLightWidth,
+      //areaLightHeight,
       zoom,
       lightColor,
       backgroundColor,
@@ -296,7 +315,7 @@ function BivotReact(props) {
     updateExposure(exposure);
     updateBrightness(brightness);
     updateContrast(contrast);
-    updateLightType(lightType);
+    updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
     updatePortrait(portrait);
     setZoom(zoom);
@@ -319,10 +338,16 @@ function BivotReact(props) {
     copyStateFields(loadedState, checkpointState);
   }
 
+  // Called when bivot finishes loading the material.
+  async function loadingCompleteCallback() {
+    console.log('Bivot loading complete');
+    setDiag(bivot.current.getDiag());
+  }
+
   async function stateSave(callback) {
     if (callback) {
       // Grab a capture of the canvas and send it to the callback
-      canvasRef.current.toBlob(callback, 'image/jpeg');
+      await canvasRef.current.toBlob(callback, 'image/jpeg');
     }
 
     const { gallery } = materialSet.materials[0]
@@ -336,9 +361,12 @@ function BivotReact(props) {
      } = state;
 
     const savedState = {
-      exposure, brightness, contrast, lightType, portrait, zoom, backgroundColor, autoRotatePeriodMs,
+      exposure, brightness, contrast, portrait, zoom, backgroundColor, autoRotatePeriodMs,
+      lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
+      dragControlsRotation: false, // Hard-coded, for now
+      dragControlsPanning: false,  // Hard-coded, for now
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
@@ -381,8 +409,10 @@ function BivotReact(props) {
     renderFrame(false);
   }
 
-  function updateLightType(val) {
-    setLightType(val);
+  function updateLightType(type, size) {
+    setLightType(type);
+    setAreaLightWidth(referenceAreaLightWidth * size);
+    setAreaLightHeight(referenceAreaLightHeight * size);
     renderFrame(true);
   }
 
@@ -488,10 +518,10 @@ function BivotReact(props) {
               <IntensityControl value={exposure} onChange={updateExposure} />
               <BrightnessControl value={brightness} onChange={updateBrightness} />
               <ContrastControl value={contrast} onChange={updateContrast} />
-              <LightTypeControl value={lightType} onChange={updateLightType} />
+              <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
               <OrientationControl value={portrait} onChange={updatePortrait} />
-              <ZoomControl value={zoom} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
+              <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />

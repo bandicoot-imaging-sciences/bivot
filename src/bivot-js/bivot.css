@@ -36,7 +36,7 @@
 }
 .bivot-progress {
     background-color: rgba(100, 100, 100, 1.0);
-    opacity: 0.9;
+    opacity: 0.4;
     margin: 1.5em;
     border: 1px solid white;
     width: 50vw;
@@ -44,7 +44,7 @@
 .bivot-progressbar {
     margin: 2px;
     background: white;
-    height: 1em;
+    height: 0.5em;
     transform-origin: top left;
     transform: scaleX(0);
 }

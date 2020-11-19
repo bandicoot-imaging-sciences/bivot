@@ -65,13 +65,12 @@ class bivotJs {
       QA: 'qa',
       MANAGE: 'manage',
       NONE: 'none',
-    }
+    };
 
     const { uniforms, vertexShader, fragmentShader } = getShaders();
     this.uniforms = uniforms;
     this.vertexShader = vertexShader;
     this.fragmentShader = fragmentShader;
-
 
     let defaultOptions = {
       canvasID: 'bivot-canvas',
@@ -81,6 +80,7 @@ class bivotJs {
       texturePath: 'textures',
       config: null,
       material: null,
+      thumbnail: null,
       textures: null,
       materialSet: null,
       controlMode: this.controlModes.FULL,
@@ -89,8 +89,9 @@ class bivotJs {
       height: 0,
       state: null,
       stateLoadCallback: null,
+      loadingCompleteCallback: null,
       setZoomCallback: null,
-    }
+    };
     this.opts = {...defaultOptions, ...options};
 
     // Initial state and configuration.  This will likely get overridden by the config file,
@@ -134,6 +135,8 @@ class bivotJs {
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
+      dragControlsRotation: undefined,
+      dragControlsPanning: undefined,
       camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
       camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
       camTiltLimitDegrees: 0.0, // Lowest elevation angle (in degrees) that the camera can tilt to.
@@ -312,7 +315,7 @@ class bivotJs {
       this.updateCanvas();
 
       loadScan();
-
+      this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
 
       // Add listeners after finishing config and initialisation
@@ -327,19 +330,77 @@ class bivotJs {
     });
     // ========== End mainline; functions follow ==========
 
+    function setLoadingImage() {
+      if (!_self.opts.materialSet && !_self.opts.thumbnail) {
+        return; // No loading image available
+      }
+
+      if (_self.overlay) {
+        var img = document.createElement('img');
+        if (_self.opts.thumbnail) {
+          img.src = _self.opts.thumbnail;
+        } else if (_self.opts.materialSet) {
+          const loc_parts = _self.opts.materialSet.split('/')
+          loc_parts.pop();
+          img.src = loc_parts.join('/') + '/images/0.jpg';
+        }
+        const style = getComputedStyle(_self.overlay);
+        if (_self.opts.width) {
+          img.width = _self.opts.width;
+        } else if (style.width) {
+          img.width = parseInt(style.width, 10);
+        }
+        if (_self.opts.height) {
+          img.height = _self.opts.height;
+        } else if (style.height) {
+          img.height = parseInt(style.height, 10);
+        }
+
+        var content = document.createElement('div');
+        content.appendChild(img);
+        content.setAttribute('style', 'display: inline; position: absolute; top: 0px; left: 0px ');
+        content.id = 'bivotLoadingImage';
+        _self.overlay.appendChild(content);
+        _self.loadingDomElement = content;
+      }
+    }
+
+    function unsetLoadingImage() {
+      if (_self.loadingDomElement) {
+        _self.loadingDomElement.setAttribute('style', 'display: none');
+      }
+    }
+
     async function initConfig() {
       if (_self.opts.materialSet) {
         _self.scans = await loadMaterialSet(_self.opts.materialSet);
       }
       if (!_self.scans || isEmpty(_self.scans)) {
         // materials not provided or failed to load
+        console.log('(Unsetting materialSet option)');
+        _self.opts.materialSet = null;
         await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
+      if (_self.opts.hasOwnProperty('show')) {
+        var s = _self.opts.show
+        const n = Number(s)
+        if (Number.isInteger(n)) {
+          const keys = Object.keys(_self.scans)
+          if (n >= 0 && n < keys.length) {
+            s = keys[n]
+          }
+        }
+        console.log(`Setting starting scan to ${s}`)
+        // Set starting scan based on the options, if provided
+        _self.state.scan = s;
+      }
+      // Use the first scan in the list if no valid starting scan has been provided
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
-        // If the scan state isn't a scan in the list, use the first scan in the list
         _self.state.scan = Object.keys(_self.scans)[0];
       }
+
+      setLoadingImage();
     }
 
     function onLoad() {
@@ -424,6 +485,7 @@ class bivotJs {
         if (jsonMaterialSet) {
           const numMaterials = jsonMaterialSet.materials.length;
           for (var i = 0; i < numMaterials; i++) {
+            // General construction of config data
             const galleryMats = jsonMaterialSet.materials[i].gallery;
             const galleryMat = galleryMats[galleryMats.length - 1];
             const render = galleryMat.config.renders[galleryMat.name];
@@ -446,13 +508,34 @@ class bivotJs {
                 bivotMatRender[key] = render[key];
               }
             }
+
+            // Handle the case where the material set file has no state.zoom field
+            // but it does have zoom settings in config
+            if (!render['state'].zoom &&
+              bivotMatRender.hasOwnProperty('cameraPositionZ') &&
+              bivotMatRender.hasOwnProperty('controlsMinDistance') &&
+              bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
+              render['state'].zoom = [
+                bivotMatRender['controlsMinDistance'],
+                bivotMatRender['cameraPositionZ'],
+                bivotMatRender['controlsMaxDistance']
+              ];
+            }
+
+            // Finalise the state structures
             jsonToState(render['state'], bivotMatRender['state']);
             materialSet[bivotMat.name] = bivotMat;
           }
         }
       }
-      console.log('materialSet loaded: ', materialSet);
-      return materialSet;
+
+      if (Object.keys(materialSet).length === 0) {
+        console.log('Failed to load materialSet file: ', filename);
+        return null;
+      } else {
+        console.log('materialSet loaded: ', materialSet);
+        return materialSet;
+      }
     }
 
     async function loadConfig(configFilename, config, state, optsConfig, vectorKeys) {
@@ -675,6 +758,7 @@ class bivotJs {
         }
       }
       updateCamTiltLimit(controls, tiltLimit);
+      _self.updateControls(controls);
       _self.registerEventListener(controls, 'change', controlsChange);
       return controls;
     }
@@ -884,21 +968,29 @@ class bivotJs {
     }
 
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
+      var meshLoaded = false;
+      var texsLoaded = 0;
+
       updateControlPanel(gui);
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
           console.log('Loaded mesh object:', meshPath);
           _self.mesh = object;
-          // START: work around for https://github.com/mrdoob/three.js/issues/20492
-          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+
           _self.mesh.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
-              child.geometry.computeVertexNormals();
+              _self.geometry = child.geometry;
             }
           });
+          _self.geometry.computeBoundingBox();
+
+          // START: work around for https://github.com/mrdoob/three.js/issues/20492
+          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+          _self.geometry.computeVertexNormals();
           // END work around.
           newMeshRotation();
+          meshLoaded = true;
         },
         function (xhr) {},
         function (error) {
@@ -983,6 +1075,14 @@ class bivotJs {
             // texture.repeat.set(matxs/padxs, matxs/padys);
             console.log('Loaded:', key, value.path);
             brdfTextures.set(key, texture);
+
+            texsLoaded += 1;
+            if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
+              unsetLoadingImage();
+              if (_self.opts.loadingCompleteCallback) {
+                _self.opts.loadingCompleteCallback();
+              }
+            }
           }
         );
       }
@@ -1008,19 +1108,31 @@ class bivotJs {
       keys.push('zoom'); // Necessary because zoom is omitted from initialState to support legacy galleries
       if (_self.opts.materialSet) {
         const material = _self.scans[_self.state.scan];
-        loadScanFromMaterial(loadManager, material, keys);
+        var location = ''
+        if (material.location.startsWith('http')) {
+          location = material.location;
+        } else {
+          // Handle relative texture paths
+          const loc_parts = _self.opts.materialSet.split('/')
+          loc_parts.pop(); // Get material set base location
+          location = loc_parts.join('/') + '/' + material.location;
+        }
+        loadScanFromMaterial(loadManager, material, keys, location);
       } else if (_self.opts.textures && _self.opts.material) {
         loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
       } else {
-        const tex_dir = _self.opts.texturePath + '/' + _self.state.scan;
+        const tex_dir = _self.opts.texturePath + '/' + _self.state.scan + '/';
         loadScanMetadata(loadManager, tex_dir, keys);
       }
     }
 
-    function loadScanFromMaterial(loadManager, material, keys) {
+    function loadScanFromMaterial(loadManager, material, keys, location) {
+      if (!location.endsWith('/')) {
+        location += '/';
+      }
       const textures = {};
       for (var key in material.textures) {
-        textures[key] = `${material.location}/${material.textures[key]}`;
+        textures[key] = location + material.textures[key];
       }
       return loadScanFromTextures(loadManager, textures, material, keys);
     }
@@ -1044,7 +1156,7 @@ class bivotJs {
     }
 
     function loadScanMetadata(loadManager, texturePath, keys) {
-      const jsonFilename = texturePath + '/render.json';
+      const jsonFilename = texturePath + 'render.json';
 
       getJSON(jsonFilename,
         function(err, data) {
@@ -1127,26 +1239,26 @@ class bivotJs {
       let paths = new Map();
       console.assert(['JPG', 'PNG', 'EXR'].includes(_self.config.textureFormat));
       if (_self.config.textureFormat == 'EXR') {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
       } else {
-        paths.set('diffuse', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
         if (_self.config.dual8Bit) {
-          paths.set('diffuse_low', {path: texDir + '/brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('normals_low', {path: texDir + '/brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('specular_low', {path: texDir + '/brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
+          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
+          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
+          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
         }
       }
 
-      loadScansImpl(paths, texDir + '/brdf-mesh.obj', loadManager);
+      loadScansImpl(paths, texDir + 'brdf-mesh.obj', loadManager);
     }
 
     function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
@@ -1436,6 +1548,17 @@ class bivotJs {
     this.requestRender();
   }
 
+  updateControls(controls) {
+    if (controls) {
+      if (this.state.dragControlsRotation != null) {
+        controls.enableRotate = this.state.dragControlsRotation;
+      }
+      if (this.state.dragControlsPanning != null) {
+        controls.enablePan = this.state.dragControlsPanning;
+      }
+    }
+  }
+
   updateZoom() {
     if (this.controls) {
       this.controls.minDistance = this.state.zoom[0];
@@ -1492,6 +1615,7 @@ class bivotJs {
         this.updateMeshRotation();
         this.updateCanvas();
         this.updateZoom();
+        this.updateControls(this.controls);
       }
 
       this.controls.update();
@@ -1537,6 +1661,16 @@ class bivotJs {
     }
   }
 
+  getDiag() {
+    const box = this.geometry.boundingBox;
+    if (box) {
+      const x = box.max.x - box.min.x;
+      const y = box.max.y - box.min.y;
+      return Math.sqrt(x * x + y * y);
+    } else {
+      return 0;
+    }
+  }
 
   registerEventListener(object, type, listener, ...args) {
     object.addEventListener(type, listener, ...args);

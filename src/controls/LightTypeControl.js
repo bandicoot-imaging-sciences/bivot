@@ -2,7 +2,7 @@ import React from 'react';
 import { Grid, Typography, Slider, Tooltip } from '@material-ui/core';
 import { Flare, WbIridescent } from '@material-ui/icons';
 
-function LightTypeControl({ value, onChange }) {
+function LightTypeControl({ type, size, onChange }) {
   return (
     <Grid container spacing={2}>
       <Grid item><Tooltip title="The spread of the light shining on the material">
@@ -11,10 +11,10 @@ function LightTypeControl({ value, onChange }) {
       <Grid item><Tooltip title="Point light"><Flare /></Tooltip></Grid>
       <Grid item xs>
         <Slider
-          value={value == 'area' ? 1 : 0}
-          onChange={(event, newValue) => onChange(newValue ? 'area' : 'point')}
+          value={type == 'area' ? size : 0}
+          onChange={(event, newValue) => onChange(newValue ? 'area' : 'point', newValue)}
           valueLabelDisplay="auto"
-          step={1}
+          step={0.1}
           min={0}
           max={1}
         />
