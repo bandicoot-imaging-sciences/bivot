@@ -270,9 +270,18 @@ function BivotReact(props) {
       configPath = 'bivot-config.json';
     }
 
+    // Pre-check portrait flag, to avoid sizing issues while loading
+    var initWidth = width;
+    var initHeight = height;
+    if (galleryMat.config.renders[galleryMat.name].state.portrait) {
+      initWidth = height;
+      initHeight = width;
+      updatePortrait(true);
+    }
+
     const options = {
-      width,
-      height,
+      width: initWidth,
+      height: initHeight,
       configPath,
       renderPath,
       texturePath,
@@ -291,6 +300,7 @@ function BivotReact(props) {
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
     bivot.current.startRender();
+
     copyStateFields(state, checkpointState);
     setLoading(false);
   }
