@@ -16,6 +16,7 @@ import ResetButton from './controls/ResetButton';
 import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
+import DragControl from './controls/DragControl';
 
 import { useWindowSize } from './utils/hooksLib';
 import { loadJsonFile } from './utils/jsonLib';
@@ -52,6 +53,7 @@ function BivotReact(props) {
     thumbnail,
     config,
     showEditor,
+    showAdvancedControls,
     fetchFiles,
     writeState,
     onClick,
@@ -168,6 +170,8 @@ function BivotReact(props) {
   const [lightColorControls, setLightColorControls] = useState(rgbArrayToHexString(state.lightColor));
   const [backgroundColor, setBackgroundColor] = useState(state.backgroundColor);
   const [autoRotatePeriodMs, setAutoRotatePeriodMs] = useState(state.autoRotatePeriodMs);
+  const [dragControlsRotation, setDragControlsRotation] = useState(state.dragControlsRotation);
+  const [dragControlsPanning, setDragControlsPanning] = useState(state.dragControlsPanning);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -182,6 +186,8 @@ function BivotReact(props) {
   state.lightColor = lightColorBivot;
   state.backgroundColor = backgroundColor;
   state.autoRotatePeriodMs = autoRotatePeriodMs;
+  state.dragControlsRotation = dragControlsRotation;
+  state.dragControlsPanning = dragControlsPanning;
 
   async function onLoad() {
     loadBivot();
@@ -319,7 +325,9 @@ function BivotReact(props) {
       zoom,
       lightColor,
       backgroundColor,
-      autoRotatePeriodMs
+      autoRotatePeriodMs,
+      dragControlsRotation,
+      dragControlsPanning
     } = stateFields;
 
     updateExposure(exposure);
@@ -333,6 +341,8 @@ function BivotReact(props) {
     updateLightColor(rgbArrayToColorObj(lightColor));
     updateBackgroundColor({ hex: backgroundColor });
     updateAutoRotate(autoRotatePeriodMs);
+    updateDragControl('rotate', dragControlsRotation);
+    updateDragControl('pan', dragControlsPanning);
 
     if (bivot.current) {
       renderFrame(true);
@@ -377,8 +387,7 @@ function BivotReact(props) {
       lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
-      dragControlsRotation: false, // Hard-coded, for now
-      dragControlsPanning: false,  // Hard-coded, for now
+      dragControlsRotation, dragControlsPanning,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
@@ -505,6 +514,15 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function updateDragControl(field, val) {
+    if (field == 'rotate') {
+      setDragControlsRotation(val);
+    } else if (field == 'pan') {
+      setDragControlsPanning(val);
+    }
+    renderFrame(true);
+  }
+
   function orientationAwareWidth(isPortrait) {
     return isPortrait ? windowShortLength : windowLongLength;
   }
@@ -537,6 +555,15 @@ function BivotReact(props) {
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
+              {showAdvancedControls && (
+                <DragControl
+                  value={{
+                    rotate: {dragControlsRotation},
+                    pan: {dragControlsPanning}
+                  }}
+                  onChange={updateDragControl}
+                />
+              )}
               <Grid container spacing={2}>
                 <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
                 <ResetButton onChange={stateReset} />
