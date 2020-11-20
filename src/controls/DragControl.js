@@ -22,7 +22,7 @@ function DragControl({ value, onChange }) {
         <Tooltip title="Allow users to rotate the Shimmer View using click + drag (mobile: touch + drag)">
           <Checkbox
             className={classes.checkbox}
-            value={value.rotate}
+            checked={value.rotate}
             onChange={(event) => onChange('rotate', event.target.checked)}
           />
         </Tooltip>
@@ -34,7 +34,7 @@ function DragControl({ value, onChange }) {
         <Tooltip title="Allow users to pan the Shimmer View using right click + drag (mobile: double touch + drag)">
           <Checkbox
             className={classes.checkbox}
-            value={value.pan}
+            checked={value.pan}
             onChange={(event) => onChange('pan', event.target.checked)}
           />
         </Tooltip>
