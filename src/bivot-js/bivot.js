@@ -341,7 +341,13 @@ class bivotJs {
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
-          img.src = getBasePath(_self.opts.materialSet) + '/images/0.jpg';
+          const loc = _self.scans[_self.state.scan].location;
+          if (!loc.endsWith('/')) {
+            loc += '/';
+          }
+          const parts = loc.split('/');
+          const filename = parts[parts.length - 2];
+          img.src = getBasePath(_self.opts.materialSet) + `/images/${filename}.jpg`;
         }
         const style = getComputedStyle(_self.overlay);
         if (_self.opts.width) {
