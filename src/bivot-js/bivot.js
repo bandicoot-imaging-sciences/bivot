@@ -341,7 +341,7 @@ class bivotJs {
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
-          const loc = _self.scans[_self.state.scan].location;
+          var loc = _self.scans[_self.state.scan].location;
           if (!loc.endsWith('/')) {
             loc += '/';
           }
