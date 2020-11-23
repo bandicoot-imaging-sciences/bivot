@@ -13,6 +13,7 @@ import OrientationControl from './controls/OrientationControl';
 import ZoomControl from './controls/ZoomControl';
 import SaveButton from './controls/SaveButton';
 import ResetButton from './controls/ResetButton';
+import FullscreenButton from './controls/FullscreenButton';
 import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
@@ -26,18 +27,21 @@ import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 
 const styles = {
   bivotGridOverlay: {
-    textAlign: "center",
-    margin: "0.5em",
+    textAlign: 'center',
+    margin: '0.5em',
   },
   loadingGridOverlay: {
-    position: "absolute",
-    bottom: "50%",
-    left: "50%",
-    zIndex: "999",
+    position: 'absolute',
+    bottom: '50%',
+    left: '50%',
+    zIndex: '999',
   },
   controlPanel: {
     width: 325,
-    padding: "0.5em",
+    padding: '0.5em',
+  },
+  grow: {
+    flexGrow: 1,
   },
 };
 
@@ -569,6 +573,8 @@ function BivotReact(props) {
               <Grid container spacing={2}>
                 <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
                 <ResetButton onChange={stateReset} />
+                <div style={styles.grow} />
+                <FullscreenButton fullscreenElement={canvasRef.current} />
               </Grid>
             </Paper>
           </Grid>

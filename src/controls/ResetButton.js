@@ -6,6 +6,7 @@ function ResetButton({ onChange }) {
     <Grid item>
       <Tooltip title="Reset to the originally loaded display settings">
         <Button
+          id="resetButton"
           variant="contained"
           onClick={() => {onChange()}}
         >

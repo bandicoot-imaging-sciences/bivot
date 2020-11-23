@@ -6,6 +6,7 @@ function SaveButton({ onChange }) {
     <Grid item>
       <Tooltip title="Save the current display settings">
         <Button
+          id="saveButton"
           variant="contained"
           color="primary"
           onClick={() => {onChange()}}
