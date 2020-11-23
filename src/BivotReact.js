@@ -542,6 +542,18 @@ function BivotReact(props) {
     // TODO:  Conditionally resize the bivot canvas on this event
   }
 
+  function onEnterFullScreen() {
+    canvasRef.current.width = pixelRatio * window.screen.width;
+    canvasRef.current.height = pixelRatio * window.screen.height;
+    renderFrame(true);
+  }
+
+  function onExitFullScreen() {
+    canvasRef.current.width = pixelRatio * orientationAwareWidth(portrait);
+    canvasRef.current.height = pixelRatio * orientationAwareHeight(portrait);
+    renderFrame(true);
+  }
+
   return (
     <div
       ref={overlayRef}
@@ -574,7 +586,11 @@ function BivotReact(props) {
                 <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
                 <ResetButton onChange={stateReset} />
                 <div style={styles.grow} />
-                <FullscreenButton fullscreenElement={canvasRef.current} />
+                <FullscreenButton
+                  fullscreenElement={canvasRef.current}
+                  onEnterFullScreen={onEnterFullScreen}
+                  onExitFullScreen={onExitFullScreen}
+                />
               </Grid>
             </Paper>
           </Grid>
