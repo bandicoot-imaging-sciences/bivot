@@ -543,15 +543,19 @@ function BivotReact(props) {
   }
 
   function onEnterFullScreen() {
-    canvasRef.current.width = pixelRatio * window.screen.width;
-    canvasRef.current.height = pixelRatio * window.screen.height;
-    renderFrame(true);
+    if (canvasRef.current) {
+      canvasRef.current.width = pixelRatio * window.screen.width;
+      canvasRef.current.height = pixelRatio * window.screen.height;
+      renderFrame(true);
+    }
   }
 
   function onExitFullScreen() {
-    canvasRef.current.width = pixelRatio * orientationAwareWidth(portrait);
-    canvasRef.current.height = pixelRatio * orientationAwareHeight(portrait);
-    renderFrame(true);
+    if (canvasRef.current) {
+      canvasRef.current.width = pixelRatio * orientationAwareWidth(portrait);
+      canvasRef.current.height = pixelRatio * orientationAwareHeight(portrait);
+      renderFrame(true);
+    }
   }
 
   return (
