@@ -40,16 +40,24 @@ function FullscreenButton({ fullscreenElement, onEnterFullScreen, onExitFullScre
     }
   }
 
+  const fullScreenAvailable =
+    document.fullscreenEnabled ||
+    document.mozFullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    document.msFullscreenEnabled;
+
   return (
     <Grid item>
-      <Button
-        id='fullscreenButton'
-        color='primary'
-        onClick={openFullscreen}
-      >
-        <ZoomIn />
-        Fullscreen
-      </Button>
+      {fullScreenAvailable && (
+        <Button
+          id='fullscreenButton'
+          color='primary'
+          onClick={openFullscreen}
+        >
+          <ZoomIn />
+          Fullscreen
+        </Button>
+      )}
     </Grid>
   );
 }
