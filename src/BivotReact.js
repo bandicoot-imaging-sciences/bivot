@@ -72,10 +72,6 @@ function BivotReact(props) {
   const canvasID = `${id}-canvas`;
   const overlayID = `${id}-overlay`;
 
-  const propsPortrait = height >= width;
-  const windowLongLength = propsPortrait ? height : width;
-  const windowShortLength = propsPortrait ? width : height;
-
   const referenceAreaLightWidth = 5;
   const referenceAreaLightHeight = 0.2;
 
@@ -88,16 +84,16 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    portrait: propsPortrait,
+    size: [590, 400],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
-
-    // State to be saved for the bivot render for which there aren't controls
     dragControlsRotation: false,
     dragControlsPanning: false,
+
+    // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.2,
     camTiltWithDeviceOrient: 0.6,
     camTiltLimitDegrees: 0.0,
@@ -117,16 +113,16 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    portrait: propsPortrait,
+    size: [590, 400],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
-
-    // State to be saved for the bivot render for which there aren't controls
     dragControlsRotation: false,
     dragControlsPanning: false,
+
+    // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.2,
     camTiltWithDeviceOrient: 0.6,
     camTiltLimitDegrees: 0.0,
@@ -167,7 +163,7 @@ function BivotReact(props) {
   const [areaLightWidth, setAreaLightWidth] = useState(state.areaLightWidth);
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
-  const [portrait, setPortrait] = useState(propsPortrait);
+  const [size, setSize] = useState(state.size);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -186,7 +182,7 @@ function BivotReact(props) {
   state.areaLightWidth = areaLightWidth;
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
-  state.portrait = portrait;
+  state.size = size;
   state.zoom = zoom;
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
@@ -283,17 +279,22 @@ function BivotReact(props) {
     }
 
     // Pre-check portrait flag, to avoid sizing issues while loading
-    var initWidth = width;
-    var initHeight = height;
-    if (galleryMat.config.renders[galleryMat.name].state.portrait) {
-      initWidth = height;
-      initHeight = width;
-      updatePortrait(true);
+    var initSize = galleryMat.config.renders[galleryMat.name].state.size;
+    if (width != null) {
+      initSize[0] = width;
     }
+    if (height != null) {
+      initSize[1] = height;
+    }
+    if (galleryMat.config.renders[galleryMat.name].state.portrait) {
+      // Handle legacy portrait flag
+      initSize = [initSize[1], initSize[0]];
+    }
+    updateSize(initSize);
 
     const options = {
-      width: initWidth,
-      height: initHeight,
+      width: initSize[0],
+      height: initSize[1],
       configPath,
       renderPath,
       texturePath,
@@ -324,6 +325,7 @@ function BivotReact(props) {
       brightness,
       contrast,
       portrait,
+      size,
       meshRotateZDegrees,
       lightType,
       areaLightWidth,
@@ -336,12 +338,17 @@ function BivotReact(props) {
       dragControlsPanning
     } = stateFields;
 
+    if (portrait) {
+      // Handle legacy portrait flag
+      size = [size[1], size[0]];
+    }
+
     updateExposure(exposure);
     updateBrightness(brightness);
     updateContrast(contrast);
     updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
-    updatePortrait(portrait);
+    updateSize(size);
     setZoom(zoom);
     setCurrentZoom(zoom[1]);
     updateLightColor(rgbArrayToColorObj(lightColor));
@@ -389,7 +396,7 @@ function BivotReact(props) {
      } = state;
 
     const savedState = {
-      exposure, brightness, contrast, portrait, zoom, backgroundColor, autoRotatePeriodMs,
+      exposure, brightness, contrast, size, zoom, backgroundColor, autoRotatePeriodMs,
       lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
@@ -400,6 +407,7 @@ function BivotReact(props) {
     }
 
     config.state = { ...config.state, ...savedState };
+    delete config.state.portrait; // Strip out legacy portrait flag, if present
 
     const { userId, materialId } = material;
     const success = await writeState(userId, materialId, materialSet);
@@ -460,13 +468,20 @@ function BivotReact(props) {
       toPortrait = event.target.checked;
     }
     const canvas = canvasRef.current;
-    const canvasPortrait = (canvas.height > canvas.width);
+    const canvasPortrait = canvas ? (canvas.height > canvas.width) : false;
     if (toPortrait != canvasPortrait) {
-      setPortrait(toPortrait);
-      canvas.width = pixelRatio * orientationAwareWidth(toPortrait);
-      canvas.height = pixelRatio * orientationAwareHeight(toPortrait);
-      renderFrame(true);
+      updateSize([size[1], size[0]]);
     }
+  }
+
+  function updateSize(val) {
+    setSize(val);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.width = pixelRatio * val[0];
+      canvas.height = pixelRatio * val[1]
+    }
+    renderFrame(true);
   }
 
   function updateZoom(val) {
@@ -529,14 +544,6 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
-  function orientationAwareWidth(isPortrait) {
-    return isPortrait ? windowShortLength : windowLongLength;
-  }
-
-  function orientationAwareHeight(isPortrait) {
-    return isPortrait ? windowLongLength : windowShortLength;
-  }
-
   function onWindowSizeChanged(size) {
     console.log('Window was resized:', size);
     // TODO:  Conditionally resize the bivot canvas on this event
@@ -552,8 +559,8 @@ function BivotReact(props) {
 
   function onExitFullScreen() {
     if (canvasRef.current) {
-      canvasRef.current.width = pixelRatio * orientationAwareWidth(portrait);
-      canvasRef.current.height = pixelRatio * orientationAwareHeight(portrait);
+      canvasRef.current.width = pixelRatio * size[0];
+      canvasRef.current.height = pixelRatio * size[1];
       renderFrame(true);
     }
   }
@@ -572,7 +579,7 @@ function BivotReact(props) {
               <ContrastControl value={contrast} onChange={updateContrast} />
               <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
-              <OrientationControl value={portrait} onChange={updatePortrait} />
+              <OrientationControl value={size[0] < size[1]} onChange={updatePortrait} />
               <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
@@ -608,8 +615,8 @@ function BivotReact(props) {
               ref={canvasRef}
               id={canvasID}
               className='bivot-canvas'
-              width={pixelRatio * orientationAwareWidth(state.portrait)}
-              height={pixelRatio * orientationAwareHeight(state.portrait)}
+              width={pixelRatio * size[0]}
+              height={pixelRatio * size[1]}
             />
           </div>
         </Grid>
