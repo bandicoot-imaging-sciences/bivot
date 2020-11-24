@@ -12,13 +12,13 @@ function FullscreenButton({ fullscreenElement, onEnterFullScreen, onExitFullScre
     }
     var entered = true;
     if (fullscreenElement.requestFullscreen) {
-      fullscreenElement.requestFullscreen();
+      await fullscreenElement.requestFullscreen();
     } else if (fullscreenElement.webkitRequestFullscreen) { /* Safari */
-      fullscreenElement.webkitRequestFullscreen();
+      await fullscreenElement.webkitRequestFullscreen();
     } else if (fullscreenElement.msRequestFullscreen) { /* IE11 */
-      fullscreenElement.msRequestFullscreen();
+      await fullscreenElement.msRequestFullscreen();
     } else if (fullscreenElement.mozRequestFullscreen) { /* Mozilla */
-      fullscreenElement.mozRequestFullscreen();
+      await fullscreenElement.mozRequestFullscreen();
     } else {
       entered = false;
     }
