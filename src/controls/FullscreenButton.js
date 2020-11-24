@@ -1,8 +1,17 @@
 import React from 'react';
 import { Grid, Button } from '@material-ui/core';
-import { ZoomIn } from '@material-ui/icons';
+import { AspectRatio } from '@material-ui/icons';
+import { makeStyles } from '@material-ui/core/styles';
+
+const useStyles = makeStyles((theme) => ({
+  icon: {
+    marginRight: theme.spacing(0.5),
+  },
+}));
 
 function FullscreenButton({ fullscreenElement, onEnterFullScreen, onExitFullScreen }) {
+  const classes = useStyles();
+
   async function openFullscreen() {
     if (document.addEventListener) {
       document.addEventListener('fullscreenchange', exitHandler, false);
@@ -54,7 +63,7 @@ function FullscreenButton({ fullscreenElement, onEnterFullScreen, onExitFullScre
           color='primary'
           onClick={openFullscreen}
         >
-          <ZoomIn />
+          <AspectRatio className={classes.icon} />
           Fullscreen
         </Button>
       )}
