@@ -323,7 +323,7 @@ function BivotReact(props) {
 
   async function updateStateFields(stateFields) {
     // Take the values out of stateFields before setting them in state.
-    var {
+    const {
       exposure,
       brightness,
       contrast,
@@ -340,14 +340,6 @@ function BivotReact(props) {
       dragControlsRotation,
       dragControlsPanning
     } = stateFields;
-
-    if (!size) {
-      size = [590, 400];
-    }
-    if (portrait) {
-      // Handle legacy portrait flag
-      size = [size[1], size[0]];
-    }
 
     updateExposure(exposure);
     updateBrightness(brightness);
