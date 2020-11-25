@@ -278,8 +278,11 @@ function BivotReact(props) {
       configPath = 'bivot-config.json';
     }
 
-    // Pre-check portrait flag, to avoid sizing issues while loading
+    // Pre-check size, to avoid sizing issues while loading
     var initSize = galleryMat.config.renders[galleryMat.name].state.size;
+    if (!initSize) {
+      initSize = [590, 400];
+    }
     if (width != null) {
       initSize[0] = width;
     }
@@ -320,7 +323,7 @@ function BivotReact(props) {
 
   async function updateStateFields(stateFields) {
     // Take the values out of stateFields before setting them in state.
-    const {
+    var {
       exposure,
       brightness,
       contrast,
@@ -338,6 +341,9 @@ function BivotReact(props) {
       dragControlsPanning
     } = stateFields;
 
+    if (!size) {
+      size = [590, 400];
+    }
     if (portrait) {
       // Handle legacy portrait flag
       size = [size[1], size[0]];
