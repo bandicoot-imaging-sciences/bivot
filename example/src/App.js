@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Container from '@material-ui/core/Container';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import clsx from 'clsx';
 import { withStyles } from '@material-ui/core/styles';
 
-import { Bivot, useScripts, bivotScripts } from '@bandicoot-imaging-sciences/bivot';
+import { Bivot } from '@bandicoot-imaging-sciences/bivot';
 
 
 const styles = {
@@ -21,38 +21,29 @@ const styles = {
   }
 };
 
+// Example public material set
+const materialSet = 'https://publish-dev.bandicootimaging.com.au/1512b6ee/biv_gallery/material-set.json';
 
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   return (
     <>
-      <Container maxWidth="sm" className={clsx(classes.testStyle, className)}>
+      <Container maxWidth='sm' className={clsx(classes.testStyle, className)}>
         <Box my={4}>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant='h4' component='h1' gutterBottom>
             Bivot React - example
           </Typography>
         </Box>
       </Container>
-
-      <Bivot
-        width="350"
-        height="200"
-        showEditor={true}
-        id={1}
-        autoRotate={true}
-        // config={config}
-        // materials={materials}
-        // s3Params={s3Params}
-      />
-      <Bivot
-        width="700"
-        height="400"
-        showEditor={true}
-        id={2}
-        // config={config}
-        // materials={materials}
-        // s3Params={s3Params}
-      />
+      <div style={{margin: '0.5em'}}>
+        <Bivot
+          materialSet={materialSet}
+          id={1}
+          // width='400'            // Override Shimmer width
+          // height='200'           // Override Shimmer height
+          // showEditor={true}      // Show the editor
+        />
+      </div>
     </>
   );
 }

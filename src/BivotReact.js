@@ -28,7 +28,6 @@ import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
-    margin: '0.5em',
   },
   loadingGridOverlay: {
     position: 'absolute',
@@ -53,6 +52,7 @@ function BivotReact(props) {
     id,
     width,
     height,
+    materialSet,
     material,
     thumbnail,
     config,
@@ -150,7 +150,7 @@ function BivotReact(props) {
   const windowSize = useWindowSize(onWindowSizeChanged);
 
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
-  const [materialSet, setMaterialSet] = useState({});
+  const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState(0.25);
 
@@ -241,40 +241,70 @@ function BivotReact(props) {
     return materialSet.materials[materialIndex].materialId;
   }
 
+  async function fetchFilesWrapper(paths, context) {
+    if (fetchFiles) {
+      return await fetchFiles(context, paths);
+    } else {
+      return paths;
+    }
+  }
+
+  async function fetchTextures(ms, basePath, context=null) {
+    var texUserPaths = {};
+    const galleryMat = getMatFromMatSet(ms);
+    for (var k in galleryMat.textures) {
+      texUserPaths[k] = `${basePath}/${galleryMat.location}/${galleryMat.textures[k]}`;
+    }
+    return await fetchFilesWrapper(texUserPaths, context);
+  }
+
   async function loadBivot() {
     var configPath;
     var renderPath;
     var texturePath;
     var galleryMat;
     var textures;
+    var bivotThumb = thumbnail;
 
-    if (material && fetchFiles) {
-      const { userId, materialUserPath } = material;
+    if (material || materialSet) {
+      var context;
+      var filename;
+      var basePath;
+      if (material) {
+        const { userId, materialId, materialUserPath } = material;
+        const url = await fetchFilesWrapper(userId, fileUserPaths);
+        basePath = `gallery/${materialId}/biv_gallery`;
+        filename = url['ms'];
+        context = userId;
+      } else if (materialSet) {
+        var parts = materialSet.split('/');
+        parts.pop();
+        basePath = parts.join('/');
+        filename = materialSet;
+        context = null;
 
-      // Fetch the MaterialSet file and isolate the GalleryMaterial from it
-      const fileUserPaths = { 'ms': materialUserPath };
-      const url = await fetchFiles(userId, fileUserPaths);
-      const ms = await loadJsonFile(url['ms']);
+        if (!bivotThumb && bivotThumb != false) {
+          // Loading image not specified by caller.
+          // Automatically set loading image path relative to material set.
+          bivotThumb = `${basePath}/images/0.jpg`;
+        }
+      }
+
+      const ms = await loadJsonFile(filename);
       if (!ms) {
         return false;
       }
-      galleryMat = getMatFromMatSet(ms)
-      setMaterialSet(ms);
-
-      // Fetch texture files
-      var texUserPaths = {};
-      const materialId = getIdFromMatSet(ms);
-      for (var k in galleryMat.textures) {
-        texUserPaths[k] = `gallery/${materialId}/biv_gallery/textures/0/${galleryMat.textures[k]}`;
-      }
-      textures = await fetchFiles(userId, texUserPaths);
+      galleryMat = getMatFromMatSet(ms);
+      setMaterialSetInternal(ms);
+      textures = await fetchTextures(ms, basePath, context);
     } else {
-      // material + callback not provided; expect local textures
+      // Neither material or materialSet was provided; try local textures
       renderPath = 'bivot-renders.json';
       texturePath = 'textures';
     }
 
     if (!config) {
+      // Auto-set config path for legacy use
       configPath = 'bivot-config.json';
     }
 
@@ -303,7 +333,7 @@ function BivotReact(props) {
       texturePath,
       textures,
       material: galleryMat,
-      thumbnail,
+      thumbnail: bivotThumb,
       config,
       state,
       stateLoadCallback,
@@ -327,7 +357,7 @@ function BivotReact(props) {
       exposure,
       brightness,
       contrast,
-      portrait,
+      //portrait,
       size,
       meshRotateZDegrees,
       lightType,
@@ -383,7 +413,7 @@ function BivotReact(props) {
       await canvasRef.current.toBlob(callback, 'image/jpeg');
     }
 
-    const { gallery } = materialSet.materials[0]
+    const { gallery } = materialSetInternal.materials[0]
     const galleryMat = gallery[gallery.length - 1];
     const config = galleryMat.config.renders['0'];
 
@@ -408,7 +438,7 @@ function BivotReact(props) {
     delete config.state.portrait; // Strip out legacy portrait flag, if present
 
     const { userId, materialId } = material;
-    const success = await writeState(userId, materialId, materialSet);
+    const success = await writeState(userId, materialId, materialSetInternal);
     if (success) {
       copyStateFields(config.state, checkpointState);
     }
@@ -543,7 +573,7 @@ function BivotReact(props) {
   }
 
   function onWindowSizeChanged(size) {
-    console.log('Window was resized:', size);
+    //console.log('Window was resized:', size);
     // TODO:  Conditionally resize the bivot canvas on this event
   }
 
