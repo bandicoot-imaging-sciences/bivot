@@ -70,8 +70,9 @@ function BivotReact(props) {
     // the same page.
     id,
 
-    // Override the width and height of the Shimmer View.  If unset, the width
-    // and height are taken from the materialSet file.
+    // Override the width and height of the Shimmer View.  Bivot resizes
+    // responsively if width or height changes on a live Bivot component.
+    // If unset, the width and height are taken from the materialSet file.
     width,
     height,
 
@@ -267,7 +268,18 @@ function BivotReact(props) {
   }, [material]);
 
   useEffect(() => {
-    // Todo: Update canvas size
+    // Update width/height
+    var w, h;
+    const galleryMat = getMatFromMatSet(materialSetInternal);
+    if (galleryMat) {
+      const initSize = galleryMat.config.renders[galleryMat.name].state.size;
+      w = (width != null) ? width : initSize[0];
+      h = (height != null) ? height : initSize[1];
+    } else {
+      w = width;
+      h = height;
+    }
+    updateSize([w, h]);
   }, [width, height]);
 
 
@@ -282,8 +294,11 @@ function BivotReact(props) {
   }, []);
 
   function getMatFromMatSet(materialSet, materialIndex=0) {
-    const gallery = materialSet.materials[materialIndex].gallery;
-    return gallery[gallery.length - 1]; // Only use last gallery Material in the array
+    if (materialSet && materialSet.materials) {
+      const gallery = materialSet.materials[materialIndex].gallery;
+      return gallery[gallery.length - 1]; // Only use last gallery Material in the array
+    }
+    return null;
   }
 
   function getIdFromMatSet(materialSet, materialIndex=0) {
