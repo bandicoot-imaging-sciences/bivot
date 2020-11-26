@@ -55,7 +55,6 @@ function BivotReact(props) {
     materialSet,
     material,
     loadingImage,
-    config,
     showEditor,
     showAdvancedControls,
     fetchFiles,
@@ -136,11 +135,7 @@ function BivotReact(props) {
   });
   const [checkpointState, _setCheckpointState] = useState({});
 
-  if (config) {
-    jsonToState(config.initialState, defaultState);
-  }
-
-  // If autoRotate is set in props, then override state after loading config
+  // If autoRotate is set in props, then override state
   if (autoRotate === true) {
     state.autoRotatePeriodMs = 8000;
   } else if (autoRotate === false) {
@@ -313,10 +308,8 @@ function BivotReact(props) {
       texturePath = 'textures';
     }
 
-    if (!config) {
-      // Auto-set config path for legacy use
-      configPath = 'bivot-config.json';
-    }
+    // Auto-set config path for legacy use
+    configPath = 'bivot-config.json';
 
     // Pre-check size, to avoid sizing issues while loading
     var initSize = galleryMat.config.renders[galleryMat.name].state.size;
@@ -344,7 +337,6 @@ function BivotReact(props) {
       textures,
       material: galleryMat,
       thumbnail,
-      config,
       state,
       stateLoadCallback,
       loadingCompleteCallback,
