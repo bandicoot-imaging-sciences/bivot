@@ -54,7 +54,7 @@ function BivotReact(props) {
     height,
     materialSet,
     material,
-    thumbnail,
+    loadingImage,
     config,
     showEditor,
     showAdvancedControls,
@@ -252,8 +252,17 @@ function BivotReact(props) {
   async function fetchTextures(ms, basePath, context=null) {
     var texUserPaths = {};
     const galleryMat = getMatFromMatSet(ms);
+    var path;
+    const loc = galleryMat.location.toLowerCase();
+    if (loc.startsWith('/') || loc.startsWith('http://') || loc.startsWith('https://')) {
+      path = `${galleryMat.location}/`;
+    } else if (loc.startsWith('s3://')) {
+      path = `${basePath}/textures/0/`;
+    } else {
+      path = `${basePath}/${galleryMat.location}/`;
+    }
     for (var k in galleryMat.textures) {
-      texUserPaths[k] = `${basePath}/${galleryMat.location}/${galleryMat.textures[k]}`;
+      texUserPaths[k] = path + galleryMat.textures[k];
     }
     return await fetchFilesWrapper(texUserPaths, context);
   }
@@ -264,7 +273,7 @@ function BivotReact(props) {
     var texturePath;
     var galleryMat;
     var textures;
-    var bivotThumb = thumbnail;
+    var thumbnail = loadingImage;
 
     if (material || materialSet) {
       var context;
@@ -272,7 +281,8 @@ function BivotReact(props) {
       var basePath;
       if (material) {
         const { userId, materialId, materialUserPath } = material;
-        const url = await fetchFilesWrapper(userId, fileUserPaths);
+        const fileUserPaths = { 'ms': materialUserPath };
+        const url = await fetchFilesWrapper(fileUserPaths, userId);
         basePath = `gallery/${materialId}/biv_gallery`;
         filename = url['ms'];
         context = userId;
@@ -283,10 +293,10 @@ function BivotReact(props) {
         filename = materialSet;
         context = null;
 
-        if (!bivotThumb && bivotThumb != false) {
+        if (!thumbnail && thumbnail != false) {
           // Loading image not specified by caller.
           // Automatically set loading image path relative to material set.
-          bivotThumb = `${basePath}/images/0.jpg`;
+          thumbnail = `${basePath}/images/0.jpg`;
         }
       }
 
@@ -333,7 +343,7 @@ function BivotReact(props) {
       texturePath,
       textures,
       material: galleryMat,
-      thumbnail: bivotThumb,
+      thumbnail,
       config,
       state,
       stateLoadCallback,
