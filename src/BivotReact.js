@@ -48,20 +48,74 @@ var zoomIndex = -1; // Index of the current zoom slider being moved
 var zoomInitialVal = [0, 0, 0]; // [min, initial, max] zoom at the beginning of the current slider move
 
 function BivotReact(props) {
+  //
+  // Props:
+  //
   const {
+    // ========== Basic props ==========
+
+    // The pathname of a material set defining a Shimmer View to display in
+    // the Bivot viewer.  May be a local path relative to the public html
+    // directory, or a URL.
+    materialSet,
+
+    // The pathname of an image to display while the Shimmer View is loading.
+    // May be a local path relative to the public html directory, or a URL.
+    // If unset, a thumbnail image relative to the material set path is
+    // automatically used.
+    // If false, then a blank canvas is shown while loading.
+    loadingImage,
+
+    // An ID of this Bivot instance, needed if multiple Bivots are used in
+    // the same page.
     id,
+
+    // Override the width and height of the Shimmer View.  If unset, the width
+    // and height are taken from the materialSet file.
     width,
     height,
-    materialSet,
-    material,
-    loadingImage,
-    showEditor,
-    showAdvancedControls,
-    fetchFiles,
-    writeState,
+
+    // ========== Advanced props ==========
+
+    // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
+
+    // If set to True or False, overrides the autoRotate setting in the
+    // material set definition.
+    autoRotate,
+
+    // An object containing a material object defining a Shimmer View to
+    // display in the Bivot viewer, as an alternative to the materialSet
+    // filename.
+    // (Currently only supported for internal use)
+    material,
+
+    // An optional callback to use when loading paths in the material set.  Only
+    // required if paths in the material set aren't directly accessible.   For
+    // example, if the material set contains private S3 paths, fetchFiles can
+    // be provided to receive those paths and return temporary signed URLs, if
+    // authorised.
+    // (Currently only supported for internal use)
+    fetchFiles,
+
+    // ========== Editor props ==========
+
+    // Set to True to show the Bivot editor.
+    // (Currently only supported for internal use)
+    showEditor,
+
+    // Set to True to show advanced controls in the Bivot editor.
+    // (Currently only supported for internal use)
+    showAdvancedControls,
+
+    // If supplied, this callback is called upon pressing "Save" in the editor.
+    // (Currently only supported for internal use)
+    writeState,
+
+    // If supplied, this callback is called when a screenshot is saved during
+    // the "save" operation of the editor.
+    // (Currently only supported for internal use)
     onSaveScreenshot,
-    autoRotate
   } = props;
 
   const canvasRef = useRef();
