@@ -238,7 +238,7 @@ function BivotReact(props) {
 
   async function fetchFilesWrapper(paths, context) {
     if (fetchFiles) {
-      return await fetchFiles(context, paths);
+      return await fetchFiles(paths, context);
     } else {
       return paths;
     }
