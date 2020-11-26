@@ -279,7 +279,9 @@ function BivotReact(props) {
       w = width;
       h = height;
     }
-    updateSize([w, h]);
+    if (w && h) {
+      updateSize([w, h]);
+    }
   }, [width, height]);
 
 
