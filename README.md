@@ -1,6 +1,6 @@
 # Bivot material viewer
 
-Bivot is a cross-platform web component for embedding Bandicoot Shimmer View images.
+Bivot is a web component for embedding Bandicoot Shimmer View images.
 
 Example:
 
