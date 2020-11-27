@@ -1,92 +1,160 @@
 # Bivot material viewer
 
-Bivot renders a Bandicoot dynamic material image in a web browser window.
+Bivot is a cross-platform web component for embedding Bandicoot Shimmer View images.
+
+Example:
+
+    <Bivot
+      materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json'
+    />
+
+Bivot is provided as a React component.  Bivot is also Javascript embeddable.
+
+Shimmer View content for Bivot can be created easily using the [Bandicoot web app](https://app.bandicootimaging.com.au).
 
 Features:
-* View fine material texture and gloss with diffuse colour, specular roughness, metalness, normals and a mesh.
-* Control lighting using mouse position or device tilt.
-* Supports most modern browsers and devices (rendering is implemented using WebGL).
+*	Show how light plays over a material, including fine texture and gloss
+*	Control the view and lighting angle using mouse position or device tilt
+*	Wide support across browsers and devices (mobile and desktop)
+*	Embed local Shimmers or remotely hosted Shimmers
+*	Physically based rendering on GPU via WebGL
+*	Fine-tune the Shimmer appearance using the Bandicoot web app editor
 
-## Usage
+## Demo
 
-See `src/bivot-js/example/embed-bivot-js.html` for sample code to add a pure JavaScript Bivot viewer into a web page.
+Examples of Bivot being used on the web can be found in the [Bandicoot material gallery](https://bandicootimaging.com.au/retail/gallery.html).
 
-See `example` for a sample app using Bivot as a React component.
+## Installing
 
-## Embedding
+To install the latest version of the Bivot React NPM package:
 
-You can embed Bivot into a web page, if the viewer is hosted on another site, for example:
-```
-<iframe width="600" height ="400" scrolling="no" 
-  src="https://www.bandicootimaging.com.au/retail/biv_wallet/index.html">
-</iframe>
+    npm install @bandicoot-imaging-sciences/bivot@latest
 
-```
+## Embedding - React
 
-However, there are [limitations on using iframes with titlt control on iOS](#Tilt-control-on-iOS).
+A `<Bivot>` element embeds a single Shimmer View, specified via the `materialSet` property.  The materialSet can be local or on the web.
 
-## Install
+Multiple `<Bivot>` components can be embedded on the same page, if different `id` properties are set.
 
-* Clone the bivot repository.
-* Inside the `src/bivot-js` folder:
-  * Create a folder called `textures` inside the `bivot` folder, and put your texture folders inside that (see
-    "Adding a new dataset" below).
-  * Copy `bivot-config-sample.json` to `bivot-config.json` and modify to suit your needs.
-  * Copy `bivot-renders-sample.json` to `bivot-renders.json` and modify to suit your needs.
-  * Serve `index.html` using HTTPS to ensure tilt control works on mobile devices (see below).
+The `width` and `height` of a `<Bivot>` component can be overridden responsively.
 
-## Use with local web server
-Inside the `src/bivot-js` folder:
+An example showing these concepts is below.
+  
+    import { Bivot } from '@bandicoot-imaging-sciences/bivot';
+    
+    export default function ViewerExample({ width, height, mat1, mat2 }) {
+      return (<>
+        <Bivot
+          id={1}
+          materialSet={mat1}
+          width={width}
+          height={height}
+        />
+        <Bivot
+          id={2}
+          materialSet={mat2}
+          width={width}
+          height={height}
+        />
+      </>);
+    }
 
-* Set up a local web server:
-  * Install local web server, e.g. webfs if using Windows Subsystem for Linux / Ubuntu Linux:
-    * `$ sudo apt install webfs`
-* Start a local web server in the `bivot` folder:
-  * `webfsd -l - -F -f index.html [-p 8000 -i 192.168.0.x -b user:pwd]`
-* Open the local web server address in your browser (default address is `localhost:8000`).
+A complete example app is provided in the `example` directory of the source repo.
 
-## Adding a new dataset
+### <Bivot> Props
 
-* Copy textures to a new folder `<texture-name>` inside the `src/bivot-js/textures`
-  folder. 
-  * See `README-textures.md` for details on the texture folder format.
-  * You can download a working Bivot folder including a sample texture folder from
-    https://www.bandicootimaging.com.au/samples/bandicoot-sample-kimono-j.zip
-* Edit `bivot-renders.json` to add the new `<texture-name>` to the `scans` variable.
+    {
+      // ========== Basic props ==========
+    
+      // The pathname of a material set defining a Shimmer View to display in
+      // the Bivot viewer.  May be a local path relative to the public html
+      // directory, or a URL.
+      materialSet,
+    
+      // The pathname of an image to display while the Shimmer View is loading.
+      // May be a local path relative to the public html directory, or a URL.
+      // If unset, a thumbnail image relative to the material set path is
+      // automatically used.
+      // If false, then a blank canvas is shown while loading.
+      loadingImage,
+    
+      // An ID of this Bivot instance, needed if multiple Bivots are used in
+      // the same page.
+      id,
+    
+      // Override the width and height of the Shimmer View.  Bivot resizes
+      // responsively if width or height changes on a live Bivot component.
+      // If unset, the width and height are taken from the materialSet file.
+      width,
+      height,
+    
+      // ========== Advanced props ==========
+    
+      // If set, this function will be called when a user clicks on the Bivot viewer.
+      onClick,
+    
+      // If set to True or False, overrides the autoRotate setting in the
+      // material set definition.
+      autoRotate,
+      
+      // An object containing a material object defining a Shimmer View to
+      // display in the Bivot viewer, as an alternative to the materialSet
+      // filename.
+      // (Currently only supported for internal use)
+      material,
+      
+      // An optional callback to use when loading paths in the material set.  Only
+      // required if paths in the material set aren't directly accessible.   For
+      // example, if the material set contains private S3 paths, fetchFiles can
+      // be provided to receive those paths and return temporary signed URLs, if
+      // authorised.
+      // (Currently only supported for internal use)
+      fetchFiles,
+      
+      // ========== Editor props ==========
+      
+      // Set to True to show the Bivot editor.
+      // (Currently only supported for internal use)
+      showEditor,
+      
+      // Set to True to show advanced controls in the Bivot editor.
+      // (Currently only supported for internal use)
+      showAdvancedControls,
+      
+      // If supplied, this callback is called upon pressing "Save" in the editor.
+      // (Currently only supported for internal use)
+      writeState,
+      
+      // If supplied, this callback is called when a screenshot is saved during
+      // the "save" operation of the editor.
+      // (Currently only supported for internal use)
+      onSaveScreenshot,
+    }
 
-## Configuration
+## Embedding - JavaScript
 
-Bivot has several variables that control initialisation and display:
+You can also embed Bivot into a web page using JavaScript.  For example:
+<pre><code>&lt;link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v2.3.2</b>/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
+&lt;div id="bivot-overlay" class="bivot-overlay" style="<b>width: 590px; height: 400px;</b>">
+  &lt;canvas id="bivot-canvas" class="bivot-canvas"></canvas>
+&lt;/div>
+&lt;script type="module">
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v2.3.2</b>/src/bivot-js/dist/index.js';
+  const materialSet = '<b>https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json</b>';
+  const options = { materialSet, configPath: null, renderPath: null };
+  import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
+&lt;/script></code></pre>
 
-1. `config`: Global configuration applied before the first texture is loaded
-2. `state`: Display state, set when each texture is loaded and updated using the viewer controls
-3. `camera`: Camera position, updated using the viewer controls
-4. `controls`: Additional camera controls
+The snippet can be embedded into any layout, including using responsive CSS.
 
-See the source code for the default values for the parameters in each variable.
+Customisable parts of the embed snippet include:
+*	**`@v2.3.2`** - The version of Bivot JS to use
+*	**`width: 590px; height: 400px;`** - Override the size of the Shimmer
+*	**`https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json`** - Specify the Shimmer to embed
 
-Bivot has a multiple level configuration and control system:
+Note that Bivot JS and Bivot React have independent versioning schemes.
 
-1. `Bivot()` function parameters: set file paths and HTML element IDs
-2. `bivot-config.json`: Intialise `config` and set the initial `state`
-3. `bivot-renders.json`: List of textures to render, with `camera`, `controls` and `state` parameters to use
-   when each texture is loaded
-4. `render.json`: subset of `state` parameters derived from texture generation
-5. Interface: slider controls for `state` and `camera`, only displayed if `config.showInterface` is `true`
-6. Mouse control and device tilt: control camera and light positions
-
-## Tilt control on iOS
-
-In iOS 13, Safari allows web pages to ask the user for permission to access tilt controls. When Bivot detects
-iOS 13 (or higher), a button is displayed to enable tilt control. When the user presses the button, iOS will
-then request access to the motion sensor. If the user clicks Allow, then tilt control is activated. Bivot must
-be served over HTTPS for this to work. Tilt control is blocked by iOS in cross-domain iframes.
-
-Tilt control in Safari was disabled for all web pages by default in iOS 12.2 - 12.4 (starting March 2019). To
-work around this issue:
-* make sure Bivot is being served over HTTPS (not HTTP),
-* switch on Settings > Safari > Motion & Orientation Access, and then
-* reload the page.
+A complete example page with responsive layout is provided at `src/bivot-js/example/embed-bivot-js.html` in the source repo.
 
 ## License
 
