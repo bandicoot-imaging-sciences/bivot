@@ -1,15 +1,11 @@
 {
-  "name": "@bandicoot-imaging-sciences/bivot",
-  "version": "1.0.3",
-  "description": "Bivot material viewer and editor, as a React component and pure JS library",
-  "author": "volrak",
+  "name": "@bandicoot/bivot",
+  "version": "1.0.4",
+  "description": "Viewer for Bandicoot Shimmer View images",
+  "author": "dkarlov",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/bandicoot-imaging-sciences/bivot.git"
-  },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "access": "public"
   },
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
