@@ -8,7 +8,7 @@ Example:
       materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json'
     />
 
-Bivot is provided as a React component.  Bivot is also Javascript embeddable.
+Bivot is provided as a React component.  Bivot is also JavaScript embeddable.
 
 Shimmer View content for Bivot can be created easily using the [Bandicoot web app](https://app.bandicootimaging.com.au).
 
@@ -26,9 +26,9 @@ Examples of Bivot being used on the web can be found in the [Bandicoot material 
 
 ## Installing
 
-To install the latest version of the Bivot React NPM package:
+To install the Bivot React NPM package:
 
-    npm install @bandicoot-imaging-sciences/bivot@latest
+    npm install @bandicoot/bivot
 
 ## Embedding - React
 
