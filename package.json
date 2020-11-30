@@ -10,6 +10,12 @@
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.js",
+  "files": [
+    "dist"
+  ],
+  "np": {
+    "contents": "dist"
+  },
   "engines": {
     "node": ">=10"
   },
@@ -50,9 +56,6 @@
     "react-scripts": "^3.4.3",
     "yui-lint": "^0.2.0"
   },
-  "files": [
-    "dist"
-  ],
   "dependencies": {
     "@material-ui/icons": "^4.9.1",
     "aws-sdk": "^2.713.0",
