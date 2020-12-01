@@ -129,7 +129,11 @@ const styles = {
 function injectStyle(elem, style) {
   if (elem) {
     for (const [key, value] of Object.entries(style)) {
-      elem.style[key] = value;
+      if (String(value).includes('!important')) {
+        elem.style.setProperty(key, value.split(' !important')[0], 'important');
+      } else {
+        elem.style.setProperty(key, value);
+      }
     }
   }
 }
