@@ -406,6 +406,7 @@ class bivotJs {
       this.updateCanvas();
 
       loadScan();
+      this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
 
