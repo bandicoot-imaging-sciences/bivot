@@ -50,6 +50,90 @@ import { isEmpty } from '../utils/objLib.js';
 import { getBasePath } from '../utils/pathLib.js';
 import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
+const styles = {
+  'bivot-canvas': {
+      'margin': 0,
+      'padding': 0,
+  },
+  'bivot-overlay': {
+      'position': 'relative',
+      'display': 'block',
+      'margin': 0,
+      'padding': 0,
+      'width': 'fit-content',
+      'height': 'fit-content',
+  },
+  'bivot-button': {
+      'color': '#fff !important',
+      'text-decoration': 'none',
+      'background': '#333',
+      'padding': '20px',
+      'border-radius': '0px',
+      'display': 'inline-block',
+      'border': 'solid #fff',
+  },
+  'bivot-loading': {
+      'position': 'absolute',
+      'top': 0,
+      'left': 0,
+      'width': '100%',
+      'height': '100%',
+      'display': 'flex',
+      'justify-content': 'center',
+      'align-items': 'center',
+  },
+  'bivot-progress': {
+      'background-color': 'rgba(100, 100, 100, 1.0)',
+      'opacity': 0.4,
+      'margin': '1.5em',
+      'border': '1px solid white',
+      'width': '50vw',
+  },
+  'bivot-progressbar': {
+      'margin': '2px',
+      'background': 'white',
+      'height': '0.5em',
+      'transform-origin': 'top left',
+      'transform': 'scaleX(0)',
+  },
+  'bivot-subtitle': {
+      'position': 'absolute',
+      'top': '45%',
+      'width': '100%',
+      'display': 'none',
+      'justify-content': 'center',
+      'align-items': 'center',
+      'text-align': 'center',
+  },
+  'bivot-subtitle-background': {
+      'background-color': 'rgba(100, 100, 100, 1.0)',
+      'opacity': 0.9,
+      'width': '75vw',
+  },
+  'bivot-subtitle-text': {
+    'display': 'inline-block',
+    'margin': '0.2em',
+    'padding': '0.2em',
+    'color': 'white',
+    'opacity': 1.0,
+  },
+  'bivot-loading-image': {
+    'display': 'inline',
+    'position': 'absolute',
+    'top': '0px',
+    'left': '0px',
+  },
+};
+
+
+function injectStyle(elem, style) {
+  if (elem) {
+    for (const [key, value] of Object.entries(style)) {
+      elem.style[key] = value;
+    }
+  }
+}
+
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
@@ -204,6 +288,8 @@ class bivotJs {
     this.overlay = document.getElementById(this.opts.overlayID);
     console.assert(this.canvas != null, 'canvas element ID not found:', this.opts.canvasID);
     console.assert(this.overlay != null, 'overlay div element ID not found:', this.opts.overlayID);
+    injectStyle(this.canvas, styles['bivot-canvas']);
+    injectStyle(this.overlay, styles['bivot-overlay']);
 
     this.scans = {};
     this.materials = {};
@@ -363,7 +449,7 @@ class bivotJs {
 
         var content = document.createElement('div');
         content.appendChild(img);
-        content.setAttribute('style', 'display: inline; position: absolute; top: 0px; left: 0px ');
+        injectStyle(content, styles['bivot-loading-image']);
         content.id = 'bivotLoadingImage';
         _self.overlay.appendChild(content);
         _self.loadingDomElement = content;
@@ -671,21 +757,21 @@ class bivotJs {
 
     function initialiseOverlays(overlay) {
       let loadingDiv = _self.registerElement(document, 'div');
-      loadingDiv.className += 'bivot-loading';
       let progressDiv = _self.registerElement(document, 'div');
-      progressDiv.className += 'bivot-progress';
       let progressBarDiv = _self.registerElement(document, 'div');
-      progressBarDiv.className += 'bivot-progressbar';
+      injectStyle(loadingDiv, styles['bivot-loading']);
+      injectStyle(progressDiv, styles['bivot-progress']);
+      injectStyle(progressBarDiv, styles['bivot-progressbar']);
       overlay.appendChild(loadingDiv);
       loadingDiv.appendChild(progressDiv);
       progressDiv.appendChild(progressBarDiv);
 
       let subtitleDiv = _self.registerElement(document, 'div');
-      subtitleDiv.className += 'bivot-subtitle';
       let subtitleBGDiv = _self.registerElement(document, 'div');
-      subtitleBGDiv.className += 'bivot-subtitle-background';
       let subtitleTextP = _self.registerElement(document, 'p');
-      subtitleTextP.className += 'bivot-subtitle-text';
+      injectStyle(subtitleDiv, styles['bivot-subtitle']);
+      injectStyle(subtitleBGDiv, styles['bivot-subtitle-background']);
+      injectStyle(subtitleTextP, styles['bivot-subtitle-text']);
       overlay.appendChild(subtitleDiv);
       subtitleDiv.appendChild(subtitleBGDiv);
       subtitleBGDiv.appendChild(subtitleTextP);
@@ -843,7 +929,7 @@ class bivotJs {
       if (orientPermWanted && orientPermNeeded && !orientPermObtained) {
         subtitleElem.style.display = 'flex';
         let requestButton = _self.registerElement(document, 'button');
-        requestButton.className = 'bivot-button';
+        injectStyle(requestButton, styles['bivot-button']);
         requestButton.innerHTML = 'Tap to enable tilt control';
         requestButton.onclick = requestTiltPermission;
         subtitleTextElem.appendChild(requestButton);
@@ -1270,7 +1356,6 @@ class bivotJs {
 
     function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
       const progress = itemsLoaded / itemsTotal;
-      loadingElem.style.display = '';
       progressBarElem.style.transform = `scaleX(${progress})`;
     };
 

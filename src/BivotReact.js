@@ -24,7 +24,6 @@ import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 
-
 const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
@@ -711,11 +710,10 @@ function BivotReact(props) {
           {loading && (
             <div style={styles.loadingGridOverlay}><CircularProgress /></div>
           )}
-          <div id={overlayID} className="bivot-overlay" style={styles.bivotOverlay}>
+          <div id={overlayID}>
             <canvas
               ref={canvasRef}
               id={canvasID}
-              className='bivot-canvas'
               width={pixelRatio * size[0]}
               height={pixelRatio * size[1]}
             />

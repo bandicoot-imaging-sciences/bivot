@@ -4,28 +4,28 @@
 
 <style>
   #bivot-overlay{
-    width: 220px;
-    height: 220px;
+    width: 200px;
+    height: 133px;
   }
   @media only screen and (min-width: 600px) {
     #bivot-overlay{
       width: 300px;
-      height: 300px;
+      height: 200px;
     }
   }
   @media only screen and (min-width: 1200px) {
     #bivot-overlay{
       width: 600px;
-      height: 600px;
+      height: 400px;
     }
   }
 </style>
 
-<link href="https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.12/src/bivot-js/dist/index.css" rel="stylesheet" type="text/css"/>
-<div id="bivot-overlay" class="bivot-overlay"><canvas id="bivot-canvas" class="bivot-canvas"></canvas></div>
+<div id="bivot-overlay" class="bivot-overlay"><canvas id="bivot-canvas"></canvas></div>
 <script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v2.2.12/src/bivot-js/dist/index.js';
-  const materialSet = 'https://publish.bandicootimaging.com.au/INSERT_HASH/biv_gallery/material-set.json';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.0.1/src/bivot-js/dist/index.js';
+  //const bivSrc = '../dist/index.js';
+  const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
   const options = { materialSet, configPath: null, renderPath: null };
   import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
 </script>
