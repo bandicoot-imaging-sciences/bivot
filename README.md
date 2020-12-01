@@ -40,7 +40,7 @@ The `width` and `height` of a `<Bivot>` component can be overridden responsively
 
 An example showing these concepts is below.
   
-    import { Bivot } from '@bandicoot-imaging-sciences/bivot';
+    import { Bivot } from '@bandicoot/bivot';
     
     export default function ViewerExample({ width, height, mat1, mat2 }) {
       return (<>
