@@ -26,9 +26,13 @@ Examples of Bivot being used on the web can be found in the [Bandicoot material 
 
 ## Installing
 
-To install the Bivot React NPM package:
+To install the Bivot React NPM package, run the following:
 
     npm install @bandicoot/bivot
+
+Bivot React has two peer dependencies: `react`, and `@material-ui/core`.  If not already present, these also need to be installed in your local or global NPM environment, for example via the following command:
+
+    npm install react @material-ui/core
 
 ## Embedding - React
 
