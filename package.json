@@ -2,6 +2,7 @@
   "name": "@bandicoot/bivot",
   "version": "3.0.6",
   "description": "Viewer for Bandicoot Shimmer View images",
+  "homepage": "https://github.com/bandicoot-imaging-sciences/bivot",
   "author": "dkarlov",
   "license": "MIT",
   "publishConfig": {
