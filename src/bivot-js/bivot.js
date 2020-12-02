@@ -475,7 +475,10 @@ class bivotJs {
         // materials not provided or failed to load
         console.log('(Unsetting materialSet option)');
         _self.opts.materialSet = null;
-        await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
+        if (!_self.opts.material) {
+          // Load legacy config.json file
+          await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
+        }
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
       if (_self.opts.hasOwnProperty('show')) {
