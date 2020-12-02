@@ -40,9 +40,8 @@
     //const bivSrc = "./dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
-    const options = { materialSet, configPath: null, renderPath: null };
     import(bivSrc).then(module => {
-      const bivot = new module.newBivot(options);
+      const bivot = new module.newBivot({ materialSet });
       bivot.checkWebGL();
       bivot.startRender();
     });
