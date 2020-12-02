@@ -140,7 +140,7 @@ A complete example app is provided in the `example` directory of the source repo
 You can also embed Bivot into a web page using JavaScript.  For example:
 <pre><code>&lt;div id="bivot-overlay" style="<b>width: 590px; height: 400px;</b>">&lt;canvas id="bivot-canvas">&lt;/canvas>&lt;/div>
 &lt;script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.0.3</b>/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.0.5</b>/src/bivot-js/dist/index.js';
   const materialSet = '<b>https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json</b>';
   const options = { materialSet, configPath: null, renderPath: null };
   import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
@@ -149,7 +149,7 @@ You can also embed Bivot into a web page using JavaScript.  For example:
 The snippet can be embedded into any layout, including using responsive CSS.
 
 Customisable parts of the embed snippet include:
-*	**`@v3.0.3`** - The version of Bivot JS to use
+*	**`@v3.0.5`** - The version of Bivot JS to use
 *	**`width: 590px; height: 400px;`** - Override the size of the Shimmer
 *	**`https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json`** - Specify the Shimmer to embed
 
