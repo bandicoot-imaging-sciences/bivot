@@ -1111,7 +1111,7 @@ class bivotJs {
       brdfTextures = new Map();
 
       // If a materialSet was provided, set the texture format directly from the texture file extensions
-      if (_self.opts.materialSet) {
+      if (_self.opts.material || _self.opts.materialSet) {
         for (var [key, value] of brdfTexturePaths) {
           _self.config.textureFormat = value.path.split('.').pop().toUpperCase();
           break;

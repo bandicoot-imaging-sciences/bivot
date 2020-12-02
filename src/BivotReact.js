@@ -333,7 +333,6 @@ function BivotReact(props) {
   }
 
   async function loadBivot() {
-    var configPath;
     var renderPath;
     var texturePath;
     var galleryMat;
@@ -378,9 +377,6 @@ function BivotReact(props) {
       texturePath = 'textures';
     }
 
-    // Auto-set config path for legacy use
-    configPath = 'bivot-config.json';
-
     // Pre-check size, to avoid sizing issues while loading
     var initSize = galleryMat.config.renders[galleryMat.name].state.size;
     if (!initSize) {
@@ -401,7 +397,6 @@ function BivotReact(props) {
     const options = {
       width: initSize[0],
       height: initSize[1],
-      configPath,
       renderPath,
       texturePath,
       textures,
