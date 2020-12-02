@@ -761,30 +761,32 @@ class bivotJs {
     }
 
     function initialiseOverlays(overlay) {
-      let loadingDiv = _self.registerElement(document, 'div');
-      let progressDiv = _self.registerElement(document, 'div');
-      let progressBarDiv = _self.registerElement(document, 'div');
-      injectStyle(loadingDiv, styles['bivot-loading']);
-      injectStyle(progressDiv, styles['bivot-progress']);
-      injectStyle(progressBarDiv, styles['bivot-progressbar']);
-      overlay.appendChild(loadingDiv);
-      loadingDiv.appendChild(progressDiv);
-      progressDiv.appendChild(progressBarDiv);
+      if (overlay) {
+        let loadingDiv = _self.registerElement(document, 'div');
+        let progressDiv = _self.registerElement(document, 'div');
+        let progressBarDiv = _self.registerElement(document, 'div');
+        injectStyle(loadingDiv, styles['bivot-loading']);
+        injectStyle(progressDiv, styles['bivot-progress']);
+        injectStyle(progressBarDiv, styles['bivot-progressbar']);
+        overlay.appendChild(loadingDiv);
+        loadingDiv.appendChild(progressDiv);
+        progressDiv.appendChild(progressBarDiv);
 
-      let subtitleDiv = _self.registerElement(document, 'div');
-      let subtitleBGDiv = _self.registerElement(document, 'div');
-      let subtitleTextP = _self.registerElement(document, 'p');
-      injectStyle(subtitleDiv, styles['bivot-subtitle']);
-      injectStyle(subtitleBGDiv, styles['bivot-subtitle-background']);
-      injectStyle(subtitleTextP, styles['bivot-subtitle-text']);
-      overlay.appendChild(subtitleDiv);
-      subtitleDiv.appendChild(subtitleBGDiv);
-      subtitleBGDiv.appendChild(subtitleTextP);
+        let subtitleDiv = _self.registerElement(document, 'div');
+        let subtitleBGDiv = _self.registerElement(document, 'div');
+        let subtitleTextP = _self.registerElement(document, 'p');
+        injectStyle(subtitleDiv, styles['bivot-subtitle']);
+        injectStyle(subtitleBGDiv, styles['bivot-subtitle-background']);
+        injectStyle(subtitleTextP, styles['bivot-subtitle-text']);
+        overlay.appendChild(subtitleDiv);
+        subtitleDiv.appendChild(subtitleBGDiv);
+        subtitleBGDiv.appendChild(subtitleTextP);
 
-      loadingElem = loadingDiv;
-      progressBarElem = progressBarDiv;
-      subtitleElem = subtitleDiv;
-      subtitleTextElem = subtitleTextP;
+        loadingElem = loadingDiv;
+        progressBarElem = progressBarDiv;
+        subtitleElem = subtitleDiv;
+        subtitleTextElem = subtitleTextP;
+      }
     }
 
     function updateToneMapParams() {
