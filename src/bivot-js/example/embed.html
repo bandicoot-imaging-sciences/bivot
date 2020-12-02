@@ -5,7 +5,7 @@
   </head>
   <body><div id="bivot-overlay" style="width: 800px; height: 400px;"><canvas id="bivot-canvas"></canvas></div></body>
   <script type="module">
-    const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.0.2/src/bivot-js/dist/index.js';
+    const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.0.5/src/bivot-js/dist/index.js';
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
     const options = { materialSet, configPath: null, renderPath: null };
     import(bivSrc).then(module => { const bivot = new module.newBivot(options); bivot.checkWebGL(); bivot.startRender(); });
