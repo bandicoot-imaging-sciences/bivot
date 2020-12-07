@@ -28,11 +28,13 @@ const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
   },
-  loadingGridOverlay: {
+  overlayContainer: {
+    position: 'relative',
+  },
+  progressOverlay: {
     position: 'absolute',
-    bottom: '50%',
-    left: '50%',
-    zIndex: '999',
+    top: '20px',
+    left: '20px',
   },
   controlPanel: {
     width: 325,
@@ -665,7 +667,7 @@ function BivotReact(props) {
       ref={overlayRef}
       style={styles.bivotGridOverlay}
     >
-      <Grid container spacing={2}>
+      <Grid container spacing={2} wrap='nowrap'>
         {showEditor && (
           <Grid item>
             <Paper style = {styles.controlPanel}>
@@ -702,16 +704,18 @@ function BivotReact(props) {
           </Grid>
         )}
         <Grid item>
-          {loading && (
-            <div style={styles.loadingGridOverlay}><CircularProgress /></div>
-          )}
-          <div id={overlayID}>
+          <div id={overlayID} style={styles.overlayContainer}>
             <canvas
               ref={canvasRef}
               id={canvasID}
               width={pixelRatio * size[0]}
               height={pixelRatio * size[1]}
             />
+            {loading && (
+              <div style={styles.progressOverlay}>
+                <CircularProgress />
+              </div>
+            )}
           </div>
         </Grid>
       </Grid>
