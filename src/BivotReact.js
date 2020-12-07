@@ -147,12 +147,12 @@ function BivotReact(props) {
     dragControlsPanning: false,
 
     // State to be saved for the bivot render for which there aren't controls
-    camTiltWithMousePos: -0.2,
+    camTiltWithMousePos: -0.3,
     camTiltWithDeviceOrient: 0.6,
-    camTiltLimitDegrees: 0.0,
+    camTiltLimitDegrees: 70.0,
     lightTiltWithMousePos: 1.0,
-    lightTiltWithDeviceOrient: 1.0,
-    lightTiltLimitDegrees: 0.0,
+    lightTiltWithDeviceOrient: 2.8,
+    lightTiltLimitDegrees: 50.0,
     autoRotatePeriodMs: 8000,
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,

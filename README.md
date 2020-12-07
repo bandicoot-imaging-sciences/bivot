@@ -148,7 +148,7 @@ You can also embed Bivot into a web page using JavaScript.  For example:
 The snippet can be embedded into any layout, including using responsive CSS.
 
 Customisable parts of the embed snippet include:
-*	**`@v3.0.8`** - The version of Bivot JS to use
+*	**`@v3.0.9`** - The version of Bivot JS to use
 *	**`width: 590px; height: 400px;`** - Override the size of the Shimmer
 *	**`https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json`** - Specify the Shimmer to embed
 
