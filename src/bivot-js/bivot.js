@@ -955,8 +955,8 @@ class bivotJs {
     function updateLightMotion() {
       if (_self.state.lightMotion == 'mouse') {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
-        _self.registerEventListener(document, 'mousemove', onDocumentMouseMove, false);
-        _self.registerEventListener(document, 'mouseout', onDocumentMouseOut, false);
+        _self.registerEventListener(_self.canvas, 'mousemove', onDocumentMouseMove, false);
+        _self.registerEventListener(_self.canvas, 'mouseout', onDocumentMouseOut, false);
         _self.registerEventListener(_self.canvas, 'mouseover', onCanvasMouseOver, false);
         _self.registerEventListener(_self.canvas, 'mouseout', onCanvasMouseOut, false);
       } else if (_self.state.lightMotion == 'gyro') {
