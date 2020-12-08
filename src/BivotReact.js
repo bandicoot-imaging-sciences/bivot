@@ -137,7 +137,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [590, 400],
+    size: [600, 400],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -166,7 +166,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [590, 400],
+    size: [600, 400],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -380,7 +380,7 @@ function BivotReact(props) {
     // Pre-check size, to avoid sizing issues while loading
     var initSize = galleryMat.config.renders[galleryMat.name].state.size;
     if (!initSize) {
-      initSize = [590, 400];
+      initSize = [600, 400];
     }
     if (width != null) {
       initSize[0] = width;
@@ -395,8 +395,6 @@ function BivotReact(props) {
     updateSize(initSize);
 
     const options = {
-      width: initSize[0],
-      height: initSize[1],
       renderPath,
       texturePath,
       textures,
