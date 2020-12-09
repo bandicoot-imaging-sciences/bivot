@@ -124,8 +124,8 @@ const styles = {
     'top': '0px',
     'left': '0px',
     'width': '100%',
-    'height': 'auto'
-},
+    'height': 'auto',
+  },
 };
 
 
@@ -414,6 +414,7 @@ class bivotJs {
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
+      setLoadingImage();
 
       loadScan();
       this.updateBackground();
@@ -455,14 +456,19 @@ class bivotJs {
           img.src = getBasePath(_self.opts.materialSet) + `/images/${filename}.jpg`;
         }
 
-        img.width = _self.overlay.clientWidth / pixelRatio;
+        // We assume that the loading image was created in the same aspect ratio as the state.size. If not,
+        // then the following assignments will produce anamorphic distortion of the loading image. An
+        // alternative approach might be to show the whole image at the correct aspect ratio and size when the
+        // aspect ratio matches, and when the aspect ratio does not match, to keep the aspect ratio from
+        // state.size but crop or pad the loading image slightly to fit instead of distorting it.
+        img.width = _self.canvas.clientWidth / pixelRatio;
         img.height = img.width / aspectRatio;
 
         var content = document.createElement('div');
         content.appendChild(img);
         injectStyle(content, styles['bivot-loading-image']);
         content.id = 'bivotLoadingImage';
-        _self.overlay.appendChild(content);
+        _self.overlay.insertBefore(content, loadingElem);
         _self.loadingDomElement = content;
       }
     }
@@ -504,8 +510,6 @@ class bivotJs {
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
         _self.state.scan = Object.keys(_self.scans)[0];
       }
-
-      setLoadingImage();
     }
 
     function onLoad() {
@@ -1427,11 +1431,10 @@ class bivotJs {
 
   initialiseCanvas(canvas, width, height) {
     var w, h;
-    const parent = this.overlay;
 
     if (!width || !height) {
-      w = parent.clientWidth;
-      h = parent.clientHeight;
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
     } else {
       w = width;
       h = height;
