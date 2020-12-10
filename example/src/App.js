@@ -22,7 +22,7 @@ const styles = {
 };
 
 // Example public material set
-const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
+const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
 
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
