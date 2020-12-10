@@ -28,11 +28,13 @@ const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
   },
-  loadingGridOverlay: {
+  overlayContainer: {
+    position: 'relative',
+  },
+  progressOverlay: {
     position: 'absolute',
-    bottom: '50%',
-    left: '50%',
-    zIndex: '999',
+    top: '20px',
+    left: '20px',
   },
   controlPanel: {
     width: 325,
@@ -147,12 +149,12 @@ function BivotReact(props) {
     dragControlsPanning: false,
 
     // State to be saved for the bivot render for which there aren't controls
-    camTiltWithMousePos: -0.2,
+    camTiltWithMousePos: -0.3,
     camTiltWithDeviceOrient: 0.6,
-    camTiltLimitDegrees: 0.0,
+    camTiltLimitDegrees: 70.0,
     lightTiltWithMousePos: 1.0,
-    lightTiltWithDeviceOrient: 1.0,
-    lightTiltLimitDegrees: 0.0,
+    lightTiltWithDeviceOrient: 2.8,
+    lightTiltLimitDegrees: 50.0,
     autoRotatePeriodMs: 8000,
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
@@ -176,12 +178,12 @@ function BivotReact(props) {
     dragControlsPanning: false,
 
     // State to be saved for the bivot render for which there aren't controls
-    camTiltWithMousePos: -0.2,
+    camTiltWithMousePos: -0.3,
     camTiltWithDeviceOrient: 0.6,
-    camTiltLimitDegrees: 0.0,
+    camTiltLimitDegrees: 70.0,
     lightTiltWithMousePos: 1.0,
-    lightTiltWithDeviceOrient: 1.0,
-    lightTiltLimitDegrees: 0.0,
+    lightTiltWithDeviceOrient: 2.8,
+    lightTiltLimitDegrees: 50.0,
     autoRotatePeriodMs: 8000,
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
@@ -663,7 +665,7 @@ function BivotReact(props) {
       ref={overlayRef}
       style={styles.bivotGridOverlay}
     >
-      <Grid container spacing={2}>
+      <Grid container spacing={2} wrap='nowrap'>
         {showEditor && (
           <Grid item>
             <Paper style = {styles.controlPanel}>
@@ -700,16 +702,18 @@ function BivotReact(props) {
           </Grid>
         )}
         <Grid item>
-          {loading && (
-            <div style={styles.loadingGridOverlay}><CircularProgress /></div>
-          )}
-          <div id={overlayID}>
+          <div id={overlayID} style={styles.overlayContainer}>
             <canvas
               ref={canvasRef}
               id={canvasID}
               width={pixelRatio * size[0]}
               height={pixelRatio * size[1]}
             />
+            {loading && (
+              <div style={styles.progressOverlay}>
+                <CircularProgress />
+              </div>
+            )}
           </div>
         </Grid>
       </Grid>
