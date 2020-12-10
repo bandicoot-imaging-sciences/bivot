@@ -138,9 +138,9 @@ A complete example app is provided in the `example` directory of the source repo
 ## Embedding - JavaScript
 
 You can also embed Bivot into a web page using JavaScript.  For example:
-<pre><code>&lt;div id="bivot-overlay" style="<b>width: 590px; height: 400px;</b>">&lt;canvas id="bivot-canvas">&lt;/canvas>&lt;/div>
+<pre><code>&lt;canvas id="bivot-canvas">&lt;/canvas>
 &lt;script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.0.10</b>/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.1.0</b>/src/bivot-js/dist/index.js';
   const materialSet = '<b>https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json</b>';
   import(bivSrc).then(m => {const bivot = new m.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});
 &lt;/script></code></pre>
