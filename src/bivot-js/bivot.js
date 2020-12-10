@@ -1445,6 +1445,10 @@ class bivotJs {
     // canvas.style.width = canvas.width / pixelRatio + 'px';
     // canvas.style.height = canvas.height / pixelRatio + 'px';
 
+    let ro = new ResizeObserver(entries => {
+      this.state.dirty = true;
+    });
+    ro.observe(this.canvas);
   }
 
   initialiseRenderer() {
@@ -1705,7 +1709,7 @@ class bivotJs {
       this.doShutdown();
     } else if (this.controls && this.composer) {
       // FIXME: Remove forced true after adding canvas client size event handler.
-      if (this.state.dirty || true) {
+      if (this.state.dirty) {
         this.state.dirty = false;
         this.updateBackground();
         this.updateLightingGrid();
