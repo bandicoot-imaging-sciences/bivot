@@ -69,8 +69,9 @@ function App(props) {
         <Typography>{String(responsive)}</Typography>
       </Box>
       <Grid container maxWidth='sm'>
-        {/* FIXME: Figure out how to get width:100% to stick to the Grid item component. */}
+        {/* FIXME: Revert sizing experiments now that I found the fix in BivotReact.js */}
         <Grid item xs={12} style={{width: '100%'}}>
+          <div style={{width: '100%'}}>
           <Bivot
             materialSet={materialSet}
             id={1}
@@ -79,6 +80,7 @@ function App(props) {
             responsive={responsive}   // Override Shimmer responsive mode
             // showEditor={true}      // Show the editor
           />
+          </div>
         </Grid>
       </Grid>
     </>

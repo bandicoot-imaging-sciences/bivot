@@ -729,7 +729,8 @@ function BivotReact(props) {
             </Paper>
           </Grid>
         )}
-        <Grid item>
+        {/* FIXME: Change this style to use the MUI styles system. */}
+        <Grid item style={{width: '100%'}}>
           <canvas
             ref={canvasRef}
             id={canvasID}
