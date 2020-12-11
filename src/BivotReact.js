@@ -10,6 +10,7 @@ import ContrastControl from './controls/ContrastControl';
 import LightTypeControl from './controls/LightTypeControl';
 import MaterialRotationControl from './controls/MaterialRotationControl';
 import OrientationControl from './controls/OrientationControl';
+import ResponsiveControl from './controls/ResponsiveControl';
 import ZoomControl from './controls/ZoomControl';
 import SaveButton from './controls/SaveButton';
 import ResetButton from './controls/ResetButton';
@@ -27,9 +28,6 @@ import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
-  },
-  overlayContainer: {
-    position: 'relative',
   },
   progressOverlay: {
     position: 'absolute',
@@ -72,10 +70,15 @@ function BivotReact(props) {
     id,
 
     // Override the width and height of the Shimmer View.  Bivot resizes
-    // responsively if width or height changes on a live Bivot component.
-    // If unset, the width and height are taken from the materialSet file.
+    // if width or height changes on a live Bivot component. If unset, the
+    // width and height are taken from the materialSet file.
     width,
     height,
+
+    // If set, Bivot will use the width and height to control the canvas aspect ratio, while the canvas
+    // logical width changes responsively to fit the width of the parent box in the page layout.
+    // Otherwise, Bivot sets the canvas logical size directly from the width and height.
+    responsive,
 
     // ========== Advanced props ==========
 
@@ -125,7 +128,6 @@ function BivotReact(props) {
   const bivot = useRef(null);
 
   const canvasID = `${id}-canvas`;
-  const overlayID = `${id}-overlay`;
 
   const referenceAreaLightWidth = 5;
   const referenceAreaLightHeight = 0.2;
@@ -140,6 +142,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
+    responsive: true,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -169,6 +172,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
+    responsive: true,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -215,6 +219,8 @@ function BivotReact(props) {
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [size, setSize] = useState(state.size);
+  // We underscore responsive to avoid clashing with the responsive variable set from props.
+  const [_responsive, setResponsive] = useState(state.responsive);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -234,6 +240,7 @@ function BivotReact(props) {
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
   state.size = size;
+  state.responsive = _responsive;
   state.zoom = zoom;
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
@@ -269,21 +276,24 @@ function BivotReact(props) {
   }, [material]);
 
   useEffect(() => {
-    // Update width/height
-    var w, h;
+    // Update width/height/responsive
+    var w, h, r;
     const galleryMat = getMatFromMatSet(materialSetInternal);
     if (galleryMat) {
       const initSize = galleryMat.config.renders[galleryMat.name].state.size;
+      const initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
       w = (width != null) ? width : initSize[0];
       h = (height != null) ? height : initSize[1];
+      r = (responsive != null) ? responsive : initResponsive;
     } else {
       w = width;
       h = height;
+      r = responsive;
     }
     if (w && h) {
-      updateSize([w, h]);
+      updateSize([w, h], r);
     }
-  }, [width, height]);
+  }, [width, height, responsive]);
 
 
   // Shut down bivot when the component closes
@@ -394,7 +404,14 @@ function BivotReact(props) {
       // Handle legacy portrait flag
       initSize = [initSize[1], initSize[0]];
     }
-    updateSize(initSize);
+    var initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
+    if (initResponsive === null) {
+      initResponsive = true;
+    }
+    if (responsive !== null) {
+      initResponsive = responsive;
+    }
+    updateSize(initSize, initResponsive);
 
     const options = {
       renderPath,
@@ -406,8 +423,7 @@ function BivotReact(props) {
       stateLoadCallback,
       loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
-      canvasID,
-      overlayID
+      canvasID
     }
     //console.log(options);
     bivot.current = new Bivot(options);
@@ -426,6 +442,7 @@ function BivotReact(props) {
       contrast,
       //portrait,
       size,
+      responsive,
       meshRotateZDegrees,
       lightType,
       areaLightWidth,
@@ -443,7 +460,7 @@ function BivotReact(props) {
     updateContrast(contrast);
     updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
-    updateSize(size);
+    updateSize(size, responsive);
     setZoom(zoom);
     setCurrentZoom(zoom[1]);
     updateLightColor(rgbArrayToColorObj(lightColor));
@@ -491,8 +508,9 @@ function BivotReact(props) {
      } = state;
 
     const savedState = {
-      exposure, brightness, contrast, size, zoom, backgroundColor, autoRotatePeriodMs,
-      lightType, areaLightWidth, areaLightHeight,
+      exposure, brightness, contrast, size, 
+      responsive: _responsive, 
+      zoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
@@ -565,18 +583,25 @@ function BivotReact(props) {
     const canvas = canvasRef.current;
     const canvasPortrait = canvas ? (canvas.height > canvas.width) : false;
     if (toPortrait != canvasPortrait) {
-      updateSize([size[1], size[0]]);
+      updateSize([size[1], size[0]], _responsive);
     }
   }
 
-  function updateSize(val) {
-    setSize(val);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.width = pixelRatio * val[0];
-      canvas.height = pixelRatio * val[1]
+  function updateSize(sizeVal, responsiveVal) {
+    setSize(sizeVal);
+    setResponsive(responsiveVal)
+    if (responsiveVal !== true) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = pixelRatio * sizeVal[0];
+        canvas.height = pixelRatio * sizeVal[1]
+      }
     }
     renderFrame(true);
+  }
+
+  function updateResponsive(val) {
+    updateSize(size, val);
   }
 
   function updateZoom(val) {
@@ -654,8 +679,10 @@ function BivotReact(props) {
 
   function onExitFullScreen() {
     if (canvasRef.current) {
-      canvasRef.current.width = pixelRatio * size[0];
-      canvasRef.current.height = pixelRatio * size[1];
+      if (!_responsive) {
+        canvasRef.current.width = pixelRatio * size[0];
+        canvasRef.current.height = pixelRatio * size[1];
+      }
       renderFrame(true);
     }
   }
@@ -675,6 +702,7 @@ function BivotReact(props) {
               <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
               <OrientationControl value={size[0] < size[1]} onChange={updatePortrait} />
+              <ResponsiveControl value={_responsive} onChange={updateResponsive} />
               <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
@@ -702,19 +730,17 @@ function BivotReact(props) {
           </Grid>
         )}
         <Grid item>
-          <div id={overlayID} style={styles.overlayContainer}>
-            <canvas
-              ref={canvasRef}
-              id={canvasID}
-              width={pixelRatio * size[0]}
-              height={pixelRatio * size[1]}
-            />
-            {loading && (
-              <div style={styles.progressOverlay}>
-                <CircularProgress />
-              </div>
-            )}
-          </div>
+          <canvas
+            ref={canvasRef}
+            id={canvasID}
+            width={pixelRatio * size[0]}
+            height={pixelRatio * size[1]}
+          />
+          {loading && (
+            <div style={styles.progressOverlay}>
+              <CircularProgress />
+            </div>
+          )}
         </Grid>
       </Grid>
     </div>

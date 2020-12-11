@@ -1442,11 +1442,9 @@ class bivotJs {
     const pixelRatio = window.devicePixelRatio || 1;
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
-    // canvas.style.width = canvas.width / pixelRatio + 'px';
-    // canvas.style.height = canvas.height / pixelRatio + 'px';
 
     let ro = new ResizeObserver(entries => {
-      this.state.dirty = true;
+      this.updateCanvasOnResize();
     });
     ro.observe(this.canvas);
   }
@@ -1613,23 +1611,39 @@ class bivotJs {
 
   updateCanvas() {
     if (this.canvas) {
-      let width, height;
       if (this.state.responsive) {
-        width = this.canvas.clientWidth;
-        height = this.canvas.clientHeight;
+        const aspectRatio = this.state.size[0] / this.state.size[1];
+        const width = this.canvas.clientWidth;
+        const height = width / aspectRatio;
+
+        // FIXME: This potentially overwrites the caller's desired style.
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = 'auto';
+
+        this.renderer.setSize(width, height, false);
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.composer.setSize(width, height);
+        this.setFxaaResolution();
       } else {
-        width = this.canvas.width;
-        height = this.canvas.height;
+        const width = this.canvas.width;
+        const height = this.canvas.height;
         const pixelRatio = window.devicePixelRatio || 1;
 
+        // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = width / pixelRatio + 'px';
         this.canvas.style.height = height / pixelRatio + 'px';        
       }
-      this.renderer.setSize(width, height, false);
-      this.camera.aspect = width / height;
-      this.camera.updateProjectionMatrix();
-      this.composer.setSize(width, height);
-      this.setFxaaResolution();
+    }
+  }
+
+  updateCanvasOnResize() {
+    if (this.canvas) {
+      if (this.state.responsive) {
+        this.updateCanvas();
+      }
+      // In non-responseive mode, there is no need to update the canvas logical size when the canvas client
+      // size changes.
     }
   }
 
