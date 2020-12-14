@@ -29,6 +29,10 @@ const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
   },
+  bivotGridCanvas: {
+    width: '100%',
+    height: 'auto',
+  },
   progressOverlay: {
     position: 'absolute',
     top: '20px',
@@ -760,8 +764,7 @@ function BivotReact(props) {
             </Paper>
           </Grid>
         )}
-        {/* FIXME: Change this style to use the MUI styles system. */}
-        <Grid item style={{width: '100%'}}>
+        <Grid item style={styles.bivotGridCanvas}>
           <canvas
             ref={canvasRef}
             id={canvasID}
