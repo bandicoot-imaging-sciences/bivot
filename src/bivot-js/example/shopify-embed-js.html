@@ -2,28 +2,9 @@
 
 <h5>Shimmer view</h5>
 
-<style>
-  #bivot-overlay{
-    width: 200px;
-    height: 133px;
-  }
-  @media only screen and (min-width: 600px) {
-    #bivot-overlay{
-      width: 300px;
-      height: 200px;
-    }
-  }
-  @media only screen and (min-width: 1200px) {
-    #bivot-overlay{
-      width: 600px;
-      height: 400px;
-    }
-  }
-</style>
-
-<div id="bivot-overlay" class="bivot-overlay"><canvas id="bivot-canvas"></canvas></div>
+<canvas id="bivot-canvas"></canvas>
 <script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.0.10/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.1.0/src/bivot-js/dist/index.js';
   //const bivSrc = '../dist/index.js';
   const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
   import(bivSrc).then(m => {const bivot = new m.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});

@@ -24,19 +24,15 @@
     </style>
   </head>
   <body>
-    <!-- Bivot elements -->
-    <!-- The IDs can be changed using options in the Bivot() call. -->
-    <!-- An overlay div is required to display Bivot progress and status text. -->
-    <div id="bivot-overlay">
-      <!-- Use a canvas inside the overlay div to place Bivot on the page. -->
-      <canvas id="bivot-canvas"></canvas>
-    </div>
+    <!-- Bivot element -->
+    <!-- The ID can be changed using options in the Bivot() call. -->
+    <canvas id="bivot-canvas"></canvas>
   </body>
 
   <!-- Finally, import and start Bivot. -->
   <!-- Use an absolute JSDelivr URL if you want a specific version of Bivot -->
   <script type="module">
-    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.0.10/src/bivot-js/dist/index.js";
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.1.0/src/bivot-js/dist/index.js";
     //const bivSrc = "./dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';

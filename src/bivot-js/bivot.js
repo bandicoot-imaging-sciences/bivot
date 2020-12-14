@@ -52,63 +52,64 @@ import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
 const styles = {
   'bivot-canvas': {
-      'margin': 0,
-      'padding': 0,
+    'display': 'block',
+    'margin': 0,
+    'padding': 0,
+    'width': '100%',
+    'height': 'auto',
   },
   'bivot-overlay': {
-      'position': 'relative',
-      'display': 'block',
-      'margin': 0,
-      'padding': 0,
-      'width': 'fit-content',
-      'height': 'fit-content',
+    'position': 'relative',
+    'display': 'block',
+    'margin': 0,
+    'padding': 0,
   },
   'bivot-button': {
-      'color': '#fff !important',
-      'text-decoration': 'none',
-      'background': '#333',
-      'padding': '20px',
-      'border-radius': '0px',
-      'display': 'inline-block',
-      'border': 'solid #fff',
+    'color': '#fff !important',
+    'text-decoration': 'none',
+    'background': '#333',
+    'padding': '20px',
+    'border-radius': '0px',
+    'display': 'inline-block',
+    'border': 'solid #fff',
   },
   'bivot-loading': {
-      'position': 'absolute',
-      'top': 0,
-      'left': 0,
-      'width': '100%',
-      'height': '100%',
-      'display': 'flex',
-      'justify-content': 'center',
-      'align-items': 'center',
+    'position': 'absolute',
+    'top': 0,
+    'left': 0,
+    'width': '100%',
+    'height': '100%',
+    'display': 'flex',
+    'justify-content': 'center',
+    'align-items': 'center',
   },
   'bivot-progress': {
-      'background-color': 'rgba(100, 100, 100, 1.0)',
-      'opacity': 0.4,
-      'margin': '1.5em',
-      'border': '1px solid white',
-      'width': '50vw',
+    'background-color': 'rgba(100, 100, 100, 1.0)',
+    'opacity': 0.7,
+    'margin': '1.5em',
+    'border': '1px solid white',
+    'width': '50vw',
   },
   'bivot-progressbar': {
-      'margin': '2px',
-      'background': 'white',
-      'height': '0.5em',
-      'transform-origin': 'top left',
-      'transform': 'scaleX(0)',
+    'margin': '2px',
+    'background': 'white',
+    'height': '0.5em',
+    'transform-origin': 'top left',
+    'transform': 'scaleX(0)',
   },
   'bivot-subtitle': {
-      'position': 'absolute',
-      'top': '45%',
-      'width': '100%',
-      'display': 'none',
-      'justify-content': 'center',
-      'align-items': 'center',
-      'text-align': 'center',
+    'position': 'absolute',
+    'top': '45%',
+    'width': '100%',
+    'display': 'none',
+    'justify-content': 'center',
+    'align-items': 'center',
+    'text-align': 'center',
   },
   'bivot-subtitle-background': {
-      'background-color': 'rgba(100, 100, 100, 1.0)',
-      'opacity': 0.9,
-      'width': '75vw',
+    'background-color': 'rgba(100, 100, 100, 1.0)',
+    'opacity': 0.9,
+    'width': '75vw',
   },
   'bivot-subtitle-text': {
     'display': 'inline-block',
@@ -118,10 +119,12 @@ const styles = {
     'opacity': 1.0,
   },
   'bivot-loading-image': {
-    'display': 'inline',
+    'display': 'block',
     'position': 'absolute',
     'top': '0px',
     'left': '0px',
+    'width': '100%',
+    'height': 'auto',
   },
 };
 
@@ -142,6 +145,7 @@ function injectStyle(elem, style) {
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
     overlayID: ID for the HTML div element that Bivot should use for the progress bar and status text
+               (default: null which means Bivot will create and insert the overlay around the canvas)
     configPath: relative or absolute URL for the JSON configuration file
     renderPath: relative or absolute URL for the JSON render file
     texturePath: relative or absolute URL for the folder containing the texture folders
@@ -163,7 +167,7 @@ class bivotJs {
 
     let defaultOptions = {
       canvasID: 'bivot-canvas',
-      overlayID: 'bivot-overlay',
+      overlayID: null,
       configPath: 'bivot-config.json',
       renderPath: 'bivot-renders.json',
       texturePath: 'textures',
@@ -174,8 +178,6 @@ class bivotJs {
       materialSet: null,
       controlMode: this.controlModes.FULL,
       useTouch: null,
-      width: 0,
-      height: 0,
       state: null,
       stateLoadCallback: null,
       loadingCompleteCallback: null,
@@ -221,6 +223,8 @@ class bivotJs {
       brdfModel: 1,
       brdfVersion: 2,
       yFlip: true,
+      size: [600, 400], // Initial size and aspect ratio (canvas logical size) in display pixels
+      responsive: true, // If set, canvas logical size changes in response to layout, aspect ratio stays fixed
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
@@ -289,9 +293,15 @@ class bivotJs {
     copyStatesCloneVectors(this.state, this.config.initialState, this.vectorKeys);
 
     this.canvas = document.getElementById(this.opts.canvasID);
-    this.overlay = document.getElementById(this.opts.overlayID);
-    console.assert(this.canvas != null, 'canvas element ID not found:', this.opts.canvasID);
-    console.assert(this.overlay != null, 'overlay div element ID not found:', this.opts.overlayID);
+    console.assert(this.canvas !== null, 'canvas element ID not found:', this.opts.canvasID);
+    if (this.opts.overlayID === null) {
+      const canvasParent = this.canvas.parentElement;
+      this.overlay = document.createElement('div');
+      this.overlay.appendChild(this.canvas);
+      canvasParent.appendChild(this.overlay);
+    } else {
+      this.overlay = document.getElementById(this.opts.overlayID);
+    }
     injectStyle(this.canvas, styles['bivot-canvas']);
     injectStyle(this.overlay, styles['bivot-overlay']);
 
@@ -399,11 +409,12 @@ class bivotJs {
       if (this.config.showInterface) {
         addControlPanel();
       }
-      this.initialiseCanvas(this.canvas, this.opts.width, this.opts.height);
+      this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
       this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
       this.updateCanvas();
+      setLoadingImage();
 
       loadScan();
       this.updateBackground();
@@ -429,6 +440,10 @@ class bivotJs {
 
       if (_self.overlay) {
         var img = document.createElement('img');
+
+        const aspectRatio = _self.state.size[0] / _self.state.size[1];
+        const pixelRatio = window.devicePixelRatio || 1;
+
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
@@ -437,26 +452,27 @@ class bivotJs {
             loc += '/';
           }
           const parts = loc.split('/');
-          const filename = parts[parts.length - 2];
+          const filename = parts[parts.length - 2];  
           img.src = getBasePath(_self.opts.materialSet) + `/images/${filename}.jpg`;
         }
-        const style = getComputedStyle(_self.overlay);
-        if (_self.opts.width) {
-          img.width = _self.opts.width;
-        } else if (style.width) {
-          img.width = parseInt(style.width, 10);
-        }
-        if (_self.opts.height) {
-          img.height = _self.opts.height;
-        } else if (style.height) {
-          img.height = parseInt(style.height, 10);
+
+        // We assume that the loading image was created in the same aspect ratio as the state.size. If not,
+        // then the following assignments will produce anamorphic distortion of the loading image. An
+        // alternative approach might be to show the whole image at the correct aspect ratio and size when the
+        // aspect ratio matches, and when the aspect ratio does not match, to keep the aspect ratio from
+        // state.size but crop or pad the loading image slightly to fit instead of distorting it.
+        if (_self.state.responsive) {
+          injectStyle(img, { width: '100%', height: 'auto' });
+        } else {
+          img.width = _self.canvas.clientWidth;
+          img.height = img.width / aspectRatio;
         }
 
         var content = document.createElement('div');
         content.appendChild(img);
         injectStyle(content, styles['bivot-loading-image']);
         content.id = 'bivotLoadingImage';
-        _self.overlay.appendChild(content);
+        _self.overlay.insertBefore(content, loadingElem);
         _self.loadingDomElement = content;
       }
     }
@@ -498,8 +514,6 @@ class bivotJs {
       if (!_self.scans.hasOwnProperty(_self.state.scan)) {
         _self.state.scan = Object.keys(_self.scans)[0];
       }
-
-      setLoadingImage();
     }
 
     function onLoad() {
@@ -551,7 +565,10 @@ class bivotJs {
       _self.requestRender();
     };
 
-    function mergeDictKeys(keys, out, first, second, third, vectorKeys) {
+    // Merge state from three input state objects (first, second, third in precedence order) into the supplied
+    // ouput state object (out), for all keys in the supplied keys list, with a subset of the keys in the
+    // vectorKeys list which need special handling during the merge.
+    function mergeDictKeys(first, second, third, keys, vectorKeys, out) {
       keys.forEach(function(item, index) {
         let t = vectorKeys[item];
         if (item in first) {
@@ -1317,7 +1334,7 @@ class bivotJs {
         bivotState.brdfVersion = curScan.version;
       }
 
-      mergeDictKeys(keys, _self.state, bivotState, scanState, _self.config.initialState, _self.vectorKeys);
+      mergeDictKeys(bivotState, scanState, _self.config.initialState, keys, _self.vectorKeys, _self.state);
 
       console.log('  BRDF model: ', _self.state.brdfModel);
       console.log('  BRDF version: ', _self.state.brdfVersion);
@@ -1379,30 +1396,6 @@ class bivotJs {
       return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
     }
 
-    function resizeRendererToDisplaySize() {
-      //_self.canvas.width = window.innerWidth;     // equals window dimension
-      //_self.canvas.height = window.innerHeight;
-      console.log('canvas:')
-      console.log(_self.canvas.width, _self.canvas.height)
-      const pixelRatio = window.devicePixelRatio || 1;
-      //const width  = _self.canvas.clientWidth  * pixelRatio;
-      //const height = _self.canvas.clientHeight * pixelRatio;
-      _self.canvas.width = _self.opts.width * pixelRatio;
-      _self.canvas.height = _self.opts.height * pixelRatio;
-
-      _self.canvas.style.width = _self.opts.width + 'px';
-      _self.canvas.style.height = _self.opts.height + 'px';
-
-      const width  = _self.canvas.clientWidth  | 0;
-      const height = _self.canvas.clientHeight | 0;
-      const needResize = _self.canvas.width !== width || _self.canvas.height !== height;
-      if (needResize) {
-        console.log(width, height);
-        //_self.renderer.setSize(width, height, false);
-      }
-      return needResize;
-    }
-
     function fieldOfView(focalLength, sensorHeight) {
       // Focal length is in mm for easier GUI control.
       // Three.js defines the field of view angle as the vertical angle.
@@ -1442,11 +1435,10 @@ class bivotJs {
 
   initialiseCanvas(canvas, width, height) {
     var w, h;
-    const parent = this.overlay;
 
     if (!width || !height) {
-      w = parent.clientWidth;
-      h = parent.clientHeight;
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
     } else {
       w = width;
       h = height;
@@ -1454,9 +1446,11 @@ class bivotJs {
     const pixelRatio = window.devicePixelRatio || 1;
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
-    canvas.style.width = canvas.width / pixelRatio + 'px';
-    canvas.style.height = canvas.height / pixelRatio + 'px';
 
+    let ro = new ResizeObserver(entries => {
+      this.updateCanvasOnResize();
+    });
+    ro.observe(this.canvas);
   }
 
   initialiseRenderer() {
@@ -1619,19 +1613,43 @@ class bivotJs {
     }
   }
 
-  // Update all rendering dimensions to conform with canvas.width and canvas.height
   updateCanvas() {
     if (this.canvas) {
       const pixelRatio = window.devicePixelRatio || 1;
-
-      this.canvas.style.width = this.canvas.width / pixelRatio + 'px';
-      this.canvas.style.height = this.canvas.height / pixelRatio + 'px';
-
-      this.renderer.setSize(this.canvas.width, this.canvas.height, false);
-      this.camera.aspect = this.canvas.width / this.canvas.height;
+      var pixelWidth, pixelHeight;
+      if (this.state.responsive) {
+        const aspectRatio = this.state.size[0] / this.state.size[1];
+        pixelWidth = this.canvas.clientWidth * pixelRatio;
+        pixelHeight = pixelWidth / aspectRatio;
+        // FIXME: This potentially overwrites the caller's desired style.
+        this.canvas.style.width = '100%';
+        this.canvas.style.height = 'auto';
+        this.canvas.width = undefined;
+        this.canvas.height = undefined;
+      } else {
+        pixelWidth = this.state.size[0] * pixelRatio;
+        pixelHeight = this.state.size[1] * pixelRatio;
+        // FIXME: This potentially overwrites the caller's desired style.
+        this.canvas.style.width = this.state.size[0] + 'px';
+        this.canvas.style.height = this.state.size[1] + 'px';
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+      }
+      this.renderer.setSize(pixelWidth, pixelHeight, false);
+      this.camera.aspect = pixelWidth / pixelHeight;
       this.camera.updateProjectionMatrix();
-      this.composer.setSize(this.canvas.width, this.canvas.height);
+      this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
+    }
+  }
+
+  updateCanvasOnResize() {
+    if (this.canvas) {
+      if (this.state.responsive) {
+        this.updateCanvas();
+      }
+      // In non-responseive mode, there is no need to update the canvas logical size when the canvas client
+      // size changes.
     }
   }
 
@@ -1710,6 +1728,7 @@ class bivotJs {
     if (this.shuttingDown) {
       this.doShutdown();
     } else if (this.controls && this.composer) {
+      // FIXME: Remove forced true after adding canvas client size event handler.
       if (this.state.dirty) {
         this.state.dirty = false;
         this.updateBackground();
