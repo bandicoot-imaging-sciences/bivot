@@ -1611,29 +1611,29 @@ class bivotJs {
 
   updateCanvas() {
     if (this.canvas) {
+      var width, height;
       if (this.state.responsive) {
         const aspectRatio = this.state.size[0] / this.state.size[1];
-        const width = this.canvas.clientWidth;
-        const height = width / aspectRatio;
+        width = this.canvas.clientWidth;
+        height = width / aspectRatio;
 
         // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = '100%';
         this.canvas.style.height = 'auto';
-
-        this.renderer.setSize(width, height, false);
-        this.camera.aspect = width / height;
-        this.camera.updateProjectionMatrix();
-        this.composer.setSize(width, height);
-        this.setFxaaResolution();
       } else {
-        const width = this.canvas.width;
-        const height = this.canvas.height;
+        width = this.canvas.width;
+        height = this.canvas.height;
         const pixelRatio = window.devicePixelRatio || 1;
 
         // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = width / pixelRatio + 'px';
         this.canvas.style.height = height / pixelRatio + 'px';        
       }
+      this.renderer.setSize(width, height, false);
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      this.composer.setSize(width, height);
+      this.setFxaaResolution();
     }
   }
 

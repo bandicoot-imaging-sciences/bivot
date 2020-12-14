@@ -31,7 +31,7 @@ const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_galler
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   const [size, setSize] = useState([undefined, undefined]);
-  const [responsive, setResponsive] = useState(true);
+  const [responsive, setResponsive] = useState(false);
 
   function onSizeClick() {
     // Toggle size override
@@ -44,7 +44,11 @@ function App(props) {
 
   function onResponsiveClick() {
     // Toggle responsive mode
-    setResponsive(!responsive);
+    if (responsive == undefined) {
+      setResponsive(false);
+    } else {
+      setResponsive(undefined);
+    }
   }
 
   return (
