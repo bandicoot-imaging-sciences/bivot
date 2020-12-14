@@ -1611,28 +1611,30 @@ class bivotJs {
 
   updateCanvas() {
     if (this.canvas) {
-      var width, height;
       const pixelRatio = window.devicePixelRatio || 1;
+      var pixelWidth, pixelHeight;
       if (this.state.responsive) {
         const aspectRatio = this.state.size[0] / this.state.size[1];
-        width = this.canvas.clientWidth * pixelRatio;
-        height = width / aspectRatio;
-
+        pixelWidth = this.canvas.clientWidth * pixelRatio;
+        pixelHeight = pixelWidth / aspectRatio;
         // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = '100%';
         this.canvas.style.height = 'auto';
+        this.canvas.width = undefined;
+        this.canvas.height = undefined;
       } else {
-        width = this.canvas.width;
-        height = this.canvas.height;
-
+        pixelWidth = this.state.size[0] * pixelRatio;
+        pixelHeight = this.state.size[1] * pixelRatio;
         // FIXME: This potentially overwrites the caller's desired style.
-        this.canvas.style.width = width / pixelRatio + 'px';
-        this.canvas.style.height = height / pixelRatio + 'px';        
+        this.canvas.style.width = this.state.size[0] + 'px';
+        this.canvas.style.height = this.state.size[1] + 'px';
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
       }
-      this.renderer.setSize(width, height, false);
-      this.camera.aspect = width / height;
+      this.renderer.setSize(pixelWidth, pixelHeight, false);
+      this.camera.aspect = pixelWidth / pixelHeight;
       this.camera.updateProjectionMatrix();
-      this.composer.setSize(width, height);
+      this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
     }
   }

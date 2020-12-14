@@ -589,12 +589,12 @@ function BivotReact(props) {
     updateRotation((rotation + degrees + 360) % 360);
   }
 
-  function updateAspect(event) {
+  function updateAspect(val) {
     var newWidth, newHeight;
-    if (event < 0) {
+    if (val < 0) {
       newWidth = 600;
       newHeight = 400;
-    } else if (event > 0) {
+    } else if (val > 0) {
       newWidth = 400;
       newHeight = 600;
     } else {
@@ -609,11 +609,6 @@ function BivotReact(props) {
 
   function updateSize(val) {
     setSize(val);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.width = pixelRatio * val[0];
-      canvas.height = pixelRatio * val[1]
-    }
     renderFrame(true);
   }
 

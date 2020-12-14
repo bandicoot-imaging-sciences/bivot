@@ -11,7 +11,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 function ResponsiveControl({ value, onChange }) {
-  //const classes = useStyles();
+  const classes = useStyles();
 
   return (
     <Grid container spacing={2}>
@@ -21,7 +21,7 @@ function ResponsiveControl({ value, onChange }) {
       <Grid item>
         <Tooltip title="Allow size to change with layout (keeping aspect ratio fixed)">
           <Checkbox
-            // className={classes.checkbox}
+            className={classes.checkbox}
             checked={value}
             onChange={(event) => onChange(event.target.checked)}
           />
