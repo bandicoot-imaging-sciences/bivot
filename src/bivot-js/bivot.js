@@ -461,8 +461,12 @@ class bivotJs {
         // alternative approach might be to show the whole image at the correct aspect ratio and size when the
         // aspect ratio matches, and when the aspect ratio does not match, to keep the aspect ratio from
         // state.size but crop or pad the loading image slightly to fit instead of distorting it.
-        img.width = _self.canvas.clientWidth / pixelRatio;
-        img.height = img.width / aspectRatio;
+        if (_self.state.responsive) {
+          injectStyle(img, { width: '100%', height: 'auto' });
+        } else {
+          img.width = _self.canvas.clientWidth;
+          img.height = img.width / aspectRatio;
+        }
 
         var content = document.createElement('div');
         content.appendChild(img);

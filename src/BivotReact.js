@@ -33,6 +33,9 @@ const styles = {
     width: '100%',
     height: 'auto',
   },
+  progressContainer: {
+    position: 'relative',
+  },
   progressOverlay: {
     position: 'absolute',
     top: '20px',
@@ -406,23 +409,6 @@ function BivotReact(props) {
       texturePath = 'textures';
     }
 
-    // Pre-check size, to avoid sizing issues while loading
-    var initSize = galleryMat.config.renders[galleryMat.name].state.size;
-    if (!initSize) {
-      initSize = [600, 400];
-    }
-    if (width != null) {
-      initSize[0] = width;
-    }
-    if (height != null) {
-      initSize[1] = height;
-    }
-    if (galleryMat.config.renders[galleryMat.name].state.portrait) {
-      // Handle legacy portrait flag
-      initSize = [initSize[1], initSize[0]];
-    }
-    updateSize(initSize);
-
     const initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
     if (initResponsive && responsive == null) {
       updateResponsive(initResponsive);
@@ -760,17 +746,14 @@ function BivotReact(props) {
           </Grid>
         )}
         <Grid item style={styles.bivotGridCanvas}>
-          <canvas
-            ref={canvasRef}
-            id={canvasID}
-            width={pixelRatio * size[0]}
-            height={pixelRatio * size[1]}
-          />
-          {loading && (
-            <div style={styles.progressOverlay}>
-              <CircularProgress />
-            </div>
-          )}
+          <div style={styles.progressContainer}>
+            <canvas ref={canvasRef} id={canvasID} />
+            {loading && (
+              <div style={styles.progressOverlay}>
+                <CircularProgress />
+              </div>
+            )}
+          </div>
         </Grid>
       </Grid>
     </div>
