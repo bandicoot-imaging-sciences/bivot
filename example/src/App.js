@@ -45,7 +45,7 @@ function App(props) {
 
   function onResponsiveClick() {
     // Toggle responsive mode
-    if (responsive == undefined) {
+    if (responsive === undefined) {
       setResponsive(false);
     } else {
       setResponsive(undefined);
