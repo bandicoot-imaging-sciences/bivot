@@ -32,19 +32,25 @@ function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   const [size, setSize] = useState([undefined, undefined]);
   const [responsive, setResponsive] = useState(true);
+  const [showEditor, setshowEditor] = useState(true);
 
   function onSizeClick() {
     // Toggle size override
     if (size[0] && size[1]) {
       setSize([undefined, undefined]);
     } else {
-      setSize([500, 300]);
+      setSize([630, 420]);
     }
   }
 
   function onResponsiveClick() {
     // Toggle responsive mode
     setResponsive(!responsive);
+  }
+
+  function onShowEditorClick() {
+    // Toggle responsive mode
+    setshowEditor(!showEditor);
   }
 
   return (
@@ -56,31 +62,37 @@ function App(props) {
           </Typography>
         </Box>
       </Container>
-      <Box>
-        <button onClick={onSizeClick}>
-          Toggle size
-        </button>
-        <Typography>({size[0]}, {size[1]})</Typography>
-      </Box>
-      <Box>
-        <button onClick={onResponsiveClick}>
-          Toggle responsive
-        </button>
-        <Typography>{String(responsive)}</Typography>
-      </Box>
-      <Grid container maxWidth='sm'>
-        {/* FIXME: Revert sizing experiments now that I found the fix in BivotReact.js */}
-        <Grid item xs={12} style={{width: '100%'}}>
-          <div style={{width: '100%'}}>
+      <Grid container style={{margin: '0.5em'}}>
+        <Grid item>
+          <button onClick={onShowEditorClick}>
+            Toggle editor
+          </button>
+          <Typography>{String(showEditor)}</Typography>
+        </Grid>
+        <Grid item>
+          <button onClick={onResponsiveClick}>
+            Toggle responsive
+          </button>
+          <Typography>{String(responsive)}</Typography>
+        </Grid>
+        <Grid item>
+          <button onClick={onSizeClick}>
+            Toggle size
+          </button>
+          <Typography>({size[0]}, {size[1]})</Typography>
+        </Grid>
+      </Grid>
+      <Grid container>
+        <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
           <Bivot
             materialSet={materialSet}
             id={1}
-            width={size[0]}           // Override Shimmer width
-            height={size[1]}          // Override Shimmer height
-            responsive={responsive}   // Override Shimmer responsive mode
-            // showEditor={true}      // Show the editor
+            width={size[0]}             // Override Shimmer width
+            height={size[1]}            // Override Shimmer height
+            responsive={responsive}     // Override Shimmer responsive mode
+            showEditor={showEditor}
+            showAdvancedControls={true}
           />
-          </div>
         </Grid>
       </Grid>
     </>
