@@ -1612,9 +1612,10 @@ class bivotJs {
   updateCanvas() {
     if (this.canvas) {
       var width, height;
+      const pixelRatio = window.devicePixelRatio || 1;
       if (this.state.responsive) {
         const aspectRatio = this.state.size[0] / this.state.size[1];
-        width = this.canvas.clientWidth;
+        width = this.canvas.clientWidth * pixelRatio;
         height = width / aspectRatio;
 
         // FIXME: This potentially overwrites the caller's desired style.
@@ -1623,7 +1624,6 @@ class bivotJs {
       } else {
         width = this.canvas.width;
         height = this.canvas.height;
-        const pixelRatio = window.devicePixelRatio || 1;
 
         // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = width / pixelRatio + 'px';
