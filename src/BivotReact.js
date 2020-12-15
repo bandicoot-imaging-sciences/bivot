@@ -20,7 +20,6 @@ import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 import DragControl from './controls/DragControl';
 
-import { useWindowSize } from './utils/hooksLib';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
@@ -211,12 +210,11 @@ function BivotReact(props) {
     state.autoRotatePeriodMs = 0;
   }
 
-  const windowSize = useWindowSize(onWindowSizeChanged);
-
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState(0.25);
+  const savedSize = useRef(null);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -689,27 +687,15 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
-  function onWindowSizeChanged(size) {
-    //console.log('Window was resized:', size);
-    // TODO:  Conditionally resize the bivot canvas on this event
-  }
-
   function onEnterFullScreen() {
-    if (canvasRef.current) {
-      canvasRef.current.width = pixelRatio * window.screen.width;
-      canvasRef.current.height = pixelRatio * window.screen.height;
-      renderFrame(true);
-    }
+    savedSize.current = size;
+    setSize([window.screen.width, window.screen.height]);
+    renderFrame(true);
   }
 
   function onExitFullScreen() {
-    if (canvasRef.current) {
-      if (!responsiveBivot) {
-        canvasRef.current.width = pixelRatio * size[0];
-        canvasRef.current.height = pixelRatio * size[1];
-      }
-      renderFrame(true);
-    }
+    setSize(savedSize.current);
+    renderFrame(true);
   }
 
   function compareVals(a, b) {
