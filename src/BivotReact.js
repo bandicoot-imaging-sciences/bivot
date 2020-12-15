@@ -409,7 +409,20 @@ function BivotReact(props) {
       texturePath = 'textures';
     }
 
+    // Pre-check size, to avoid sizing issues while loading
+    var initSize = galleryMat.config.renders[galleryMat.name].state.size;
     const initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
+    if (width != null && height != null) {
+      initSize = [width, height];
+    }
+    if (initSize && (initResponsive === false || responsive === false)) {
+      // Handle legacy portrait flag
+      if (galleryMat.config.renders[galleryMat.name].state.portrait) {
+        initSize = [initSize[1], initSize[0]];
+      }
+      updateSize(initSize);
+    }
+
     if (initResponsive && responsive == null) {
       updateResponsive(initResponsive);
     }
