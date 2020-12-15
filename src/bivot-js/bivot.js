@@ -413,10 +413,9 @@ class bivotJs {
       this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
-      this.updateCanvas();
-      setLoadingImage();
 
       loadScan();
+      this.updateCanvas();
       this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
@@ -447,7 +446,7 @@ class bivotJs {
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
-          var loc = _self.scans[_self.state.scan].location;
+          var loc = _self.scans[_self.scan].location;
           if (!loc.endsWith('/')) {
             loc += '/';
           }
@@ -464,8 +463,8 @@ class bivotJs {
         if (_self.state.responsive) {
           injectStyle(img, { width: '100%', height: 'auto' });
         } else {
-          img.width = _self.canvas.clientWidth;
-          img.height = img.width / aspectRatio;
+          img.width = _self.state.size[0];
+          img.height = _self.state.size[1];
         }
 
         var content = document.createElement('div');
@@ -508,11 +507,11 @@ class bivotJs {
         }
         console.log(`Setting starting scan to ${s}`)
         // Set starting scan based on the options, if provided
-        _self.state.scan = s;
+        _self.scan = s;
       }
       // Use the first scan in the list if no valid starting scan has been provided
-      if (!_self.scans.hasOwnProperty(_self.state.scan)) {
-        _self.state.scan = Object.keys(_self.scans)[0];
+      if (!_self.scans.hasOwnProperty(_self.scan)) {
+        _self.scan = Object.keys(_self.scans)[0];
       }
     }
 
@@ -773,7 +772,7 @@ class bivotJs {
 
     function processUrlFlags() {
       if (urlFlags.hasOwnProperty('show')) {
-        _self.state.scan = urlFlags.show;
+        _self.scan = urlFlags.show;
       }
       if (urlFlags.hasOwnProperty('textureFormat')) {
         _self.config.textureFormat = urlFlags.textureFormat;
@@ -1230,7 +1229,7 @@ class bivotJs {
       const keys = Object.keys(_self.config.initialState);
       keys.push('zoom'); // Necessary because zoom is omitted from initialState to support legacy galleries
       if (_self.opts.materialSet) {
-        const material = _self.scans[_self.state.scan];
+        const material = _self.scans[_self.scan];
         var location = ''
         if (material.location.startsWith('http')) {
           location = material.location;
@@ -1241,7 +1240,7 @@ class bivotJs {
       } else if (_self.opts.textures && _self.opts.material) {
         loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
       } else {
-        const tex_dir = _self.opts.texturePath + '/' + _self.state.scan + '/';
+        const tex_dir = _self.opts.texturePath + '/' + _self.scan + '/';
         loadScanMetadata(loadManager, tex_dir, keys);
       }
     }
@@ -1264,7 +1263,7 @@ class bivotJs {
       paths.set('specular', {path: textures.specular, format: THREE.RGBFormat});
 
       let scanState = [];
-      const metadata = material.config.renders[_self.state.scan];
+      const metadata = material.config.renders[_self.scan];
       if (metadata.hasOwnProperty('state')) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
@@ -1272,6 +1271,7 @@ class bivotJs {
         scanState.brdfVersion = metadata.version;
       }
       mergeMetadata(scanState, keys);
+      setLoadingImage();
       loadScansImpl(paths, textures.mesh, loadManager);
     }
 
@@ -1311,7 +1311,7 @@ class bivotJs {
       let bivotState = [];
 
       // Read valid bivot-renders.json parameters, if present
-      const curScan = _self.scans[_self.state.scan];
+      const curScan = _self.scans[_self.scan];
       if (curScan.hasOwnProperty('cameraPositionX')) {
         _self.camera.position.x = curScan.cameraPositionX;
       }
