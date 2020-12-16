@@ -63,6 +63,9 @@ const styles = {
     'display': 'inline-block',
     'margin': 0,
     'padding': 0,
+    'width': 'fit-content',
+    'height': 'fit-content',
+    'vertical-align': 'bottom',
   },
   'bivot-button': {
     'color': '#fff !important',
