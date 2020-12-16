@@ -60,7 +60,7 @@ const styles = {
   },
   'bivot-overlay': {
     'position': 'relative',
-    'display': 'block',
+    'display': 'inline-block',
     'margin': 0,
     'padding': 0,
   },
