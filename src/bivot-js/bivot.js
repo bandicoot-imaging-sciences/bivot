@@ -52,20 +52,23 @@ import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
 const styles = {
   'bivot-canvas': {
+    'position': 'absolute',
     'display': 'block',
     'margin': 0,
     'padding': 0,
     'width': '100%',
     'height': 'auto',
   },
-  'bivot-overlay': {
+  'bivot-container': {
     'position': 'relative',
-    'display': 'inline-block',
+  },
+  'bivot-overlay': {
+    'position': 'absolute',
+    'display': 'block',
     'margin': 0,
     'padding': 0,
-    'width': 'fit-content',
-    'height': 'fit-content',
-    'vertical-align': 'bottom',
+    'justify-content': 'center',
+    'align-items': 'center',
   },
   'bivot-button': {
     'color': '#fff !important',
@@ -147,8 +150,6 @@ function injectStyle(elem, style) {
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
-    overlayID: ID for the HTML div element that Bivot should use for the progress bar and status text
-               (default: null which means Bivot will create and insert the overlay around the canvas)
     configPath: relative or absolute URL for the JSON configuration file
     renderPath: relative or absolute URL for the JSON render file
     texturePath: relative or absolute URL for the folder containing the texture folders
@@ -170,7 +171,6 @@ class bivotJs {
 
     let defaultOptions = {
       canvasID: 'bivot-canvas',
-      overlayID: null,
       configPath: 'bivot-config.json',
       renderPath: 'bivot-renders.json',
       texturePath: 'textures',
@@ -297,15 +297,15 @@ class bivotJs {
 
     this.canvas = document.getElementById(this.opts.canvasID);
     console.assert(this.canvas !== null, 'canvas element ID not found:', this.opts.canvasID);
-    if (this.opts.overlayID === null) {
-      const canvasParent = this.canvas.parentElement;
-      this.overlay = document.createElement('div');
-      this.overlay.appendChild(this.canvas);
-      canvasParent.appendChild(this.overlay);
-    } else {
-      this.overlay = document.getElementById(this.opts.overlayID);
-    }
+    const canvasParent = this.canvas.parentElement;
+    this.container = document.createElement('div');
+    this.overlay = document.createElement('div');
+    this.container.appendChild(this.overlay);
+    this.container.appendChild(this.canvas);
+    canvasParent.appendChild(this.container);
+
     injectStyle(this.canvas, styles['bivot-canvas']);
+    injectStyle(this.container, styles['bivot-container']);
     injectStyle(this.overlay, styles['bivot-overlay']);
 
     this.scans = {};
@@ -1450,6 +1450,9 @@ class bivotJs {
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
+    this.overlay.style.width = w + 'px';
+    this.overlay.style.height = h + 'px';
+
     let ro = new ResizeObserver(entries => {
       this.updateCanvasOnResize();
     });
@@ -1643,6 +1646,9 @@ class bivotJs {
       this.camera.updateProjectionMatrix();
       this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
+
+      this.overlay.style.width = this.canvas.width / pixelRatio + 'px';
+      this.overlay.style.height = this.canvas.height / pixelRatio + 'px';
     }
   }
 
@@ -1831,6 +1837,7 @@ class bivotJs {
 
     this.canvas = null;
     this.overlay = null;
+    this.container = null;
   }
 }
 
