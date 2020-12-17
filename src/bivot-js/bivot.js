@@ -1627,7 +1627,6 @@ class bivotJs {
         const aspectRatio = this.state.size[0] / this.state.size[1];
         pixelWidth = this.canvas.clientWidth * pixelRatio;
         pixelHeight = pixelWidth / aspectRatio;
-        // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = '100%';
         this.canvas.style.height = 'auto';
         this.canvas.width = undefined;
@@ -1635,7 +1634,6 @@ class bivotJs {
       } else {
         pixelWidth = this.state.size[0] * pixelRatio;
         pixelHeight = this.state.size[1] * pixelRatio;
-        // FIXME: This potentially overwrites the caller's desired style.
         this.canvas.style.width = this.state.size[0] + 'px';
         this.canvas.style.height = this.state.size[1] + 'px';
         this.canvas.width = pixelWidth;

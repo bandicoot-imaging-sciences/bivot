@@ -272,8 +272,6 @@ function BivotReact(props) {
 
   // Update bivot when the whole material changes
   useEffect(() => {
-    // FIXME: Test whether this succeeds in the scenario where
-    //        bivot has started loading but not finished loading
     async function onChangeMaterial() {
       if (bivot.current) {
         bivot.current.shutdown();
