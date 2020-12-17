@@ -300,8 +300,8 @@ class bivotJs {
     const canvasParent = this.canvas.parentElement;
     this.container = document.createElement('div');
     this.overlay = document.createElement('div');
-    this.container.appendChild(this.overlay);
     this.container.appendChild(this.canvas);
+    this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
     canvasParent.appendChild(this.container);
 
     injectStyle(this.canvas, styles['bivot-canvas']);
@@ -408,7 +408,7 @@ class bivotJs {
       initialiseOverlays(this.overlay);
       initialiseLighting(this.getBgColorFromState(this.state), this.scene);
       this.camera = initialiseCamera(this.state.focalLength, this.config.initCamZ);
-      this.controls = initialiseControls(this.camera, this.canvas, this.config, this.state.camTiltLimitDegrees);
+      this.controls = initialiseControls(this.camera, this.overlay, this.config, this.state.camTiltLimitDegrees);
       if (this.config.showInterface) {
         addControlPanel();
       }
@@ -856,8 +856,8 @@ class bivotJs {
       _self.requestRender();
     }
 
-    function initialiseControls(camera, canvas, config, tiltLimit) {
-      var controls = new OrbitControls(camera, canvas);
+    function initialiseControls(camera, elem, config, tiltLimit) {
+      var controls = new OrbitControls(camera, elem);
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
       controls.panSpeed = 0.3;
@@ -974,23 +974,23 @@ class bivotJs {
     function updateLightMotion() {
       if (_self.state.lightMotion == 'mouse') {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
-        _self.registerEventListener(_self.canvas, 'mousemove', onDocumentMouseMove, false);
-        _self.registerEventListener(_self.canvas, 'mouseout', onDocumentMouseOut, false);
-        _self.registerEventListener(_self.canvas, 'mouseover', onCanvasMouseOver, false);
-        _self.registerEventListener(_self.canvas, 'mouseout', onCanvasMouseOut, false);
+        _self.registerEventListener(_self.overlay, 'mousemove', onDocumentMouseMove, false);
+        _self.registerEventListener(_self.overlay, 'mouseout', onDocumentMouseOut, false);
+        _self.registerEventListener(_self.overlay, 'mouseover', onCanvasMouseOver, false);
+        _self.registerEventListener(_self.overlay, 'mouseout', onCanvasMouseOut, false);
       } else if (_self.state.lightMotion == 'gyro') {
         _self.registerEventListener(window, 'deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
-        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);
+        _self.overlay.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.overlay.removeEventListener('mouseout', onCanvasMouseOut, false);
       } else {
         console.assert(_self.state.lightMotion == 'animate');
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-        _self.canvas.removeEventListener('mouseover', onCanvasMouseOver, false);
-        _self.canvas.removeEventListener('mouseout', onCanvasMouseOut, false);        
+        _self.overlay.removeEventListener('mouseover', onCanvasMouseOver, false);
+        _self.overlay.removeEventListener('mouseout', onCanvasMouseOut, false);
       }
     }
 
