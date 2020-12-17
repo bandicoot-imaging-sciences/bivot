@@ -150,7 +150,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
-    responsive: (responsive != null ? responsive : defaultResponsive),
+    responsive: defaultResponsive,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -180,7 +180,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
-    responsive: (responsive != null ? responsive : defaultResponsive),
+    responsive: defaultResponsive,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -226,10 +226,10 @@ function BivotReact(props) {
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [size, setSize] = useState(state.size);
-  // Whether the editor viewer itself is responsive
-  const [responsiveBivot, setResponsiveBivot] = useState(state.responsive);
+  // Whether the editor viewer itself is responsive: Only if specified in props
+  const [responsiveBivot, setResponsiveBivot] = useState(responsive ? true : undefined);
   // Whether responsive has been selected in the editor controls
-  const [responsiveControls, setResponsiveControls] = useState(state.responsive);
+  const [responsiveControls, setResponsiveControls] = useState(defaultResponsive);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -302,16 +302,7 @@ function BivotReact(props) {
   }, [width, height]);
 
   useEffect(() => {
-    // Update responsive
-    var r;
-    const galleryMat = getMatFromMatSet(materialSetInternal);
-    if (galleryMat) {
-      const initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
-      r = (responsive != null) ? responsive : initResponsive;
-    } else {
-      r = responsive;
-    }
-    updateResponsive(r);
+    updateResponsive(undefined);
   }, [responsive]);
 
   // Shut down bivot when the component closes
@@ -610,20 +601,12 @@ function BivotReact(props) {
   }
 
   function updateResponsive(val) {
-    if (responsive !== undefined) {
-      // Update controls as per value.
-      // Bivot responsive mode overridden by props.
-      setResponsiveControls(val);
-      setResponsiveBivot(responsive);
-    } else if (val === undefined) {
-      // Unknown responsive mode; use default for controls and for Bivot
-      setResponsiveControls(defaultResponsive);
-      setResponsiveBivot(defaultResponsive);
-    } else {
-      // Set controls and Bivot as per the given value
-      setResponsiveControls(val);
-      setResponsiveBivot(val);
-    }
+    // Set responsive flag in editor controls to the given value, or the default value if undefined
+    const responsiveControlsVal = (val === undefined) ? defaultResponsive : val;
+    // Set bivot editor itself to the given value only if not overriden in the props
+    const responsiveEditorVal = responsive ? true : undefined;
+    setResponsiveControls(responsiveControlsVal);
+    setResponsiveBivot(responsiveEditorVal);
     renderFrame(true);
   }
 
