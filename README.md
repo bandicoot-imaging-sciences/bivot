@@ -92,6 +92,12 @@ A complete example app is provided in the `example` directory of the source repo
       width,
       height,
     
+      // If true, Bivot renders with a fixed aspect ratio, with canvas width
+      // changing responsively to fit the width of the parent element.  If false,
+      // Bivot sets the canvas size directly from the width and height.
+      // (Default: true)
+      responsive,
+
       // ========== Advanced props ==========
     
       // If set, this function will be called when a user clicks on the Bivot viewer.

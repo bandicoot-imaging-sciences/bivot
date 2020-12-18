@@ -80,9 +80,10 @@ function BivotReact(props) {
     width,
     height,
 
-    // If set, Bivot will use the width and height to control the canvas aspect ratio, while the canvas
-    // logical width changes responsively to fit the width of the parent box in the page layout.
-    // Otherwise, Bivot sets the canvas logical size directly from the width and height.
+    // If true, Bivot renders with a fixed aspect ratio, with canvas width
+    // changing responsively to fit the width of the parent element.  If false,
+    // Bivot sets the canvas size directly from the width and height.
+    // (Default: true)
     responsive,
 
     // ========== Advanced props ==========
