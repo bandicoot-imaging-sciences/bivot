@@ -10,7 +10,6 @@ import ContrastControl from './controls/ContrastControl';
 import LightTypeControl from './controls/LightTypeControl';
 import MaterialRotationControl from './controls/MaterialRotationControl';
 import AspectControl from './controls/AspectControl';
-import ResponsiveControl from './controls/ResponsiveControl';
 import ZoomControl from './controls/ZoomControl';
 import SaveButton from './controls/SaveButton';
 import ResetButton from './controls/ResetButton';
@@ -138,8 +137,6 @@ function BivotReact(props) {
   const referenceAreaLightWidth = 5;
   const referenceAreaLightHeight = 0.2;
 
-  const defaultResponsive = true;
-
   // FIXME: Find a sensible way to not have to duplicate the initial / default state object
   const defaultState = {
     exposure: 1.0,
@@ -150,7 +147,6 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
-    responsive: defaultResponsive,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -180,7 +176,6 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: [600, 400],
-    responsive: defaultResponsive,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -226,10 +221,6 @@ function BivotReact(props) {
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [size, setSize] = useState(state.size);
-  // Whether the editor viewer itself is responsive: Only if specified in props
-  const [responsiveBivot, setResponsiveBivot] = useState(responsive ? true : undefined);
-  // Whether responsive has been selected in the editor controls
-  const [responsiveControls, setResponsiveControls] = useState(defaultResponsive);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -249,7 +240,6 @@ function BivotReact(props) {
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
   state.size = size;
-  state.responsive = responsiveBivot;
   state.zoom = zoom;
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
@@ -298,10 +288,6 @@ function BivotReact(props) {
       updateSize([w, h]);
     }
   }, [width, height]);
-
-  useEffect(() => {
-    updateResponsive(undefined);
-  }, [responsive]);
 
   // Shut down bivot when the component closes
   useEffect(() => {
@@ -398,20 +384,13 @@ function BivotReact(props) {
 
     // Pre-check size, to avoid sizing issues while loading
     var initSize = galleryMat.config.renders[galleryMat.name].state.size;
-    const initResponsive = galleryMat.config.renders[galleryMat.name].state.responsive;
     if (width != null && height != null) {
       initSize = [width, height];
-    }
-    if (initSize && (initResponsive === false || responsive === false)) {
       // Handle legacy portrait flag
       if (galleryMat.config.renders[galleryMat.name].state.portrait) {
         initSize = [initSize[1], initSize[0]];
       }
       updateSize(initSize);
-    }
-
-    if (initResponsive && responsive == null) {
-      updateResponsive(initResponsive);
     }
 
     const options = {
@@ -421,11 +400,12 @@ function BivotReact(props) {
       material: galleryMat,
       thumbnail,
       state,
+      responsive,
       stateLoadCallback,
       loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
       canvasID
-    }
+    };
     //console.log(options);
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
@@ -443,7 +423,6 @@ function BivotReact(props) {
       contrast,
       //portrait,
       size,
-      responsive,
       meshRotateZDegrees,
       lightType,
       areaLightWidth,
@@ -462,7 +441,6 @@ function BivotReact(props) {
     updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
     updateSize(size);
-    updateResponsive(responsive);
     setZoom(zoom);
     setCurrentZoom(zoom[1]);
     updateLightColor(rgbArrayToColorObj(lightColor));
@@ -511,7 +489,6 @@ function BivotReact(props) {
 
     const savedState = {
       exposure, brightness, contrast, size,
-      responsive: responsiveControls,
       zoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
@@ -595,16 +572,6 @@ function BivotReact(props) {
 
   function updateSize(val) {
     setSize(val);
-    renderFrame(true);
-  }
-
-  function updateResponsive(val) {
-    // Set responsive flag in editor controls to the given value, or the default value if undefined
-    const responsiveControlsVal = (val === undefined) ? defaultResponsive : val;
-    // Set bivot editor itself to the given value only if not overriden in the props
-    const responsiveEditorVal = responsive ? true : undefined;
-    setResponsiveControls(responsiveControlsVal);
-    setResponsiveBivot(responsiveEditorVal);
     renderFrame(true);
   }
 
@@ -698,7 +665,6 @@ function BivotReact(props) {
               <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
               <AspectControl value={compareVals(size[0], size[1])} onChange={updateAspect} />
-              <ResponsiveControl value={responsiveControls} onChange={updateResponsive} />
               <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />

@@ -181,6 +181,7 @@ class bivotJs {
       materialSet: null,
       controlMode: this.controlModes.FULL,
       useTouch: null,
+      responsive: true,
       state: null,
       stateLoadCallback: null,
       loadingCompleteCallback: null,
@@ -227,7 +228,6 @@ class bivotJs {
       brdfVersion: 2,
       yFlip: true,
       size: [600, 400], // Initial size and aspect ratio (canvas logical size) in display pixels
-      responsive: true, // If set, canvas logical size changes in response to layout, aspect ratio stays fixed
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
@@ -463,7 +463,7 @@ class bivotJs {
         // alternative approach might be to show the whole image at the correct aspect ratio and size when the
         // aspect ratio matches, and when the aspect ratio does not match, to keep the aspect ratio from
         // state.size but crop or pad the loading image slightly to fit instead of distorting it.
-        if (_self.state.responsive) {
+        if (_self.opts.responsive) {
           injectStyle(img, { width: '100%', height: 'auto' });
         } else {
           img.width = _self.state.size[0];
@@ -1623,7 +1623,7 @@ class bivotJs {
     if (this.canvas) {
       const pixelRatio = window.devicePixelRatio || 1;
       var pixelWidth, pixelHeight;
-      if (this.state.responsive) {
+      if (this.opts.responsive) {
         const aspectRatio = this.state.size[0] / this.state.size[1];
         pixelWidth = this.canvas.clientWidth * pixelRatio;
         pixelHeight = pixelWidth / aspectRatio;
@@ -1651,13 +1651,11 @@ class bivotJs {
   }
 
   updateCanvasOnResize() {
-    if (this.canvas) {
-      if (this.state.responsive) {
-        this.updateCanvas();
-      }
-      // In non-responseive mode, there is no need to update the canvas logical size when the canvas client
-      // size changes.
+    if (this.opts.responsive) {
+      this.updateCanvas();
     }
+    // In non-responsive mode, no need to update the canvas
+    // logical size when the canvas client size changes.
   }
 
   getBgColorFromState(state) {

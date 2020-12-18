@@ -31,7 +31,6 @@ const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_galler
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   const [size, setSize] = useState([undefined, undefined]);
-  const [responsive, setResponsive] = useState(undefined);
   const [showEditor, setshowEditor] = useState(true);
 
   function onSizeClick() {
@@ -40,15 +39,6 @@ function App(props) {
       setSize([undefined, undefined]);
     } else {
       setSize([630, 420]);
-    }
-  }
-
-  function onResponsiveClick() {
-    // Toggle responsive mode
-    if (responsive === undefined) {
-      setResponsive(false);
-    } else {
-      setResponsive(undefined);
     }
   }
 
@@ -74,12 +64,6 @@ function App(props) {
           <Typography>{String(showEditor)}</Typography>
         </Grid>
         <Grid item>
-          <button onClick={onResponsiveClick}>
-            Toggle responsive
-          </button>
-          <Typography>{String(responsive)}</Typography>
-        </Grid>
-        <Grid item>
           <button onClick={onSizeClick}>
             Toggle size
           </button>
@@ -87,13 +71,26 @@ function App(props) {
         </Grid>
       </Grid>
       <Grid container>
+        <Grid item xs={12}><Typography>Responsive = false</Typography></Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
           <Bivot
             materialSet={materialSet}
             id={1}
             width={size[0]}             // Override Shimmer width
             height={size[1]}            // Override Shimmer height
-            responsive={responsive}     // Override Shimmer responsive mode
+            responsive={false}
+            showEditor={showEditor}
+            showAdvancedControls={true}
+          />
+        </Grid>
+        <Grid item xs={12}><Typography>Responsive = true</Typography></Grid>
+        <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
+          <Bivot
+            materialSet={materialSet}
+            id={2}
+            width={size[0]}             // Override Shimmer width
+            height={size[1]}            // Override Shimmer height
+            responsive={true}
             showEditor={showEditor}
             showAdvancedControls={true}
           />
