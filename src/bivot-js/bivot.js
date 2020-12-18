@@ -52,7 +52,6 @@ import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 
 const styles = {
   'bivot-canvas': {
-    'position': 'absolute',
     'display': 'block',
     'margin': 0,
     'padding': 0,
@@ -69,6 +68,9 @@ const styles = {
     'padding': 0,
     'justify-content': 'center',
     'align-items': 'center',
+    'width': '100%',
+    'height': '100%',
+    'top': '0',
   },
   'bivot-button': {
     'color': '#fff !important',
@@ -80,7 +82,6 @@ const styles = {
     'border': 'solid #fff',
   },
   'bivot-loading': {
-    'position': 'absolute',
     'top': 0,
     'left': 0,
     'width': '100%',
@@ -90,11 +91,14 @@ const styles = {
     'align-items': 'center',
   },
   'bivot-progress': {
+    'position': 'absolute',
     'background-color': 'rgba(100, 100, 100, 1.0)',
     'opacity': 0.7,
-    'margin': '1.5em',
     'border': '1px solid white',
-    'width': '50vw',
+    'width': '80%',
+    'top': '50%',
+    'left': '50%',
+    'transform': 'translate(-50%, -50%)',
   },
   'bivot-progressbar': {
     'margin': '2px',
@@ -1450,9 +1454,6 @@ class bivotJs {
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
-    this.overlay.style.width = w + 'px';
-    this.overlay.style.height = h + 'px';
-
     let ro = new ResizeObserver(entries => {
       this.updateCanvasOnResize();
     });
@@ -1644,9 +1645,6 @@ class bivotJs {
       this.camera.updateProjectionMatrix();
       this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
-
-      this.overlay.style.width = this.canvas.width / pixelRatio + 'px';
-      this.overlay.style.height = this.canvas.height / pixelRatio + 'px';
     }
   }
 
