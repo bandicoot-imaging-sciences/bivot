@@ -109,23 +109,20 @@ const styles = {
   },
   'bivot-subtitle': {
     'position': 'absolute',
-    'top': '45%',
+    'top': '100%',
+    'transform': 'translate(0%, -100%)',
     'width': '100%',
     'display': 'none',
     'justify-content': 'center',
     'align-items': 'center',
     'text-align': 'center',
   },
-  'bivot-subtitle-background': {
-    'background-color': 'rgba(100, 100, 100, 1.0)',
-    'opacity': 0.9,
-    'width': '75vw',
-  },
   'bivot-subtitle-text': {
     'display': 'inline-block',
     'margin': '0.2em',
     'padding': '0.2em',
     'color': 'white',
+    'background-color': 'rgba(100, 100, 100, 1.0)',
     'opacity': 1.0,
   },
   'bivot-loading-image': {
@@ -799,14 +796,11 @@ class bivotJs {
         progressDiv.appendChild(progressBarDiv);
 
         let subtitleDiv = _self.registerElement(document, 'div');
-        let subtitleBGDiv = _self.registerElement(document, 'div');
         let subtitleTextP = _self.registerElement(document, 'p');
         injectStyle(subtitleDiv, styles['bivot-subtitle']);
-        injectStyle(subtitleBGDiv, styles['bivot-subtitle-background']);
         injectStyle(subtitleTextP, styles['bivot-subtitle-text']);
         overlay.appendChild(subtitleDiv);
-        subtitleDiv.appendChild(subtitleBGDiv);
-        subtitleBGDiv.appendChild(subtitleTextP);
+        subtitleDiv.appendChild(subtitleTextP);
 
         loadingElem = loadingDiv;
         progressBarElem = progressBarDiv;
@@ -963,8 +957,8 @@ class bivotJs {
         subtitleElem.style.display = 'flex';
         let requestButton = _self.registerElement(document, 'button');
         injectStyle(requestButton, styles['bivot-button']);
-        requestButton.innerHTML = 'Tap to enable tilt control';
-        requestButton.onclick = requestTiltPermission;
+        requestButton.innerHTML = 'Tap for tilt control';
+        requestButton.addEventListener('touchstart', requestTiltPermission);
         subtitleTextElem.appendChild(requestButton);
       } else if (_self.state._statusText.length == 0) {
         subtitleElem.style.display = 'none';
