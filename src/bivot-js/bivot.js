@@ -270,7 +270,7 @@ class bivotJs {
       mouseCamControlsPan: true,
       // Enables touch control for phones and tablet, but disables scrolling the page for touch-drags inside the
       // Bivot canvas.
-      useTouch: true,
+      useTouch: false,
       initCamZ: 0.9,
       minCamZ: 0.4, // Initial value, state is changed via controls object.
       maxCamZ: 2.0, // Initial value, state is changed via controls object.
@@ -433,7 +433,7 @@ class bivotJs {
       }
       this.registerEventListener(window, 'resize', this.requestRender);
 
-      if (this.opts.useTouch == true || this.opts.useTouch == false) {
+      if (this.opts.useTouch === true || this.opts.useTouch === false) {
         this.config.useTouch = this.opts.useTouch;
       }
     });
