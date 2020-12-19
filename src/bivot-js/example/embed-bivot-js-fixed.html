@@ -2,7 +2,7 @@
 <!-- https://github.com/bandicoot-imaging-sciences/bivot -->
 <!-- Copyright (C) Bandicoot Imaging Sciences 2020 -->
 
-<!-- Embed example with Bivot taking up the full browser window width. -->
+<!-- Embed example with fixed width layout control. -->
 
 <!DOCTYPE html>
 <html>
@@ -14,23 +14,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Bivot material viewer</title>
     <style>
-      body {
-        margin: 0;
-      }
-      /* This ID should match the canvas element ID used below. */
-      #bivot-canvas {
-        width: 100vw;
-        height: 100vh;
-        display: block;
+      .bivot-container {
+        /* Only the CSS width is needed. The height is set from the materialSet aspect ratio. */
+        width: 600px;
       }
     </style>
   </head>
   <body>
-    <!-- Bivot element -->
-    <!-- The ID can be changed using options in the Bivot() call. -->
-    <canvas id="bivot-canvas"></canvas>
+    <h1>Bivot embedding example</h1>
+    <div class="bivot-container">
+      <!-- Bivot element -->
+      <!-- The ID can be changed using options in the Bivot() call. -->
+      <canvas id="bivot-canvas"></canvas>
+    </div>
   </body>
-  <!-- Finally, import and start Bivot, pegged to the specified version -->
+  <!-- Import and start Bivot, pegged to the specified version -->
   <script type="module">
     const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.3.2/src/bivot-js/dist/index.js";
     // const bivSrc = "../dist/index.js";
