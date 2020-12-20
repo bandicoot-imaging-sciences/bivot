@@ -958,7 +958,7 @@ class bivotJs {
         let requestButton = _self.registerElement(document, 'button');
         injectStyle(requestButton, styles['bivot-button']);
         requestButton.innerHTML = 'Tap for tilt control';
-        requestButton.addEventListener('touchstart', requestTiltPermission);
+        requestButton.onclick = requestTiltPermission;
         subtitleTextElem.appendChild(requestButton);
       } else if (_self.state._statusText.length == 0) {
         subtitleElem.style.display = 'none';
