@@ -9,8 +9,9 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function FullscreenButton({ fullscreenElement, onEnterFullScreen, onExitFullScreen }) {
+function FullscreenButton({ getFullscreenElement, onEnterFullScreen, onExitFullScreen }) {
   const classes = useStyles();
+  const fullscreenElement = getFullscreenElement();
 
   async function openFullscreen() {
     if (document.addEventListener) {

@@ -647,6 +647,15 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function getFullscreenElement() {
+    if (canvasRef.current) {
+      // If the overlay div exists yet, select it as the full screen element
+      return canvasRef.current.parentNode;
+    } else {
+      return canvasRef.current;
+    }
+  }
+
   function compareVals(a, b) {
     return (a < b ? -1 : (a > b ? 1 : 0));
   }
@@ -684,7 +693,7 @@ function BivotReact(props) {
                 <ResetButton onChange={stateReset} />
                 <div style={styles.grow} />
                 <FullscreenButton
-                  fullscreenElement={canvasRef.current}
+                  getFullscreenElement={getFullscreenElement}
                   onEnterFullScreen={onEnterFullScreen}
                   onExitFullScreen={onExitFullScreen}
                 />
