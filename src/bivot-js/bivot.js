@@ -330,6 +330,9 @@ class bivotJs {
     // the canvas.
     this.mouseInCanvas = false;
 
+    this.intersectionObserver = null;
+    this.isVisible = false;
+
     // Tracking to handle cleanup
     this.shuttingDown = false;
     this.timeouts = [];
@@ -783,6 +786,21 @@ class bivotJs {
       }
     }
 
+    function onIntersection(entries, observer) {
+      if (observer == _self.intersectionObserver) {
+        entries.forEach(entry => {
+          if (entry.target == _self.overlay) {
+            _self.isVisible = entry.isIntersecting;
+            if (_self.isVisible) {
+              // Render a single frame when crossing threshold into visibility.
+              // This will restart the animation loop, if animating.
+              _self.requestRender();
+            }
+          }
+        });
+      }
+    }
+
     function initialiseOverlays(overlay) {
       if (overlay) {
         let loadingDiv = _self.registerElement(document, 'div');
@@ -806,6 +824,9 @@ class bivotJs {
         progressBarElem = progressBarDiv;
         subtitleElem = subtitleDiv;
         subtitleTextElem = subtitleTextP;
+
+        _self.intersectionObserver = new IntersectionObserver(onIntersection, {});
+        _self.intersectionObserver.observe(overlay);
       }
     }
 
@@ -1702,7 +1723,7 @@ class bivotJs {
   }
 
   updateAutoRotate(loopValue) {
-    if (!this.mouseInCanvas || this.state.lightMotion == 'animate') {
+    if (this.isVisible && (!this.mouseInCanvas || this.state.lightMotion == 'animate')) {
       // loopValue is between 0 and 1
       const angle = 2 * Math.PI * loopValue;
       const xy = new THREE.Vector2(
