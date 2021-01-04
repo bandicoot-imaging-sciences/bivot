@@ -1098,7 +1098,9 @@ class bivotJs {
         const surplus = xy.length() - xy.clone().clampLength(0.0, qLimit).length();
         baselineTilt.addScaledVector(deltaTilt, surplus * _self.state.tiltDriftSpeed);
       }
-      _self.updateCamsAndLightsFromXY(xy, _self.state.lightTiltWithDeviceOrient, _self.state.camTiltWithDeviceOrient);
+      if (_self.isVisible) {
+        _self.updateCamsAndLightsFromXY(xy, _self.state.lightTiltWithDeviceOrient, _self.state.camTiltWithDeviceOrient);
+      }
     }
 
     function newMeshRotation() {
