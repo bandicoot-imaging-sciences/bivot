@@ -148,6 +148,66 @@ function injectStyle(elem, style) {
   }
 }
 
+class activeOverlay {
+  constructor(overlay, container) {
+    container.appendChild(overlay);
+    this.overlay = overlay;
+    this.parent = container;
+    this.children = [];
+    this.overlaysActive = true;
+
+    // true: Remove the overlay from the DOM when no overlay elements are active
+    // false: Set style.display=none on the overlay when no overlay elements are active
+    this.removeOnInactive = false;
+  }
+
+  addElement(elem, insertFront=false, visible=true, display='block') {
+    const entry = {elem, visible, display};
+    if (insertFront && this.children.length > 0) {
+      this.overlay.insertBefore(elem, this.children[0].elem);
+      this.children.unshift(entry);
+    } else {
+      this.overlay.appendChild(elem);
+      this.children.push(entry);
+    }
+    this.setElementVisibility(elem, visible);
+  }
+
+  setElementVisibility(elem, visible) {
+    var anyVisible = false;
+    this.children.forEach(child => {
+      if (child.elem === elem) {
+        setStyle(elem, visible, child.display);
+        child.visible = visible;
+      }
+      if (child.visible) {
+        anyVisible = true;
+      }
+    });
+
+    // Both removing from DOM and setting visibility to False causes mouse
+    // listeners to stop working.  That means that when using activeOverlay,
+    // listeners must be attached to the canvas rather than the overlay.
+    if (this.removeOnInactive) {
+      if (this.overlaysActive && !anyVisible) {
+        // Remove overlay from DOM
+        this.parent.removeChild(this.overlay);
+        this.overlaysActive = false;
+      } else if (!this.overlaysActive && anyVisible) {
+        // Add overlay to DOM
+        this.parent.appendChild(this.overlay);
+        this.overlaysActive = true;
+      }
+    } else {
+      setStyle(this.overlay, anyVisible, 'block');
+    }
+
+    function setStyle(elem, visibility, displayStyle) {
+      elem.style.setProperty('display', visibility ? displayStyle : 'none');
+    }
+  }
+}
+
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
@@ -301,13 +361,17 @@ class bivotJs {
     const canvasParent = this.canvas.parentElement;
     this.container = document.createElement('div');
     this.overlay = document.createElement('div');
-    this.container.appendChild(this.canvas);
-    this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
-    canvasParent.appendChild(this.container);
 
     injectStyle(this.canvas, styles['bivot-canvas']);
     injectStyle(this.container, styles['bivot-container']);
     injectStyle(this.overlay, styles['bivot-overlay']);
+
+    // Create and insert active overlay into DOM, then canvas
+    this.overlayManager = new activeOverlay(this.overlay, this.container);
+    this.container.appendChild(this.canvas);
+
+    // Insert container around canvas
+    canvasParent.appendChild(this.container);
 
     this.scans = {};
     this.materials = {};
@@ -478,14 +542,14 @@ class bivotJs {
         content.appendChild(img);
         injectStyle(content, styles['bivot-loading-image']);
         content.id = 'bivotLoadingImage';
-        _self.overlay.insertBefore(content, loadingElem);
+        _self.overlayManager.addElement(content, true, true);
         _self.loadingDomElement = content;
       }
     }
 
     function unsetLoadingImage() {
       if (_self.loadingDomElement) {
-        _self.loadingDomElement.setAttribute('style', 'display: none');
+        _self.overlayManager.setElementVisibility(_self.loadingDomElement, false);
       }
     }
 
@@ -524,7 +588,7 @@ class bivotJs {
 
     function onLoad() {
       // Run after all textures and the mesh are loaded.
-      loadingElem.style.display = 'none';
+      _self.overlayManager.setElementVisibility(loadingElem, false);
       _self.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
       _self.uniforms.normalMap.value = brdfTextures.get('normals');
       _self.uniforms.specularMap.value = brdfTextures.get('specular');
@@ -809,7 +873,7 @@ class bivotJs {
         injectStyle(loadingDiv, styles['bivot-loading']);
         injectStyle(progressDiv, styles['bivot-progress']);
         injectStyle(progressBarDiv, styles['bivot-progressbar']);
-        overlay.appendChild(loadingDiv);
+        _self.overlayManager.addElement(loadingDiv, false, true, 'flex');
         loadingDiv.appendChild(progressDiv);
         progressDiv.appendChild(progressBarDiv);
 
@@ -817,7 +881,7 @@ class bivotJs {
         let subtitleTextP = _self.registerElement(document, 'p');
         injectStyle(subtitleDiv, styles['bivot-subtitle']);
         injectStyle(subtitleTextP, styles['bivot-subtitle-text']);
-        overlay.appendChild(subtitleDiv);
+        _self.overlayManager.addElement(subtitleDiv, false, false);
         subtitleDiv.appendChild(subtitleTextP);
 
         loadingElem = loadingDiv;
@@ -975,41 +1039,42 @@ class bivotJs {
       // Trying to add this button while also displaying status text sends iOS Safari into a reload loop. So the
       // button takes precedence.
       if (orientPermWanted && orientPermNeeded && !orientPermObtained) {
-        subtitleElem.style.display = 'flex';
+        _self.overlayManager.setElementVisibility(subtitleElem, true);
         let requestButton = _self.registerElement(document, 'button');
         injectStyle(requestButton, styles['bivot-button']);
         requestButton.innerHTML = 'Tap for tilt control';
         requestButton.onclick = requestTiltPermission;
         subtitleTextElem.appendChild(requestButton);
       } else if (_self.state._statusText.length == 0) {
-        subtitleElem.style.display = 'none';
+        _self.overlayManager.setElementVisibility(subtitleElem, false);
         subtitleTextElem.innerHTML = '';
       } else {
-        subtitleElem.style.display = 'flex';
+        _self.overlayManager.setElementVisibility(subtitleElem, true);
         subtitleTextElem.innerHTML = _self.state._statusText;
       }
     }
 
     function updateLightMotion() {
+      const elem = _self.overlay;
       if (_self.state.lightMotion == 'mouse') {
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
-        _self.registerEventListener(_self.overlay, 'mousemove', onDocumentMouseMove, false);
-        _self.registerEventListener(_self.overlay, 'mouseout', onDocumentMouseOut, false);
-        _self.registerEventListener(_self.overlay, 'mouseover', onCanvasMouseOver, false);
-        _self.registerEventListener(_self.overlay, 'mouseout', onCanvasMouseOut, false);
+        _self.registerEventListener(elem, 'mousemove', onDocumentMouseMove, false);
+        _self.registerEventListener(elem, 'mouseout', onDocumentMouseOut, false);
+        _self.registerEventListener(elem, 'mouseover', onCanvasMouseOver, false);
+        _self.registerEventListener(elem, 'mouseout', onCanvasMouseOut, false);
       } else if (_self.state.lightMotion == 'gyro') {
         _self.registerEventListener(window, 'deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-        _self.overlay.removeEventListener('mouseover', onCanvasMouseOver, false);
-        _self.overlay.removeEventListener('mouseout', onCanvasMouseOut, false);
+        elem.removeEventListener('mouseover', onCanvasMouseOver, false);
+        elem.removeEventListener('mouseout', onCanvasMouseOut, false);
       } else {
         console.assert(_self.state.lightMotion == 'animate');
         window.removeEventListener('deviceorientation', onDeviceOrientation, false);
         document.removeEventListener('mousemove', onDocumentMouseMove, false);
         document.removeEventListener('mouseout', onDocumentMouseOut, false);
-        _self.overlay.removeEventListener('mouseover', onCanvasMouseOver, false);
-        _self.overlay.removeEventListener('mouseout', onCanvasMouseOut, false);
+        elem.removeEventListener('mouseover', onCanvasMouseOver, false);
+        elem.removeEventListener('mouseout', onCanvasMouseOut, false);
       }
     }
 
