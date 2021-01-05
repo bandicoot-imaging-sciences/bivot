@@ -1649,6 +1649,10 @@ class bivotJs {
         this.canvas.style.height = 'auto';
         this.canvas.width = undefined;
         this.canvas.height = undefined;
+        if (this.overlay) {
+          this.overlay.style.width = '100%';
+          this.overlay.style.height = '100%';
+        }
       } else {
         pixelWidth = this.state.size[0] * pixelRatio;
         pixelHeight = this.state.size[1] * pixelRatio;
@@ -1656,6 +1660,10 @@ class bivotJs {
         this.canvas.style.height = this.state.size[1] + 'px';
         this.canvas.width = pixelWidth;
         this.canvas.height = pixelHeight;
+        if (this.overlay) {
+          this.overlay.style.width = this.canvas.style.width;
+          this.overlay.style.height = this.canvas.style.height;
+        }
       }
       this.renderer.setSize(pixelWidth, pixelHeight, false);
       this.camera.aspect = pixelWidth / pixelHeight;
