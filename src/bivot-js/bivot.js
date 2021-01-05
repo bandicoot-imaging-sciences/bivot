@@ -329,9 +329,10 @@ class bivotJs {
     // Start false so that auto-rotate is always active until the mouse moves, even if the mouse starts over
     // the canvas.
     this.mouseInCanvas = false;
-
     this.intersectionObserver = null;
     this.isVisible = false;
+
+    this.needsResize = false;
 
     // Tracking to handle cleanup
     this.shuttingDown = false;
@@ -1638,7 +1639,23 @@ class bivotJs {
   }
 
   updateCanvas() {
-    if (this.canvas) {
+    this.needsResize = true;
+  }
+
+  updateCanvasOnResize() {
+    if (this.opts.responsive) {
+      this.needsResize = true;
+    }
+    // In non-responsive mode, no need to update the canvas
+    // logical size when the canvas client size changes.
+  }
+
+  // Update the canvas sizing.  Only call from within the render loop,
+  // to time the resize immediately prior to the next frame render.
+  renderLoopUpdateCanvas() {
+    if (this.canvas && this.needsResize) {
+      this.needsResize = false;
+
       const pixelRatio = window.devicePixelRatio || 1;
       var pixelWidth, pixelHeight;
       if (this.opts.responsive) {
@@ -1671,14 +1688,6 @@ class bivotJs {
       this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
     }
-  }
-
-  updateCanvasOnResize() {
-    if (this.opts.responsive) {
-      this.updateCanvas();
-    }
-    // In non-responsive mode, no need to update the canvas
-    // logical size when the canvas client size changes.
   }
 
   getBgColorFromState(state) {
@@ -1766,6 +1775,8 @@ class bivotJs {
         this.updateZoom();
         this.updateControls(this.controls);
       }
+
+      this.renderLoopUpdateCanvas();
 
       this.controls.update();
 
