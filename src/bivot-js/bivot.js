@@ -844,7 +844,7 @@ class bivotJs {
       _self.updateLightingGrid();
       updateLightMotion();
 
-      const ambientColour = 0x3F3F3F;
+      const ambientColour = 0xFFFFFF;
       const ambientIntensity = 1.0;
       ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
       scene.add(ambientLight);

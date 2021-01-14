@@ -158,12 +158,14 @@ export default function getShaders() {
       float roughnessSurface = 0.0;
       float tintSurface = 0.0;
       float metallicSurface = 0.0;
+      float aoSurface = 0.0;
 
       if (uBrdfModel == 1) {
         // (M/R model)
         white_L = 16383.0;
         roughnessSurface = specularTexel.r;
         metallicSurface = specularTexel.g;
+        aoSurface = specularTexel.b;
       } else {
         // uBrdfModel == 0 (BIS model)
         specularSurface = specularTexel.r;
@@ -196,8 +198,10 @@ export default function getShaders() {
         #include <lights_fragment_maps>
         #include <lights_fragment_end>
 
-        // Ambient light is calculated automatically as part of reflectedLight.indirectDiffuse
-        //vec3 ambientFactor = diffuseSurface.rgb * ambientLightColor;
+        float aoMapIntensity = 1.0;
+        float ambientOcclusion = (aoSurface - 1.0) * aoMapIntensity + 1.0;
+        reflectedLight.indirectDiffuse *= ambientOcclusion;
+
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
         vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
         vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor);
