@@ -158,14 +158,16 @@ export default function getShaders() {
       float roughnessSurface = 0.0;
       float tintSurface = 0.0;
       float metallicSurface = 0.0;
-      float aoSurface = 0.0;
+      float aoSurface = 0.5;
 
       if (uBrdfModel == 1) {
         // (M/R model)
         white_L = 16383.0;
         roughnessSurface = specularTexel.r;
         metallicSurface = specularTexel.g;
-        aoSurface = specularTexel.b;
+        if (uBrdfVersion >= 3.0) {
+          aoSurface = specularTexel.b;
+        }
       } else {
         // uBrdfModel == 0 (BIS model)
         specularSurface = specularTexel.r;
