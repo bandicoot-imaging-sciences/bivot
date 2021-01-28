@@ -200,7 +200,7 @@ export default function getShaders() {
         #include <lights_fragment_maps>
         #include <lights_fragment_end>
 
-        float aoMapIntensity = 2.0;
+        float aoMapIntensity = 1.0;
         float ambientOcclusion = (aoSurface - 1.0) * aoMapIntensity + 1.0;
         reflectedLight.indirectDiffuse *= ambientOcclusion;
 
