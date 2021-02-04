@@ -162,7 +162,11 @@ export default function getShaders() {
 
       if (uBrdfModel == 1) {
         // (M/R model)
-        white_L = 16383.0;
+        if (uBrdfVersion >= 4.0) {
+          white_L = 32767.0;
+        } else {
+          white_L = 16383.0;
+        }
         roughnessSurface = specularTexel.r;
         metallicSurface = specularTexel.g;
         if (uBrdfVersion >= 3.0) {
