@@ -555,7 +555,10 @@ function BivotReact(props) {
 
   function updateAspect(val) {
     var newWidth, newHeight;
-    if (val == 2) {  // Custom Retail aspect ratio
+    if (val == -2) {  // Custom Retail landscape
+      newWidth = 792;
+      newHeight = 548;
+    } else if (val == 2) {  // Custom Retail portrait
       newWidth = 634;
       newHeight = 811;
     } else if (val < 0) {
