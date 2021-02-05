@@ -1568,7 +1568,6 @@ class bivotJs {
           rectLight.position.add(offset);
           lights.add(rectLight);
         } else {
-          console.log('##### color:', color, 'intensity:', lightIntensity);
           let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
           light.position.copy(upVector);
           light.position.add(offset);
