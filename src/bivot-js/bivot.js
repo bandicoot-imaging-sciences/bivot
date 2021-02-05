@@ -333,6 +333,7 @@ class bivotJs {
     this.isVisible = false;
 
     this.needsResize = false;
+    this.inFullScreen = false;
 
     // Tracking to handle cleanup
     this.shuttingDown = false;
@@ -1093,7 +1094,7 @@ class bivotJs {
       if (_self.mouseInCanvas) {
         switch(event.keyCode) {
           case 17: // Ctrl
-            if (_self.controls && _self.config.mouseCamControlsZoom) {
+            if (_self.controls && _self.config.mouseCamControlsZoom && !_self.isFullScreen()) {
               _self.controls.enableZoom = false;
             }
             break;
@@ -1103,8 +1104,9 @@ class bivotJs {
 
     function onWheel(event) {
       if (_self.mouseInCanvas && _self.config.mouseCamControlsZoom) {
-        if (event.ctrlKey) {
-          // Not reached (onWheel doesn't fire when enableZoom is set on controls)
+        if (event.ctrlKey || _self.isFullScreen()) {
+          // TODO: Clear help immediately when ctrl + scroll is used (currently,
+          //       onWheel() doesn't fire in these circumstances)
           clearZoomHelp();
         } else {
           setZoomHelp();
@@ -1703,6 +1705,15 @@ class bivotJs {
     // logical size when the canvas client size changes.
   }
 
+  isFullScreen() {
+    return (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement ||
+      document.mozFullScreenElement
+    );
+  }
+
   // Update the canvas sizing.  Only call from within the render loop,
   // to time the resize immediately prior to the next frame render.
   renderLoopUpdateCanvas() {
@@ -1862,9 +1873,32 @@ class bivotJs {
 
   // Request a render frame only if a request is not already pending.
   requestRender() {
+    // Note that requestRender can be called as an event handler in which case
+    // some methods might not be attached to 'this'.  In the event handler case,
+    // the full screen check is not required.
+    if (this.checkChangeFullScreen) {
+      this.checkChangeFullScreen();
+    }
+
     if (!this.renderRequested && this.render) {
       this.renderRequested = true;
       requestAnimationFrame(this.render.bind(this));
+    }
+  }
+
+  checkChangeFullScreen() {
+    if (this.controls && this.config.mouseCamControlsZoom) {
+      if (this.isFullScreen() && !this.inFullScreen) {
+        // Entering full screen
+        this.inFullScreen = true;
+        this.controls.enableZoom = true;
+        // TODO: Clear help immediately when exiting full screen
+        //       (difficult with current code structure)
+      } else if (!this.isFullScreen() && this.inFullScreen) {
+        // Exiting full screen
+        this.inFullScreen = false;
+        this.controls.enableZoom = false;
+      }
     }
   }
 
