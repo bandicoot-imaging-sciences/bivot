@@ -379,6 +379,7 @@ class bivotJs {
       iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
       iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
     }
+    let zoomHelpTimeoutID = null;
 
     let urlFlags = getUrlFlags(); // Get options from URL
 
@@ -433,6 +434,9 @@ class bivotJs {
         this.registerEventListener(window, 'deviceorientation', detectGyro, false);
       }
       this.registerEventListener(window, 'resize', this.requestRender);
+      this.registerEventListener(document, 'keydown', onKeyDown, false);
+      this.registerEventListener(document, 'keyup', onKeyUp, false);
+      this.registerEventListener(document, 'wheel', onWheel, false);
 
       if (this.opts.useTouch === true || this.opts.useTouch === false) {
         this.config.useTouch = this.opts.useTouch;
@@ -885,7 +889,7 @@ class bivotJs {
       controls.zoomSpeed = 1.0;
       controls.target.set(0, 0, 0);
       controls.update();
-      controls.enableZoom = config.mouseCamControlsZoom;
+      controls.enableZoom = false;
       controls.enableRotate = config.mouseCamControlsRotate;
       controls.enablePan = config.mouseCamControlsPan;
       controls.minDistance = config.minCamZ;
@@ -969,6 +973,20 @@ class bivotJs {
       if (gyroDetected) {
         orientPermObtained = true;
       }
+      updateStatusTextDisplay();
+    }
+
+    function setZoomHelp() {
+      clearZoomHelp();
+      _self.state._statusText = 'Use ctrl + scroll to zoom';
+      updateStatusTextDisplay();
+      zoomHelpTimeoutID = setTimeout(clearZoomHelp, 2500);
+      _self.timeouts.push(zoomHelpTimeoutID);
+    }
+
+    function clearZoomHelp() {
+      clearTimeout(zoomHelpTimeoutID);
+      _self.state._statusText = '';
       updateStatusTextDisplay();
     }
 
@@ -1057,6 +1075,41 @@ class bivotJs {
 
     function onCanvasMouseOut(event) {
       _self.mouseInCanvas = false;
+    }
+
+    function onKeyDown(event) {
+      if (_self.mouseInCanvas) {
+        switch(event.keyCode) {
+          case 17: // Ctrl
+            if (_self.controls && _self.config.mouseCamControlsZoom) {
+              _self.controls.enableZoom = true;
+            }
+            break;
+        }
+      }
+    }
+
+    function onKeyUp(event) {
+      if (_self.mouseInCanvas) {
+        switch(event.keyCode) {
+          case 17: // Ctrl
+            if (_self.controls && _self.config.mouseCamControlsZoom) {
+              _self.controls.enableZoom = false;
+            }
+            break;
+        }
+      }
+    }
+
+    function onWheel(event) {
+      if (_self.mouseInCanvas && _self.config.mouseCamControlsZoom) {
+        if (event.ctrlKey) {
+          // Not reached (onWheel doesn't fire when enableZoom is set on controls)
+          clearZoomHelp();
+        } else {
+          setZoomHelp();
+        }
+      }
     }
 
     function getOrientation(event) {
