@@ -487,7 +487,7 @@ function BivotReact(props) {
     const {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
-      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom
      } = state;
 
     const savedState = {
