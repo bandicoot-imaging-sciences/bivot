@@ -167,6 +167,7 @@ function BivotReact(props) {
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
+    bloom: 0.0,
   };
   const [state, _setState] = useState({
     exposure: 1.0,
@@ -196,6 +197,7 @@ function BivotReact(props) {
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
+    bloom: 0.0,
   });
   const [checkpointState, _setCheckpointState] = useState({});
 
@@ -497,6 +499,7 @@ function BivotReact(props) {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+      bloom,
     }
 
     config.state = { ...config.state, ...savedState };
