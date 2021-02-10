@@ -31,6 +31,7 @@ Parts adapted from Threejsfundamentals:
 
 import * as THREE from '@bandicoot-imaging-sciences/three';
 
+import Stats from '@bandicoot-imaging-sciences/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/EXRLoader.js';
 import { OBJLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/OBJLoader.js';
@@ -335,6 +336,9 @@ class bivotJs {
     this.needsResize = false;
     this.inFullScreen = false;
 
+    this.stats = null;
+    this.statsVisible = false;
+
     // Tracking to handle cleanup
     this.shuttingDown = false;
     this.timeouts = [];
@@ -430,6 +434,9 @@ class bivotJs {
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
 
+      this.stats = new Stats();
+      this.stats.showPanel(0);
+
       // Add listeners after finishing config and initialisation
       if (orientPermWanted) {
         this.registerEventListener(window, 'deviceorientation', detectGyro, false);
@@ -444,6 +451,18 @@ class bivotJs {
       }
     });
     // ========== End mainline; functions follow ==========
+
+    function showStats(show) {
+      if (show) {
+        _self.overlay.appendChild(_self.stats.dom);
+      } else {
+        _self.overlay.removeChild(_self.stats.dom);
+      }
+      _self.statsVisible = show;
+    }
+    function toggleStats() {
+      showStats(!_self.statsVisible);
+    }
 
     function setLoadingImage() {
       if (!_self.opts.materialSet && !_self.opts.thumbnail) {
@@ -1084,6 +1103,11 @@ class bivotJs {
           case 17: // Ctrl
             if (_self.controls && _self.config.mouseCamControlsZoom) {
               _self.controls.enableZoom = true;
+            }
+            break;
+          case 70: // F
+            if (event.ctrlKey) {
+              toggleStats();
             }
             break;
         }
@@ -1829,6 +1853,10 @@ class bivotJs {
     if (this.shuttingDown) {
       this.doShutdown();
     } else if (this.controls && this.composer) {
+      if (this.stats) {
+        this.stats.begin();
+      }
+
       // FIXME: Remove forced true after adding canvas client size event handler.
       if (this.state.dirty) {
         this.state.dirty = false;
@@ -1866,6 +1894,9 @@ class bivotJs {
       this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
 
       this.composer.render();
+      if (this.stats) {
+        this.stats.end();
+      }
 
       this.renderRequested = false;
     }
