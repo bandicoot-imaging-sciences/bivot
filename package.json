@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "@material-ui/icons": "^4.9.1",
-    "react-color": "^2.19.3"
+    "react-color": "^2.19.3",
+    "stats.js": "^0.17.0"
   }
 }
