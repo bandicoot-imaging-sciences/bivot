@@ -424,11 +424,13 @@ class bivotJs {
         addControlPanel();
       }
       this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
+
+      loadScan();
+
       this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
-      loadScan();
       this.updateCanvas();
       this.updateBackground();
       this.updateControls(this.controls);
