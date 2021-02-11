@@ -393,6 +393,9 @@ class bivotJs {
       this.opts.controlMode = urlFlags.controls;
     }
 
+    this.stats = new Stats();
+    this.stats.showPanel(0);
+
     initConfig().then(() => {
       // After loading (or failing to load) the config, begin the initialisation sequence.
       processUrlFlags();
@@ -436,9 +439,6 @@ class bivotJs {
       this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
-
-      this.stats = new Stats();
-      this.stats.showPanel(0);
 
       // Add listeners after finishing config and initialisation
       if (orientPermWanted) {
@@ -772,7 +772,8 @@ class bivotJs {
         controls: ['full', 'qa', 'manage', 'none'],
         show: 'SAFE_STRING',
         showcase: ['1'],
-        textureFormat: ['JPG', 'PNG', 'EXR']
+        textureFormat: ['JPG', 'PNG', 'EXR'],
+        bivotFps: ['1'],
       };
 
       const parsedUrl = new URL(window.location.href);
@@ -811,6 +812,9 @@ class bivotJs {
       }
       if (urlFlags.hasOwnProperty('textureFormat')) {
         _self.config.textureFormat = urlFlags.textureFormat;
+      }
+      if (urlFlags.hasOwnProperty('bivotFps')) {
+        showStats(true);
       }
     }
 
