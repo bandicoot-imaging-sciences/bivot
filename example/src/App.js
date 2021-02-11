@@ -78,6 +78,7 @@ function App(props) {
             id={1}
             width={size[0]}             // Override Shimmer width
             height={size[1]}            // Override Shimmer height
+            featured={true}
             responsive={false}
             showEditor={showEditor}
             showAdvancedControls={true}

@@ -88,6 +88,11 @@ function BivotReact(props) {
 
     // ========== Advanced props ==========
 
+    // If set to True, the Shimmer View is embedded as the featured element of
+    // the web page.  This allows scroll wheel to zoom the Shimmer directly,
+    // rather than requiring the ctrl key to be held down to zoom.
+    featured,
+
     // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
 
@@ -403,6 +408,7 @@ function BivotReact(props) {
       material: galleryMat,
       thumbnail,
       state,
+      featured,
       responsive,
       stateLoadCallback,
       loadingCompleteCallback,

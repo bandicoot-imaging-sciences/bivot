@@ -183,6 +183,7 @@ class bivotJs {
       materialSet: null,
       controlMode: this.controlModes.FULL,
       useTouch: null,
+      featured: false,
       responsive: true,
       state: null,
       stateLoadCallback: null,
@@ -911,7 +912,7 @@ class bivotJs {
       controls.zoomSpeed = 1.0;
       controls.target.set(0, 0, 0);
       controls.update();
-      controls.enableZoom = false;
+      controls.enableZoom = (_self.opts.featured === true) ? true : false;
       controls.enableRotate = config.mouseCamControlsRotate;
       controls.enablePan = config.mouseCamControlsPan;
       controls.minDistance = config.minCamZ;
@@ -1120,8 +1121,10 @@ class bivotJs {
       if (_self.mouseInCanvas) {
         switch(event.keyCode) {
           case 17: // Ctrl
-            if (_self.controls && _self.config.mouseCamControlsZoom && !_self.isFullScreen()) {
-              _self.controls.enableZoom = false;
+            if (_self.controls && _self.config.mouseCamControlsZoom) {
+              if (_self.opts.featured !== true && !_self.isFullScreen()) {
+                _self.controls.enableZoom = false;
+              }
             }
             break;
         }
@@ -1130,7 +1133,7 @@ class bivotJs {
 
     function onWheel(event) {
       if (_self.mouseInCanvas && _self.config.mouseCamControlsZoom) {
-        if (event.ctrlKey || _self.isFullScreen()) {
+        if (event.ctrlKey || _self.opts.featured === true || _self.isFullScreen()) {
           // TODO: Clear help immediately when ctrl + scroll is used (currently,
           //       onWheel() doesn't fire in these circumstances)
           clearZoomHelp();
