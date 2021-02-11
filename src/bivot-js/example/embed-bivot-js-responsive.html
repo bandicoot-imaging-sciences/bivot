@@ -16,7 +16,7 @@
     <style>
       .bivot-container {
         /* Only the CSS width is needed. The height is set from the materialSet aspect ratio. */
-        width: 50vw;
+        width: 80vw;
       }
     </style>
   </head>
@@ -74,7 +74,7 @@
     </p>
   </body>
   <!-- Import and start Bivot, pegged to the specified version -->
-  <script type="module">
+  <!-- <script type="module">
     const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.3.3/src/bivot-js/dist/index.js";
     // const bivSrc = "../dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
@@ -85,5 +85,12 @@
       bivot.checkWebGL();
       bivot.startRender();
     });
-  </script>
+  </script> -->
+<canvas id="bivot-canvas"></canvas>
+<script type="module">
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.6.1/src/bivot-js/dist/index.js';
+  const materialSet = 'https://publish.bandicootimaging.com.au/07e7c5f8/biv_gallery/material-set.json';
+  import(bivSrc).then(module => {const bivot = new module.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});
+</script>
+
 </html>
