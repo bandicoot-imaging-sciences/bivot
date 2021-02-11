@@ -1,6 +1,6 @@
 {
   "name": "@bandicoot/bivot",
-  "version": "3.3.3",
+  "version": "3.6.1",
   "description": "Viewer for Bandicoot Shimmer View images",
   "homepage": "https://github.com/bandicoot-imaging-sciences/bivot",
   "author": "dkarlov",
@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "@material-ui/icons": "^4.9.1",
-    "react-color": "^2.19.3"
+    "react-color": "^2.19.3",
+    "stats.js": "^0.17.0"
   }
 }

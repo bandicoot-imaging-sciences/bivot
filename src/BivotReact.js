@@ -88,6 +88,11 @@ function BivotReact(props) {
 
     // ========== Advanced props ==========
 
+    // If set to True, the Shimmer View is embedded as the featured element of
+    // the web page.  This allows scroll wheel to zoom the Shimmer directly,
+    // rather than requiring the ctrl key to be held down to zoom.
+    featured,
+
     // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
 
@@ -167,6 +172,7 @@ function BivotReact(props) {
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
+    bloom: 0.0,
   };
   const [state, _setState] = useState({
     exposure: 1.0,
@@ -196,6 +202,7 @@ function BivotReact(props) {
     autoRotateFps: 30,
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
+    bloom: 0.0,
   });
   const [checkpointState, _setCheckpointState] = useState({});
 
@@ -401,6 +408,7 @@ function BivotReact(props) {
       material: galleryMat,
       thumbnail,
       state,
+      featured,
       responsive,
       stateLoadCallback,
       loadingCompleteCallback,
@@ -485,7 +493,7 @@ function BivotReact(props) {
     const {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
-      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom
      } = state;
 
     const savedState = {
@@ -497,6 +505,7 @@ function BivotReact(props) {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
+      bloom,
     }
 
     config.state = { ...config.state, ...savedState };
@@ -555,7 +564,13 @@ function BivotReact(props) {
 
   function updateAspect(val) {
     var newWidth, newHeight;
-    if (val < 0) {
+    if (val == -2) {  // Custom Retail landscape
+      newWidth = 792;
+      newHeight = 548;
+    } else if (val == 2) {  // Custom Retail portrait
+      newWidth = 634;
+      newHeight = 811;
+    } else if (val < 0) {
       newWidth = 600;
       newHeight = 400;
     } else if (val > 0) {

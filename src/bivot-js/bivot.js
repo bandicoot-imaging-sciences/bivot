@@ -31,6 +31,7 @@ Parts adapted from Threejsfundamentals:
 
 import * as THREE from '@bandicoot-imaging-sciences/three';
 
+import Stats from '@bandicoot-imaging-sciences/three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/EXRLoader.js';
 import { OBJLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/OBJLoader.js';
@@ -182,6 +183,7 @@ class bivotJs {
       materialSet: null,
       controlMode: this.controlModes.FULL,
       useTouch: null,
+      featured: false,
       responsive: true,
       state: null,
       stateLoadCallback: null,
@@ -329,9 +331,14 @@ class bivotJs {
     // Start false so that auto-rotate is always active until the mouse moves, even if the mouse starts over
     // the canvas.
     this.mouseInCanvas = false;
-
     this.intersectionObserver = null;
     this.isVisible = false;
+
+    this.needsResize = false;
+    this.inFullScreen = false;
+
+    this.stats = null;
+    this.statsVisible = false;
 
     // Tracking to handle cleanup
     this.shuttingDown = false;
@@ -378,6 +385,7 @@ class bivotJs {
       iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
       iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
     }
+    let zoomHelpTimeoutID = null;
 
     let urlFlags = getUrlFlags(); // Get options from URL
 
@@ -417,27 +425,47 @@ class bivotJs {
         addControlPanel();
       }
       this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
+
+      loadScan();
+
       this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
-      loadScan();
       this.updateCanvas();
       this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
+
+      this.stats = new Stats();
+      this.stats.showPanel(0);
 
       // Add listeners after finishing config and initialisation
       if (orientPermWanted) {
         this.registerEventListener(window, 'deviceorientation', detectGyro, false);
       }
       this.registerEventListener(window, 'resize', this.requestRender);
+      this.registerEventListener(document, 'keydown', onKeyDown, false);
+      this.registerEventListener(document, 'keyup', onKeyUp, false);
+      this.registerEventListener(document, 'wheel', onWheel, false);
 
       if (this.opts.useTouch === true || this.opts.useTouch === false) {
         this.config.useTouch = this.opts.useTouch;
       }
     });
     // ========== End mainline; functions follow ==========
+
+    function showStats(show) {
+      if (show) {
+        _self.overlay.appendChild(_self.stats.dom);
+      } else {
+        _self.overlay.removeChild(_self.stats.dom);
+      }
+      _self.statsVisible = show;
+    }
+    function toggleStats() {
+      showStats(!_self.statsVisible);
+    }
 
     function setLoadingImage() {
       if (!_self.opts.materialSet && !_self.opts.thumbnail) {
@@ -843,7 +871,7 @@ class bivotJs {
       _self.updateLightingGrid();
       updateLightMotion();
 
-      const ambientColour = 0x3F3F3F;
+      const ambientColour = 0xFFFFFF;
       const ambientIntensity = 1.0;
       ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
       scene.add(ambientLight);
@@ -884,7 +912,7 @@ class bivotJs {
       controls.zoomSpeed = 1.0;
       controls.target.set(0, 0, 0);
       controls.update();
-      controls.enableZoom = config.mouseCamControlsZoom;
+      controls.enableZoom = (_self.opts.featured === true) ? true : false;
       controls.enableRotate = config.mouseCamControlsRotate;
       controls.enablePan = config.mouseCamControlsPan;
       controls.minDistance = config.minCamZ;
@@ -968,6 +996,20 @@ class bivotJs {
       if (gyroDetected) {
         orientPermObtained = true;
       }
+      updateStatusTextDisplay();
+    }
+
+    function setZoomHelp() {
+      clearZoomHelp();
+      _self.state._statusText = 'Use ctrl + scroll to zoom';
+      updateStatusTextDisplay();
+      zoomHelpTimeoutID = setTimeout(clearZoomHelp, 2500);
+      _self.timeouts.push(zoomHelpTimeoutID);
+    }
+
+    function clearZoomHelp() {
+      clearTimeout(zoomHelpTimeoutID);
+      _self.state._statusText = '';
       updateStatusTextDisplay();
     }
 
@@ -1056,6 +1098,49 @@ class bivotJs {
 
     function onCanvasMouseOut(event) {
       _self.mouseInCanvas = false;
+    }
+
+    function onKeyDown(event) {
+      if (_self.mouseInCanvas) {
+        switch(event.keyCode) {
+          case 17: // Ctrl
+            if (_self.controls && _self.config.mouseCamControlsZoom) {
+              _self.controls.enableZoom = true;
+            }
+            break;
+          case 70: // F
+            if (event.ctrlKey) {
+              toggleStats();
+            }
+            break;
+        }
+      }
+    }
+
+    function onKeyUp(event) {
+      if (_self.mouseInCanvas) {
+        switch(event.keyCode) {
+          case 17: // Ctrl
+            if (_self.controls && _self.config.mouseCamControlsZoom) {
+              if (_self.opts.featured !== true && !_self.isFullScreen()) {
+                _self.controls.enableZoom = false;
+              }
+            }
+            break;
+        }
+      }
+    }
+
+    function onWheel(event) {
+      if (_self.mouseInCanvas && _self.config.mouseCamControlsZoom) {
+        if (event.ctrlKey || _self.opts.featured === true || _self.isFullScreen()) {
+          // TODO: Clear help immediately when ctrl + scroll is used (currently,
+          //       onWheel() doesn't fire in these circumstances)
+          clearZoomHelp();
+        } else {
+          setZoomHelp();
+        }
+      }
     }
 
     function getOrientation(event) {
@@ -1638,7 +1723,32 @@ class bivotJs {
   }
 
   updateCanvas() {
-    if (this.canvas) {
+    this.needsResize = true;
+  }
+
+  updateCanvasOnResize() {
+    if (this.opts.responsive) {
+      this.needsResize = true;
+    }
+    // In non-responsive mode, no need to update the canvas
+    // logical size when the canvas client size changes.
+  }
+
+  isFullScreen() {
+    return (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement ||
+      document.mozFullScreenElement
+    );
+  }
+
+  // Update the canvas sizing.  Only call from within the render loop,
+  // to time the resize immediately prior to the next frame render.
+  renderLoopUpdateCanvas() {
+    if (this.canvas && this.needsResize) {
+      this.needsResize = false;
+
       const pixelRatio = window.devicePixelRatio || 1;
       var pixelWidth, pixelHeight;
       if (this.opts.responsive) {
@@ -1649,6 +1759,10 @@ class bivotJs {
         this.canvas.style.height = 'auto';
         this.canvas.width = undefined;
         this.canvas.height = undefined;
+        if (this.overlay) {
+          this.overlay.style.width = '100%';
+          this.overlay.style.height = '100%';
+        }
       } else {
         pixelWidth = this.state.size[0] * pixelRatio;
         pixelHeight = this.state.size[1] * pixelRatio;
@@ -1656,6 +1770,10 @@ class bivotJs {
         this.canvas.style.height = this.state.size[1] + 'px';
         this.canvas.width = pixelWidth;
         this.canvas.height = pixelHeight;
+        if (this.overlay) {
+          this.overlay.style.width = this.canvas.style.width;
+          this.overlay.style.height = this.canvas.style.height;
+        }
       }
       this.renderer.setSize(pixelWidth, pixelHeight, false);
       this.camera.aspect = pixelWidth / pixelHeight;
@@ -1663,14 +1781,6 @@ class bivotJs {
       this.composer.setSize(pixelWidth, pixelHeight);
       this.setFxaaResolution();
     }
-  }
-
-  updateCanvasOnResize() {
-    if (this.opts.responsive) {
-      this.updateCanvas();
-    }
-    // In non-responsive mode, no need to update the canvas
-    // logical size when the canvas client size changes.
   }
 
   getBgColorFromState(state) {
@@ -1748,6 +1858,10 @@ class bivotJs {
     if (this.shuttingDown) {
       this.doShutdown();
     } else if (this.controls && this.composer) {
+      if (this.stats) {
+        this.stats.begin();
+      }
+
       // FIXME: Remove forced true after adding canvas client size event handler.
       if (this.state.dirty) {
         this.state.dirty = false;
@@ -1758,6 +1872,8 @@ class bivotJs {
         this.updateZoom();
         this.updateControls(this.controls);
       }
+
+      this.renderLoopUpdateCanvas();
 
       this.controls.update();
 
@@ -1783,6 +1899,9 @@ class bivotJs {
       this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
 
       this.composer.render();
+      if (this.stats) {
+        this.stats.end();
+      }
 
       this.renderRequested = false;
     }
@@ -1790,9 +1909,32 @@ class bivotJs {
 
   // Request a render frame only if a request is not already pending.
   requestRender() {
+    // Note that requestRender can be called as an event handler in which case
+    // some methods might not be attached to 'this'.  In the event handler case,
+    // the full screen check is not required.
+    if (this.checkChangeFullScreen) {
+      this.checkChangeFullScreen();
+    }
+
     if (!this.renderRequested && this.render) {
       this.renderRequested = true;
       requestAnimationFrame(this.render.bind(this));
+    }
+  }
+
+  checkChangeFullScreen() {
+    if (this.controls && this.config.mouseCamControlsZoom) {
+      if (this.isFullScreen() && !this.inFullScreen) {
+        // Entering full screen
+        this.inFullScreen = true;
+        this.controls.enableZoom = true;
+        // TODO: Clear help immediately when exiting full screen
+        //       (difficult with current code structure)
+      } else if (!this.isFullScreen() && this.inFullScreen) {
+        // Exiting full screen
+        this.inFullScreen = false;
+        this.controls.enableZoom = false;
+      }
     }
   }
 

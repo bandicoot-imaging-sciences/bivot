@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grid, Typography, ButtonGroup, Button, Tooltip } from '@material-ui/core';
-import { CropLandscape, CropSquare, CropPortrait } from '@material-ui/icons';
+import { CropLandscape, CropSquare, CropPortrait, LocalMall } from '@material-ui/icons';
 
 function AspectControl({ value, onChange }) {
   return (
@@ -14,6 +14,8 @@ function AspectControl({ value, onChange }) {
             <Tooltip title="Landscape"><Button onClick={() => {onChange(-1)}}><CropLandscape /></Button></Tooltip>
             <Tooltip title="Square"><Button onClick={() => {onChange(0)}}><CropSquare /></Button></Tooltip>
             <Tooltip title="Portrait"><Button onClick={() => {onChange(1)}}><CropPortrait /></Button></Tooltip>
+            <Tooltip title="Landscape (retail)"><Button onClick={() => {onChange(-2)}}><LocalMall /></Button></Tooltip>
+            <Tooltip title="Portrait (retail)"><Button onClick={() => {onChange(2)}}><LocalMall /></Button></Tooltip>
           </ButtonGroup>
         </Grid>
       </Grid>
