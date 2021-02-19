@@ -423,7 +423,7 @@ class bivotJs {
       initialiseOverlays(this.overlay);
       initialiseLighting(this.getBgColorFromState(this.state), this.scene);
       this.camera = initialiseCamera(this.state.focalLength, this.config.initCamZ);
-      this.controls = initialiseControls(this.camera, this.overlay, this.config, this.state.camTiltLimitDegrees);
+      this.controls = initialiseControls(this.camera, this.overlay, this.config);
       if (this.config.showInterface) {
         addControlPanel();
       }
@@ -439,6 +439,7 @@ class bivotJs {
       this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
+      updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
 
       // Add listeners after finishing config and initialisation
       if (orientPermWanted) {
@@ -907,7 +908,7 @@ class bivotJs {
       _self.requestRender();
     }
 
-    function initialiseControls(camera, elem, config, tiltLimit) {
+    function initialiseControls(camera, elem, config) {
       var controls = new OrbitControls(camera, elem);
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
@@ -928,7 +929,6 @@ class bivotJs {
           controls.dispose();
         }
       }
-      updateCamTiltLimit(controls, tiltLimit);
       _self.updateControls(controls);
       _self.registerEventListener(controls, 'change', controlsChange);
       return controls;
