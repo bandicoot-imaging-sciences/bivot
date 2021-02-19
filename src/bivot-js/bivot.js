@@ -230,7 +230,7 @@ class bivotJs {
       brdfModel: 1,
       brdfVersion: 2,
       yFlip: true,
-      size: [600, 400], // Initial size and aspect ratio (canvas logical size) in display pixels
+      size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
