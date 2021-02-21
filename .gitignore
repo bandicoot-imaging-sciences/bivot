@@ -30,3 +30,6 @@ yarn-error.log*
 /bivot-config.json
 /bivot-renders.json
 /configs
+
+# textures used for testing
+/src/bivot-js/example/ladybug
