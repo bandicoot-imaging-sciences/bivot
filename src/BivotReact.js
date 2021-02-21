@@ -152,7 +152,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [600, 400],
+    size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -182,7 +182,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [600, 400],
+    size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.3, 0.36],
     currentZoom: 0.3,
@@ -563,26 +563,9 @@ function BivotReact(props) {
   }
 
   function updateAspect(val) {
-    var newWidth, newHeight;
-    if (val == -2) {  // Custom Retail landscape
-      newWidth = 792;
-      newHeight = 548;
-    } else if (val == 2) {  // Custom Retail portrait
-      newWidth = 634;
-      newHeight = 811;
-    } else if (val < 0) {
-      newWidth = 600;
-      newHeight = 400;
-    } else if (val > 0) {
-      newWidth = 400;
-      newHeight = 600;
-    } else {
-      newWidth = 500;
-      newHeight = 500;
-    }
     const canvas = canvasRef.current;
-    if (newWidth != canvas.width || newHeight != canvas.height) {
-      updateSize([newWidth, newHeight]);
+    if (val[0] != canvas.width || val[1] != canvas.height) {
+      updateSize([val[0], val[1]]);
     }
   }
 
@@ -671,10 +654,6 @@ function BivotReact(props) {
     }
   }
 
-  function compareVals(a, b) {
-    return (a < b ? -1 : (a > b ? 1 : 0));
-  }
-
   return (
     <div
       ref={overlayRef}
@@ -689,7 +668,7 @@ function BivotReact(props) {
               <ContrastControl value={contrast} onChange={updateContrast} />
               <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
               <MaterialRotationControl value={rotation} onChange={addRotation} />
-              <AspectControl value={compareVals(size[0], size[1])} onChange={updateAspect} />
+              <AspectControl value={size} onChange={updateAspect} />
               <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
