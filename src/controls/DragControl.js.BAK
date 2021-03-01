@@ -40,7 +40,7 @@ function DragControl({ value, onChange }) {
         </Tooltip>
       </Grid>
       <Grid item>
-        <Typography>Cam/light limits</Typography>
+        <Typography>Drag limits</Typography>
       </Grid>
       <Grid item>
         <Tooltip title="Set limits on the drag rotation amount">

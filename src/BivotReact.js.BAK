@@ -446,8 +446,7 @@ function BivotReact(props) {
       autoRotatePeriodMs,
       dragControlsRotation,
       dragControlsPanning,
-      camTiltLimitDegrees,
-      lightTiltLimitDegrees
+      camTiltLimitDegrees
     } = stateFields;
 
     updateExposure(exposure);
@@ -463,6 +462,7 @@ function BivotReact(props) {
     updateAutoRotate(autoRotatePeriodMs);
     updateDragControl('rotate', dragControlsRotation);
     updateDragControl('pan', dragControlsPanning);
+    updateDragControl('limits', camTiltLimitDegrees > 0);
     updateDragControl('limits', camTiltLimitDegrees > 0);
 
     if (bivot.current) {
@@ -502,6 +502,9 @@ function BivotReact(props) {
       lightTiltWithMousePos, lightTiltWithDeviceOrient,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom
      } = state;
+
+    const camTiltLimitDegrees = dragLimitsEnabled ? 70 : 0;
+    const lightTiltLimitDegrees = dragLimitsEnabled ? 70 : 0;
 
     const savedState = {
       exposure, brightness, contrast, size,
@@ -641,10 +644,9 @@ function BivotReact(props) {
       if (val) {
         setCamTiltLimitDegrees(defaultState.camTiltLimitDegrees);
         setLightTiltLimitDegrees(defaultState.lightTiltLimitDegrees);
-      } else {
-        setCamTiltLimitDegrees(0);
-        setLightTiltLimitDegrees(0);
       }
+      setCamTiltLimitDegrees(0);
+      setLightTiltLimitDegrees(0);
     }
     renderFrame(true);
   }
@@ -693,7 +695,7 @@ function BivotReact(props) {
                   value={{
                     rotate: dragControlsRotation,
                     pan: dragControlsPanning,
-                    limits: (camTiltLimitDegrees > 0)
+                    limits: camTiltLimitDegrees
                   }}
                   onChange={updateDragControl}
                 />

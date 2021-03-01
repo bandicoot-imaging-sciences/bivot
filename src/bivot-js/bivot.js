@@ -439,7 +439,7 @@ class bivotJs {
       this.updateBackground();
       this.updateControls(this.controls);
       initialiseZoom(this.state.zoom);
-      updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
+      this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
 
       // Add listeners after finishing config and initialisation
       if (orientPermWanted) {
@@ -932,14 +932,6 @@ class bivotJs {
       _self.updateControls(controls);
       _self.registerEventListener(controls, 'change', controlsChange);
       return controls;
-    }
-
-    function updateCamTiltLimit(controls, limitDeg) {
-      let tiltLimitRadians = Math.PI * limitDeg / 180;
-      controls.minPolarAngle = tiltLimitRadians;
-      controls.maxPolarAngle = Math.PI - tiltLimitRadians;
-      controls.minAzimuthAngle = -Math.PI/2 + tiltLimitRadians;
-      controls.maxAzimuthAngle = +Math.PI/2 - tiltLimitRadians;
     }
 
     function detectGyro(event) {
@@ -1804,11 +1796,14 @@ class bivotJs {
 
   updateControls(controls) {
     if (controls) {
-      if (this.state.dragControlsRotation != null) {
+      if (this.state.dragControlsRotation !== null) {
         controls.enableRotate = this.state.dragControlsRotation;
       }
-      if (this.state.dragControlsPanning != null) {
+      if (this.state.dragControlsPanning !== null) {
         controls.enablePan = this.state.dragControlsPanning;
+      }
+      if (this.state.camTiltLimitDegrees !== null) {
+        this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
       }
     }
   }
@@ -1825,6 +1820,16 @@ class bivotJs {
       this.camera.position.copy(this.camera.position.multiplyScalar(ratio));
     }
     this.requestRender();
+  }
+
+  updateCamTiltLimit(controls, limitDeg) {
+    if (controls) {
+      let tiltLimitRadians = Math.PI * limitDeg / 180;
+      controls.minPolarAngle = tiltLimitRadians;
+      controls.maxPolarAngle = Math.PI - tiltLimitRadians;
+      controls.minAzimuthAngle = -Math.PI/2 + tiltLimitRadians;
+      controls.maxAzimuthAngle = +Math.PI/2 - tiltLimitRadians;
+    }
   }
 
   setFxaaResolution() {
