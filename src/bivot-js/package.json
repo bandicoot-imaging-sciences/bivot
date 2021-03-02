@@ -6,12 +6,14 @@
   "main": "dist/index.js",
   "source": "./index.js",
   "scripts": {
-    "build": "microbundle-crl --format esm --css-modules false"
+    "build": "microbundle-crl --format esm --css-modules false",
+    "deploy:bperf": "aws s3 sync . s3://bis-bivot-dev-dxxjfu/bperf/"
   },
   "dependencies": {},
   "devDependencies": {
     "@bandicoot-imaging-sciences/three": "^0.121.101",
-    "microbundle-crl": "^0.13.11"
+    "microbundle-crl": "^0.13.11",
+    "resize-observer-polyfill": "^1.5.1"
   },
   "eslintConfig": {},
   "browserslist": [
