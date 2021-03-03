@@ -2,7 +2,7 @@
 <!-- https://github.com/bandicoot-imaging-sciences/bivot -->
 <!-- Copyright (C) Bandicoot Imaging Sciences 2020 -->
 
-<!-- Embed example with responsive layout control. -->
+<!-- Embed example with responsive layout control. Uses local dist copy of Bivot. -->
 
 <!DOCTYPE html>
 <html>
@@ -88,8 +88,7 @@
   </script> -->
 <canvas id="bivot-canvas"></canvas>
 <script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.7.1/src/bivot-js/dist/index.js';
-  // const bivSrc = "../dist/index.js";
+  const bivSrc = "../dist/index.js";
   const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
   import(bivSrc).then(module => {const bivot = new module.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});
 </script>
