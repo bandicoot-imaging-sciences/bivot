@@ -27,6 +27,9 @@ Parts adapted from Threejsfundamentals:
 
 'use strict';
 
+// Polyfills
+import ResizeObserver from 'resize-observer-polyfill';
+
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
 import * as THREE from '@bandicoot-imaging-sciences/three';
