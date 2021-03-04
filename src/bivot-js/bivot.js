@@ -229,6 +229,8 @@ class bivotJs {
       scan: 'kimono 2k',
       brdfModel: 1,
       brdfVersion: 2,
+      displacementOffset: 0.0,
+      displacementUnits: 0.0,
       yFlip: true,
       size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
@@ -552,15 +554,29 @@ class bivotJs {
     }
 
     function onLoad() {
+      var use_disp_map = false;
+
       // Run after all textures and the mesh are loaded.
       loadingElem.style.display = 'none';
       _self.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
       _self.uniforms.normalMap.value = brdfTextures.get('normals');
       _self.uniforms.specularMap.value = brdfTextures.get('specular');
+      if (brdfTextures.get('displacement') !== undefined) {
+        use_disp_map = true;
+        _self.uniforms.displacementMap.value = brdfTextures.get('displacement');
+        if (_self.state.displacementUnits) {
+          _self.uniforms.displacementScale.value = _self.state.displacementUnits;
+          _self.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
+        }
+      }
+
       if (_self.config.dual8Bit) {
         _self.uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
         _self.uniforms.normalMapLow.value = brdfTextures.get('normals_low');
         _self.uniforms.specularMapLow.value = brdfTextures.get('specular_low');
+        if (use_disp_map) {
+          _self.uniforms.displacementMapLow.value = brdfTextures.get('displacement_low');
+        }
       }
 
       // Set up the material and attach it to the mesh
@@ -577,6 +593,11 @@ class bivotJs {
         OBJECTSPACE_NORMALMAP: 1,
         // USE_TANGENT: 1,
       };
+      if (use_disp_map) {
+        console.log('Displacement map enabled');
+        material.defines['USE_DISPLACEMENTMAP'] = 1;
+      }
+
       material.extensions.derivatives = true;
       _self.mesh.traverse(function(child) {
         if (child instanceof THREE.Mesh) {
@@ -1218,7 +1239,10 @@ class bivotJs {
 
           // START: work around for https://github.com/mrdoob/three.js/issues/20492
           // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
-          _self.geometry.computeVertexNormals();
+          if (!_self.geometry.attributes.hasOwnProperty('normal')) {
+            console.log('Computing vertex normals...');
+            _self.geometry.computeVertexNormals();
+          }
           // END work around.
           newMeshRotation();
           meshLoaded = true;
@@ -1310,6 +1334,12 @@ class bivotJs {
 
             texsLoaded += 1;
             tryCompleteLoading();
+          },
+          function (xhr) {},
+          function (error) {
+            console.log('Failed to load texture:', key);
+            texsLoaded += 1;
+            tryCompleteLoading();
           }
         );
       }
@@ -1366,6 +1396,9 @@ class bivotJs {
       paths.set('diffuse', {path: textures.basecolor, format: THREE.RGBFormat});
       paths.set('normals', {path: textures.normals, format: THREE.RGBFormat});
       paths.set('specular', {path: textures.specular, format: THREE.RGBFormat});
+      if (textures.displacement) {
+        paths.set('displacement', {path: textures.displacement, format: THREE.RGBFormat});
+      }
 
       let scanState = [];
       const metadata = material.config.renders[_self.scan];
@@ -1455,6 +1488,7 @@ class bivotJs {
         texNames.set('diffuse', 'basecolor');
         texNames.set('normals', 'normals');
         texNames.set('specular', 'roughness-metallic');
+        texNames.set('displacement', 'displacement');
       } else {
         texNames.set('diffuse', 'diffuse');
         texNames.set('normals', 'normals');
@@ -1467,19 +1501,23 @@ class bivotJs {
         paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: THREE.RGBFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
         paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
       } else {
         paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: THREE.RGBFormat});
         if (_self.config.dual8Bit) {
           paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
           paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
           paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
+          paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: THREE.RGBFormat});
         }
       }
 
