@@ -7,7 +7,7 @@
   "source": "./index.js",
   "scripts": {
     "build": "microbundle-crl --format esm --css-modules false",
-    "deploy:bperf": "aws s3 sync . s3://bis-bivot-dev-dxxjfu/bperf/"
+    "deploy:bperf": "aws s3 sync . s3://bis-bivot-dev-dxxjfu/bperf/ --delete"
   },
   "dependencies": {},
   "devDependencies": {
