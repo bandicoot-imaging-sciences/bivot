@@ -32,6 +32,9 @@ export default function getShaders() {
         'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
         'uBrightness': {value: 1.0},
         'uContrast': {value: 0.5},
+        'displacementMap': {value: null},
+        'displacementScale': {value: 0.05},
+        'displacementBias': {value: 0.0},
       }
     ]);
 
@@ -40,6 +43,8 @@ export default function getShaders() {
     varying vec3 vNormal;
     varying vec2 vUv;
     varying vec3 vViewPosition;
+
+    #include <displacementmap_pars_vertex>
 
     void main() {
       vec4 worldPosition = modelMatrix*vec4(position, 1.0);
@@ -54,9 +59,10 @@ export default function getShaders() {
       vNormal = normalize(transformedNormal);
 
       #include <begin_vertex>
+      #include <displacementmap_vertex>
       #include <project_vertex>
 
-      vViewPosition = - mvPosition.xyz;
+      vViewPosition = -mvPosition.xyz;
     }
     `;
 
