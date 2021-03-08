@@ -1389,7 +1389,11 @@ class bivotJs {
       }
       const textures = {};
       for (var key in material.textures) {
-        textures[key] = location + material.textures[key];
+        if (material.textures[key].startsWith('http')) {
+          textures[key] = material.textures[key];
+        } else {
+          textures[key] = location + material.textures[key];
+        }
       }
       return loadScanFromTextures(loadManager, textures, material, keys);
     }
