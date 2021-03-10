@@ -44,6 +44,11 @@ export default function getShaders() {
     varying vec2 vUv;
     varying vec3 vViewPosition;
 
+    #ifdef USE_TANGENT
+      varying vec3 vTangent;
+      varying vec3 vBitangent;
+    #endif
+
     #include <displacementmap_pars_vertex>
 
     void main() {
@@ -57,6 +62,10 @@ export default function getShaders() {
       #include <defaultnormal_vertex>
 
       vNormal = normalize(transformedNormal);
+      #ifdef USE_TANGENT
+        vTangent = normalize(transformedTangent);
+        vBitangent = normalize(cross(vNormal, vTangent) * tangent.w);
+      #endif
 
       #include <begin_vertex>
       #include <displacementmap_vertex>
@@ -220,8 +229,11 @@ export default function getShaders() {
         gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, diffuseColor.a);
       } else {
         vec3 macroNormal = normalize(vNormal);
-        //vec3 mesoNormal = normal;  // Enable for tangent-space normal map
-        vec3 mesoNormal = normalize(normalMatrix * (normalSurface * 2.0 - 1.0));  // For object space normal map
+        #ifdef TANGENTSPACE_NORMALMAP
+          vec3 mesoNormal = vNormal;
+        #else
+          vec3 mesoNormal = normalize(normalMatrix * (normalSurface * 2.0 - 1.0));
+        #endif
         vec3 viewerDirection = normalize(vViewPosition);
         float ndv = max(dot(mesoNormal, viewerDirection), 0.0);
 

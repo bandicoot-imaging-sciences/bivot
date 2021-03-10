@@ -47,6 +47,7 @@ import { AdaptiveToneMappingPass } from '@bandicoot-imaging-sciences/three/examp
 import { FXAAShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/FXAAShader.js';
 import { GammaCorrectionShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { RectAreaLightUniformsLib } from '@bandicoot-imaging-sciences/three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+//import { BufferGeometryUtils } from '@bandicoot-imaging-sciences/three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
@@ -1777,6 +1778,13 @@ class bivotJs {
       geom.computeVertexNormals();
     }
     // END work around.
+
+    // TODO: This only works on a mesh with indexed geometry.
+    //       Our loaded OBJ meshes don't have indexed geometry.
+    // if (_self.useDispMap) {
+    //   console.log('Computing tangents...')
+    //   BufferGeometryUtils.computeTangents(geom);
+    // }
     _self.geometry = geom;
 
     // Set up the material and attach it to the mesh
@@ -1790,12 +1798,16 @@ class bivotJs {
     );
     material.defines = {
       USE_NORMALMAP: 1,
-      OBJECTSPACE_NORMALMAP: 1,
-      // USE_TANGENT: 1,
     };
     if (_self.useDispMap) {
       console.log('Displacement map enabled');
       material.defines['USE_DISPLACEMENTMAP'] = 1;
+      material.defines['TANGENTSPACE_NORMALMAP'] = 1;
+      // TODO: Define when tangents can be computed in the geometry
+      //       (which requires loading a mesh with indexed geometry)
+      //material.defines['USE_TANGENT'] = 1;
+    } else {
+      material.defines['OBJECTSPACE_NORMALMAP'] = 1;
     }
 
     material.extensions.derivatives = true;
