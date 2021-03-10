@@ -230,6 +230,7 @@ class bivotJs {
       lightSpacing: 0.5,
       light45: false,
       scan: 'kimono 2k',
+      meshOverride: false,
       brdfModel: 1,
       brdfVersion: 2,
       displacementOffset: 0.0,
@@ -316,6 +317,9 @@ class bivotJs {
     injectStyle(this.container, styles['bivot-container']);
     injectStyle(this.overlay, styles['bivot-overlay']);
 
+    this.loadingElem = null;
+    this.progressBarElem = null;
+
     this.scans = {};
     this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
@@ -324,7 +328,11 @@ class bivotJs {
     this.camera = null;
     this.lights = null;
     this.lights45 = null;
-    this.mesh = null;
+    this.mesh = null;           // The mesh object currently in use
+    this.meshPathUsed = false;  // The path of the mesh object currently in use
+    this.meshOrig = null;       // Original mesh provided in mesh textures
+    this.meshCache = {};        // Cache of loaded mesh objects
+    this.useDispMap = null;     // True if displacement map is in use
     this.renderer = null;
     this.fxaaPass = null;
     this.toneMappingPass = null;
@@ -366,8 +374,6 @@ class bivotJs {
     let brdfTextures = null;
     let gui = null;
 
-    let loadingElem = null;
-    let progressBarElem = null;
     let subtitleElem = null;
     let subtitleTextElem = null;
 
@@ -512,7 +518,7 @@ class bivotJs {
         content.appendChild(img);
         injectStyle(content, styles['bivot-loading-image']);
         content.id = 'bivotLoadingImage';
-        _self.overlay.insertBefore(content, loadingElem);
+        _self.overlay.insertBefore(content, _self.loadingElem);
         _self.loadingDomElement = content;
       }
     }
@@ -557,57 +563,40 @@ class bivotJs {
     }
 
     function onLoad() {
-      var use_disp_map = false;
+      unsetLoadingImage();
 
-      // Run after all textures and the mesh are loaded.
-      loadingElem.style.display = 'none';
+      // Run post-texture-load operations
+      _self.loadingElem.style.display = 'none';
       _self.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
       _self.uniforms.normalMap.value = brdfTextures.get('normals');
       _self.uniforms.specularMap.value = brdfTextures.get('specular');
       if (brdfTextures.get('displacement') !== undefined) {
-        use_disp_map = true;
+        _self.useDispMap = true;
         _self.uniforms.displacementMap.value = brdfTextures.get('displacement');
         if (_self.state.displacementUnits) {
           _self.uniforms.displacementScale.value = _self.state.displacementUnits;
           _self.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
         }
+      } else {
+        _self.useDispMap = false;
       }
 
       if (_self.config.dual8Bit) {
         _self.uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
         _self.uniforms.normalMapLow.value = brdfTextures.get('normals_low');
         _self.uniforms.specularMapLow.value = brdfTextures.get('specular_low');
-        if (use_disp_map) {
+        if (_self.useDispMap) {
           _self.uniforms.displacementMapLow.value = brdfTextures.get('displacement_low');
         }
       }
 
-      // Set up the material and attach it to the mesh
-      let material = new THREE.ShaderMaterial(
-        {
-          fragmentShader: _self.fragmentShader,
-          vertexShader: _self.vertexShader,
-          uniforms: _self.uniforms,
-          lights: true
-        }
-      );
-      material.defines = {
-        USE_NORMALMAP: 1,
-        OBJECTSPACE_NORMALMAP: 1,
-        // USE_TANGENT: 1,
-      };
-      if (use_disp_map) {
-        console.log('Displacement map enabled');
-        material.defines['USE_DISPLACEMENTMAP'] = 1;
-      }
+      // Run post-mesh-load operations
+      _self.activateLoadedMesh(_self);
 
-      material.extensions.derivatives = true;
-      _self.mesh.traverse(function(child) {
-        if (child instanceof THREE.Mesh) {
-          child.material = material;
-        }
-      });
-      _self.scene.add(_self.mesh);
+      // Call loading complete callback, if provided
+      if (_self.opts.loadingCompleteCallback) {
+        _self.opts.loadingCompleteCallback();
+      }
 
       // The deviceorientation event has been restricted for privacy reasons.
       // A work around on iOS >= 12.2 is for the user to enable it in iOS Settings > Safari (off by default).
@@ -619,9 +608,6 @@ class bivotJs {
       }
       firstRenderLoaded = true;
       baselineTiltSet = false;
-
-      _self.updateLightingGrid();
-      _self.requestRender();
     };
 
     // Merge state from three input state objects (first, second, third in precedence order) into the supplied
@@ -877,8 +863,8 @@ class bivotJs {
         overlay.appendChild(subtitleDiv);
         subtitleDiv.appendChild(subtitleTextP);
 
-        loadingElem = loadingDiv;
-        progressBarElem = progressBarDiv;
+        _self.loadingElem = loadingDiv;
+        _self.progressBarElem = progressBarDiv;
         subtitleElem = subtitleDiv;
         subtitleTextElem = subtitleTextP;
 
@@ -1208,56 +1194,8 @@ class bivotJs {
       }
     }
 
-    function newMeshRotation() {
-      _self.state._meshRotateZDegreesPrevious = 0;
-      _self.updateMeshRotation();
-    }
-
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
-      var meshLoaded = false;
-      var texsLoaded = 0;
-
-      function tryCompleteLoading() {
-        if (texsLoaded == brdfTexturePaths.size && meshLoaded) {
-          unsetLoadingImage();
-          if (_self.opts.loadingCompleteCallback) {
-            _self.opts.loadingCompleteCallback();
-          }
-        }
-      }
-
       updateControlPanel(gui);
-      var objLoader = new OBJLoader(loadManager);
-      objLoader.load(meshPath,
-        function(object) {
-          console.log('Loaded mesh object:', meshPath);
-          _self.mesh = object;
-
-          _self.mesh.traverse(function(child) {
-            if (child instanceof THREE.Mesh) {
-              _self.geometry = child.geometry;
-            }
-          });
-          _self.geometry.computeBoundingBox();
-
-          // START: work around for https://github.com/mrdoob/three.js/issues/20492
-          // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
-          if (!_self.geometry.attributes.hasOwnProperty('normal')) {
-            console.log('Computing vertex normals...');
-            _self.geometry.computeVertexNormals();
-          }
-          // END work around.
-          newMeshRotation();
-          meshLoaded = true;
-          tryCompleteLoading();
-        },
-        function (xhr) {},
-        function (error) {
-          console.log('Mesh unavailable; using planar geometry');
-          _self.mesh = new THREE.Mesh(getPlaneGeometry());
-          newMeshRotation();
-        }
-      );
 
       brdfTextures = new Map();
 
@@ -1332,36 +1270,32 @@ class bivotJs {
             // iOS does not support WebGL2
             // Textures need to be square powers of 2 for WebGL1
             // texture.repeat.set(matxs/padxs, matxs/padys);
-            console.log('Loaded:', key, value.path);
+            //console.log('Loaded:', key, value.path);
             brdfTextures.set(key, texture);
-
-            texsLoaded += 1;
-            tryCompleteLoading();
           },
           function (xhr) {},
           function (error) {
             console.log('Failed to load texture:', key);
-            texsLoaded += 1;
-            tryCompleteLoading();
           }
         );
       }
+
+      _self.meshOrig = meshPath;
+      // Load the override mesh if set, otherwise use given textures mesh
+      if (_self.state.meshOverride) {
+        console.log('Using meshOverride:', _self.state.meshOverride);
+        meshPath = _self.state.meshOverride;
+      }
+      _self.loadMesh(_self, meshPath, loadManager);
     }
 
     function loadScan() {
-      if (_self.mesh != null) {
-        _self.scene.remove(_self.mesh); // Remove old mesh from scene and clean up memory
-        _self.mesh.traverse(function(child) {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose();
-            child.material.dispose();
-          }
-        });
-      }
+      _self.deactivateMesh();
 
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoad;
       loadManager.onProgress = onProgress;
+      loadManager.onStart = onStart;
 
       // List of keys to merge between the 3 states.
       const keys = Object.keys(_self.config.initialState);
@@ -1531,20 +1465,17 @@ class bivotJs {
       loadScansImpl(paths, texDir + 'brdf-mesh.obj', loadManager);
     }
 
-    function onProgress(urlOfLastItemLoaded, itemsLoaded, itemsTotal) {
-      const progress = itemsLoaded / itemsTotal;
-      progressBarElem.style.transform = `scaleX(${progress})`;
+    function onStart(url, itemsLoaded, itemsTotal) {
+      //console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
     };
 
-    function getPlaneGeometry() {
-      const dpi = 300;
-      const pixelsPerMetre = dpi / 0.0254;
-      const textureWidthPixels = 2048;
-      const textureHeightPixels = 2048;
-      const planeWidth = textureWidthPixels / pixelsPerMetre;
-      const planeHeight = textureHeightPixels / pixelsPerMetre;
-      return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
-    }
+    function onProgress(url, itemsLoaded, itemsTotal) {
+      if (itemsLoaded > 0) {
+        console.log(`${itemsLoaded}/${itemsTotal} Loaded ${url}`);
+      }
+      const progress = itemsLoaded / itemsTotal;
+      _self.progressBarElem.style.transform = `scaleX(${progress})`;
+    };
 
     function fieldOfView(focalLength, sensorHeight) {
       // Focal length is in mm for easier GUI control.
@@ -1755,6 +1686,127 @@ class bivotJs {
     return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
   }
 
+  updateMesh() {
+    var meshPath = this.state.meshOverride;
+    // Only update the mesh if the new path is different to the current path in use
+    if (this.meshPathUsed !== meshPath) {
+      if (meshPath === false) {
+        // Default mesh requested; use original mesh in textures list
+        meshPath = this.meshOrig;
+      }
+
+      const _self = this;
+      function onLoadUpdateMesh() {
+        // Hide progress bar and activate the loaded mesh
+        _self.loadingElem.style.display = 'none';
+        _self.activateLoadedMesh(_self);
+        _self.meshPathUsed = meshPath;
+      };
+      // Reset and show progress bar, then load the mesh
+      _self.loadingElem.style.display = 'flex';
+      _self.progressBarElem.style.transform = 'scaleX(0)';
+      const loadManager = new THREE.LoadingManager();
+      loadManager.onLoad = onLoadUpdateMesh;
+      this.loadMesh(this, meshPath, loadManager);
+    }
+  }
+
+  loadMesh(_self, meshPath, loadManager) {
+    if (_self.meshCache.hasOwnProperty(meshPath)) {
+      // Mesh cache hit.  Switch to the requested mesh which is already loaded.
+      _self.deactivateMesh();
+      _self.mesh = _self.meshCache[meshPath];
+      loadManager.onLoad();
+    } else {
+      // Mesh cache miss.  Load the mesh from the given path.
+      var objLoader = new OBJLoader(loadManager);
+      objLoader.load(meshPath,
+        function(object) {
+          _self.deactivateMesh();
+          _self.mesh = null;
+          object.traverse(function(child) {
+            if (child instanceof THREE.Mesh) {
+              _self.mesh = child;
+            }
+          });
+          _self.meshCache[meshPath] = _self.mesh;  // Add to mesh cache
+        },
+        function (xhr) {},
+        function (error) {
+          console.log('Error loading mesh ', meshPath);
+        }
+      );
+    }
+  }
+
+  deactivateMesh() {
+    if (this.mesh != null) {
+      this.scene.remove(this.mesh); // Remove old mesh from scene and clean up memory
+      this.mesh.traverse(
+        function(child) {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            child.material.dispose();
+          }
+        }
+      );
+    }
+  }
+
+  activateLoadedMesh(_self) {
+    // Deactivate existing mesh
+    _self.deactivateMesh();
+
+    if (_self.mesh === null) {
+      console.log('Mesh unavailable; using planar geometry');
+      _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
+    }
+
+    // Reset mesh rotation
+    _self.state._meshRotateZDegreesPrevious = 0;
+    _self.updateMeshRotation();
+
+    var geom = _self.mesh.geometry;
+    geom.computeBoundingBox();
+    // START: work around for https://github.com/mrdoob/three.js/issues/20492
+    // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
+    if (!geom.attributes.hasOwnProperty('normal')) {
+      console.log('Computing vertex normals...');
+      geom.computeVertexNormals();
+    }
+    // END work around.
+    _self.geometry = geom;
+
+    // Set up the material and attach it to the mesh
+    let material = new THREE.ShaderMaterial(
+      {
+        fragmentShader: _self.fragmentShader,
+        vertexShader: _self.vertexShader,
+        uniforms: _self.uniforms,
+        lights: true
+      }
+    );
+    material.defines = {
+      USE_NORMALMAP: 1,
+      OBJECTSPACE_NORMALMAP: 1,
+      // USE_TANGENT: 1,
+    };
+    if (_self.useDispMap) {
+      console.log('Displacement map enabled');
+      material.defines['USE_DISPLACEMENTMAP'] = 1;
+    }
+
+    material.extensions.derivatives = true;
+    _self.mesh.traverse(function(child) {
+      if (child instanceof THREE.Mesh) {
+        child.material = material;
+      }
+    });
+    _self.scene.add(_self.mesh);
+
+    _self.updateLightingGrid();
+    _self.requestRender();
+  }
 
   updateMeshRotation() {
     if (this.mesh) {
@@ -1877,6 +1929,16 @@ class bivotJs {
     }
   }
 
+  getPlaneGeometry() {
+    const dpi = 300;
+    const pixelsPerMetre = dpi / 0.0254;
+    const textureWidthPixels = 2048;
+    const textureHeightPixels = 2048;
+    const planeWidth = textureWidthPixels / pixelsPerMetre;
+    const planeHeight = textureHeightPixels / pixelsPerMetre;
+    return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+  }
+
   setFxaaResolution() {
     var fxaaUniforms = this.fxaaPass.material.uniforms;
     const pixelRatio = this.renderer.getPixelRatio();
@@ -1921,6 +1983,7 @@ class bivotJs {
         this.state.dirty = false;
         this.updateBackground();
         this.updateLightingGrid();
+        this.updateMesh();
         this.updateMeshRotation();
         this.updateCanvas();
         this.updateZoom();
@@ -1999,14 +2062,15 @@ class bivotJs {
   }
 
   getDiag() {
-    const box = this.geometry.boundingBox;
-    if (box) {
-      const x = box.max.x - box.min.x;
-      const y = box.max.y - box.min.y;
-      return Math.sqrt(x * x + y * y);
-    } else {
-      return 0;
+    if (this.geometry) {
+      const box = this.geometry.boundingBox;
+      if (box) {
+        const x = box.max.x - box.min.x;
+        const y = box.max.y - box.min.y;
+        return Math.sqrt(x * x + y * y);
+      }
     }
+    return 0;
   }
 
   registerEventListener(object, type, listener, ...args) {
