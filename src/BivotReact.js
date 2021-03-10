@@ -663,8 +663,10 @@ function BivotReact(props) {
   }
 
   function updateMeshOverride(path) {
-    setMeshOverride(path);
-    renderFrame(true);
+    if (meshOverride !== path) {
+      setMeshOverride(path);
+      renderFrame(true);
+    }
   }
 
   function onEnterFullScreen() {
