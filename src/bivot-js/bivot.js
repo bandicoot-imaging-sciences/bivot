@@ -1687,20 +1687,21 @@ class bivotJs {
   }
 
   updateMesh() {
-    var meshPath = this.state.meshOverride;
+    var meshPath;
+    if (this.state.meshOverride !== false) {
+      meshPath = this.state.meshOverride;
+    } else {
+      // Default mesh requested; use original mesh in textures list
+      meshPath = this.meshOrig;
+    }
+
     // Only update the mesh if the new path is different to the current path in use
     if (this.meshPathUsed !== meshPath) {
-      if (meshPath === false) {
-        // Default mesh requested; use original mesh in textures list
-        meshPath = this.meshOrig;
-      }
-
       const _self = this;
       function onLoadUpdateMesh() {
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
         _self.activateLoadedMesh(_self);
-        _self.meshPathUsed = meshPath;
       };
       // Reset and show progress bar, then load the mesh
       _self.loadingElem.style.display = 'flex';
@@ -1712,6 +1713,7 @@ class bivotJs {
   }
 
   loadMesh(_self, meshPath, loadManager) {
+    _self.meshPathUsed = meshPath;
     if (_self.meshCache.hasOwnProperty(meshPath)) {
       // Mesh cache hit.  Switch to the requested mesh which is already loaded.
       _self.deactivateMesh();
