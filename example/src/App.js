@@ -47,6 +47,11 @@ function App(props) {
     setshowEditor(!showEditor);
   }
 
+  const meshList = {
+    'Default': false,
+    'Draped cloth': 'https://hosted.bandicootimaging.com.au/assets/mesh/drape-sphere_inner-square_90k.obj',
+  };
+
   return (
     <>
       <Container maxWidth='sm' className={clsx(classes.testStyle, className)}>
@@ -82,6 +87,7 @@ function App(props) {
             responsive={false}
             showEditor={showEditor}
             showAdvancedControls={true}
+            meshChoices={meshList}
           />
         </Grid>
         <Grid item xs={12}><Typography>Responsive = true</Typography></Grid>

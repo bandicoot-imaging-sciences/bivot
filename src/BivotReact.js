@@ -18,6 +18,7 @@ import LightColorControl from './controls/LightColorControl';
 import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 import DragControl from './controls/DragControl';
+import MeshOverrideControl from './controls/MeshOverrideControl';
 
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
@@ -132,6 +133,12 @@ function BivotReact(props) {
     // the "save" operation of the editor.
     // (Currently only supported for internal use)
     onSaveScreenshot,
+
+    // If supplied, a list of absolute paths to OBJ mesh files over which the
+    // textures can be rendered.
+    // (Currently only supported for internal use)
+    meshChoices,
+
   } = props;
 
   const canvasRef = useRef();
@@ -160,6 +167,7 @@ function BivotReact(props) {
     backgroundColor: '#FFFFFF',
     dragControlsRotation: false,
     dragControlsPanning: false,
+    meshOverride: false,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -190,6 +198,7 @@ function BivotReact(props) {
     backgroundColor: '#FFFFFF',
     dragControlsRotation: false,
     dragControlsPanning: false,
+    meshOverride: false,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -241,6 +250,7 @@ function BivotReact(props) {
   const [dragControlsPanning, setDragControlsPanning] = useState(state.dragControlsPanning);
   const [camTiltLimitDegrees, setCamTiltLimitDegrees] = useState(state.camTiltLimitDegrees);
   const [lightTiltLimitDegrees, setLightTiltLimitDegrees] = useState(state.lightTiltLimitDegrees);
+  const [meshOverride, setMeshOverride] = useState(state.meshOverride);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -259,6 +269,7 @@ function BivotReact(props) {
   state.dragControlsPanning = dragControlsPanning;
   state.camTiltLimitDegrees = camTiltLimitDegrees;
   state.lightTiltLimitDegrees = lightTiltLimitDegrees;
+  state.meshOverride = meshOverride;
 
   async function onLoad() {
     loadBivot();
@@ -447,7 +458,8 @@ function BivotReact(props) {
       dragControlsRotation,
       dragControlsPanning,
       camTiltLimitDegrees,
-      lightTiltLimitDegrees
+      lightTiltLimitDegrees,
+      meshOverride
     } = stateFields;
 
     updateExposure(exposure);
@@ -464,6 +476,7 @@ function BivotReact(props) {
     updateDragControl('rotate', dragControlsRotation);
     updateDragControl('pan', dragControlsPanning);
     updateDragControl('limits', camTiltLimitDegrees > 0);
+    updateMeshOverride(meshOverride);
 
     if (bivot.current) {
       renderFrame(true);
@@ -512,7 +525,7 @@ function BivotReact(props) {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
-      bloom,
+      bloom, meshOverride,
     }
 
     config.state = { ...config.state, ...savedState };
@@ -651,6 +664,13 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function updateMeshOverride(path) {
+    if (meshOverride !== path) {
+      setMeshOverride(path);
+      renderFrame(true);
+    }
+  }
+
   function onEnterFullScreen() {
     savedSize.current = size;
     setSize([window.screen.width, window.screen.height]);
@@ -691,14 +711,23 @@ function BivotReact(props) {
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
               {showAdvancedControls && (
-                <DragControl
-                  value={{
-                    rotate: dragControlsRotation,
-                    pan: dragControlsPanning,
-                    limits: (camTiltLimitDegrees > 0)
-                  }}
-                  onChange={updateDragControl}
-                />
+                <React.Fragment>
+                  <DragControl
+                    value={{
+                      rotate: dragControlsRotation,
+                      pan: dragControlsPanning,
+                      limits: (camTiltLimitDegrees > 0)
+                    }}
+                    onChange={updateDragControl}
+                  />
+                  {meshChoices && (
+                    <MeshOverrideControl
+                      overrides={meshChoices}
+                      value={meshOverride}
+                      onChange={updateMeshOverride}
+                    />
+                  )}
+                </React.Fragment>
               )}
               <Grid container spacing={2}>
                 <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
