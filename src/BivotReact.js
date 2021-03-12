@@ -648,10 +648,9 @@ function BivotReact(props) {
   function updateDragControl(field, val) {
     if (field == 'rotate') {
       setDragControlsRotation(val);
-      state.camTiltWithMousePos = (val ? defaultState.camTiltWithMousePos : 0.0);
+      state.camTiltWithMousePos = (val ? 0.0: defaultState.camTiltWithMousePos);
     } else if (field == 'pan') {
       setDragControlsPanning(val);
-      state.lightTiltWithMousePos = (val ? defaultState.lightTiltWithMousePos : 0.0);
     } else if (field == 'limits') {
       if (val) {
         setCamTiltLimitDegrees(defaultState.camTiltLimitDegrees);
