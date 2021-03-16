@@ -50,7 +50,7 @@ const styles = {
 };
 
 var zoomIndex = -1; // Index of the current zoom slider being moved
-var zoomInitialVal = [0, 0, 0]; // [min, initial, max] zoom at the beginning of the current slider move
+var zoomInitialVal = [0, 0]; // [min, max] zoom at the beginning of the current slider move
 
 function BivotReact(props) {
   //
@@ -161,7 +161,7 @@ function BivotReact(props) {
     meshRotateZDegrees: 0,
     size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
-    zoom: [0.2, 0.3, 0.36],
+    zoom: [0.2, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
@@ -192,7 +192,7 @@ function BivotReact(props) {
     meshRotateZDegrees: 0,
     size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
-    zoom: [0.2, 0.3, 0.36],
+    zoom: [0.2, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
@@ -452,6 +452,7 @@ function BivotReact(props) {
       areaLightWidth,
       //areaLightHeight,
       zoom,
+      currentZoom,
       lightColor,
       backgroundColor,
       autoRotatePeriodMs,
@@ -469,7 +470,7 @@ function BivotReact(props) {
     updateRotation(meshRotateZDegrees);
     updateSize(size);
     setZoom(zoom);
-    setCurrentZoom(zoom[1]);
+    setCurrentZoom(currentZoom);
     updateLightColor(rgbArrayToColorObj(lightColor));
     updateBackgroundColor({ hex: backgroundColor });
     updateAutoRotate(autoRotatePeriodMs);
@@ -518,7 +519,7 @@ function BivotReact(props) {
 
     const savedState = {
       exposure, brightness, contrast, size,
-      zoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
+      zoom, currentZoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,

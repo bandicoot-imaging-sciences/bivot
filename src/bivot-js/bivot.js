@@ -258,7 +258,8 @@ class bivotJs {
       autoRotateFps: 30,
       autoRotateCamFactor: 0.5,
       autoRotateLightFactor: 0.9,
-      // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
+      currentZoom: 0.9,
+      // zoom: [0.4, 2.0],  // No default, to allow legacy galleries to keep working
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
@@ -450,7 +451,7 @@ class bivotJs {
       this.updateCanvas();
       this.updateBackground();
       this.updateControls(this.controls);
-      initialiseZoom(this.state.zoom);
+      this.updateZoom();
       this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
 
       // Add listeners after finishing config and initialisation
@@ -530,6 +531,30 @@ class bivotJs {
       }
     }
 
+    function convertLegacyState(scans) {
+      Object.keys(scans).forEach(key => {
+        var stateDict = null;
+        if (scans[key].state) {
+          stateDict = scans[key].state;
+        } else if (
+          scans[key].config &&
+          scans[key].config.renders &&
+          scans[key].config.renders[key] &&
+          scans[key].config.renders[key].state
+        ) {
+          stateDict = scans[key].config.renders[key].state;
+        }
+
+        // Convert legacy 3-element zoom array to two elements
+        if (stateDict !== null && stateDict.zoom) {
+          if (stateDict.zoom.length == 3) {
+            stateDict.currentZoom = stateDict.zoom[1];
+            stateDict.zoom = [stateDict.zoom[0], stateDict.zoom[2]];
+          }
+        }
+      });
+    }
+
     async function initConfig() {
       if (_self.opts.materialSet) {
         _self.scans = await loadMaterialSet(_self.opts.materialSet);
@@ -544,6 +569,7 @@ class bivotJs {
         }
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
+      convertLegacyState(_self.scans);
       if (_self.opts.hasOwnProperty('show')) {
         var s = _self.opts.show
         const n = Number(s)
@@ -679,9 +705,9 @@ class bivotJs {
               bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
               render['state'].zoom = [
                 bivotMatRender['controlsMinDistance'],
-                bivotMatRender['cameraPositionZ'],
                 bivotMatRender['controlsMaxDistance']
               ];
+              render['state'].currentZoom = bivotMatRender['cameraPositionZ'];
             }
 
             // Finalise the state structures
@@ -903,13 +929,6 @@ class bivotJs {
       var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
       camera.position.set(0, 0, initZ);
       return camera;
-    }
-
-    function initialiseZoom(zoomArray) {
-      if (zoomArray) {
-        _self.state.currentZoom = zoomArray[1];
-        _self.updateZoom();
-      }
     }
 
     function controlsChange(event) {
@@ -1514,7 +1533,6 @@ class bivotJs {
     }
   }
 
-
   initialiseCanvas(canvas, width, height) {
     var w, h;
 
@@ -1922,7 +1940,7 @@ class bivotJs {
   updateZoom() {
     if (this.controls) {
       this.controls.minDistance = this.state.zoom[0];
-      this.controls.maxDistance = this.state.zoom[2];
+      this.controls.maxDistance = this.state.zoom[1];
     }
 
     if (this.camera) {
