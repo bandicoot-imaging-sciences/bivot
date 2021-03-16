@@ -4,8 +4,9 @@ import { Grid, Typography, Slider, Tooltip } from '@material-ui/core';
 import { Mapper } from '../utils/mappingLib';
 
 function ZoomControl({ value, onChange, onChangeCommitted, max }) {
-  // value should be an array of 2 members:
+  // value should be an array of 3 members:
   // - min zoom
+  // - [unused]
   // - max zoom
   const [mapper, setMapper] = useState(null);
 

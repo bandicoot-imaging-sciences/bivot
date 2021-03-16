@@ -50,7 +50,7 @@ const styles = {
 };
 
 var zoomIndex = -1; // Index of the current zoom slider being moved
-var zoomInitialVal = [0, 0]; // [min, max] zoom at the beginning of the current slider move
+var zoomInitialVal = [0, 0, 0]; // [min, unused, max] zoom at the beginning of the current slider move
 
 function BivotReact(props) {
   //
@@ -161,7 +161,7 @@ function BivotReact(props) {
     meshRotateZDegrees: 0,
     size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
-    zoom: [0.2, 0.36],
+    zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
@@ -192,7 +192,7 @@ function BivotReact(props) {
     meshRotateZDegrees: 0,
     size: [792, 528],
     dirty: false, // For bivot internal only, to know when to update render
-    zoom: [0.2, 0.36],
+    zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
     backgroundColor: '#FFFFFF',
@@ -519,7 +519,8 @@ function BivotReact(props) {
 
     const savedState = {
       exposure, brightness, contrast, size,
-      zoom, currentZoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
+      zoom: [zoom[0], currentZoom, zoom[2]], // Backwards compatibility for deprecated middle zoom value
+      currentZoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
@@ -596,28 +597,32 @@ function BivotReact(props) {
   }
 
   function updateZoom(val) {
-    if (zoomIndex == -1) {
-      const index = getDelta(zoom, val);
+    var index = getDelta(zoom, val);
+    if (zoomIndex === -1) {
       if (index >= 0) {
-        // Set the index being moved
         zoomIndex = index;
         zoomInitialVal = val.slice();
       }
+    } else if (zoomIndex >= 1 && index >= 1) {
+      // Knobs 2 and 3 are interchangeable (to keep them in tandom)
+      zoomIndex = index;
     }
 
-    if (zoomIndex != -1) {
-      // Don't let any slider move except the active one
-      for (i = 0; i < val.length; i++) {
-        if (i != zoomIndex) {
-          val[i] = zoomInitialVal[i];
-        }
-      }
-      // Don't let the active slider overtake an adjacent slider
-      if (zoomIndex < val.length - 1) {
-        val[zoomIndex] = Math.min(val[zoomIndex], val[zoomIndex + 1]);
-      }
-      if (zoomIndex > 0) {
-        val[zoomIndex] = Math.max(val[zoomIndex], val[zoomIndex - 1]);
+    if (zoomIndex !== -1) {
+      // Don't let the min and max sliders pass through each other.
+      // Keep other slider values the same.  Keep 1 and 2 in tandem.
+      if (zoomIndex === 0) {
+        val[0] = Math.min(val[0], val[2]);
+        val[1] = zoomInitialVal[1];
+        val[2] = zoomInitialVal[2];
+      } else if (zoomIndex === 1) {
+        val[1] = Math.max(val[1], val[0]);
+        val[2] = val[1]
+        val[0] = zoomInitialVal[0];
+      } else if (zoomIndex === 2) {
+        val[2] = Math.max(val[2], val[0]);
+        val[1] = val[2]
+        val[0] = zoomInitialVal[0];
       }
 
       setZoom(val);

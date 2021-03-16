@@ -259,7 +259,7 @@ class bivotJs {
       autoRotateCamFactor: 0.5,
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
-      // zoom: [0.4, 2.0],  // No default, to allow legacy galleries to keep working
+      // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
@@ -545,12 +545,9 @@ class bivotJs {
           stateDict = scans[key].config.renders[key].state;
         }
 
-        // Convert legacy 3-element zoom array to two elements
+        // Extract initial zoom value from 3-element zoom array
         if (stateDict !== null && stateDict.zoom) {
-          if (stateDict.zoom.length == 3) {
-            stateDict.currentZoom = stateDict.zoom[1];
-            stateDict.zoom = [stateDict.zoom[0], stateDict.zoom[2]];
-          }
+          stateDict.currentZoom = stateDict.zoom[1];
         }
       });
     }
@@ -1940,7 +1937,7 @@ class bivotJs {
   updateZoom() {
     if (this.controls) {
       this.controls.minDistance = this.state.zoom[0];
-      this.controls.maxDistance = this.state.zoom[1];
+      this.controls.maxDistance = this.state.zoom[2];
     }
 
     if (this.camera) {
