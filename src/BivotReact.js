@@ -479,6 +479,9 @@ function BivotReact(props) {
     updateDragControl('limits', camTiltLimitDegrees > 0);
     updateMeshOverride(meshOverride);
 
+    // Update initial zoom value after loading state
+    zoomInitialVal = zoom;
+
     if (bivot.current) {
       renderFrame(true);
     }

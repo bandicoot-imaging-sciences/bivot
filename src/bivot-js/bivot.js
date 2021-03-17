@@ -548,6 +548,7 @@ class bivotJs {
         // Extract initial zoom value from 3-element zoom array
         if (stateDict !== null && stateDict.zoom) {
           stateDict.currentZoom = stateDict.zoom[1];
+          stateDict.zoom[1] = stateDict.zoom[2];
         }
       });
     }
