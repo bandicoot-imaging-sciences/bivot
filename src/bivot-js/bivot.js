@@ -260,6 +260,7 @@ class bivotJs {
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
+      transform: null,
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
@@ -1781,6 +1782,15 @@ class bivotJs {
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
     }
 
+    if (_self.state.transform && _self.mesh) {
+      var m4 = new THREE.Matrix4();
+      m4.fromArray(_self.state.transform);
+      m4.transpose();
+      _self.mesh.matrix.matrixAutoUpdate = false;
+      _self.mesh.applyMatrix4(m4);
+      console.log('Object transform applied: ', _self.mesh.matrix);
+    }
+
     // Reset mesh rotation
     _self.state._meshRotateZDegreesPrevious = 0;
     _self.updateMeshRotation();
@@ -1832,8 +1842,8 @@ class bivotJs {
         child.material = material;
       }
     });
-    _self.scene.add(_self.mesh);
 
+    _self.scene.add(_self.mesh);
     _self.updateLightingGrid();
     _self.requestRender();
   }
