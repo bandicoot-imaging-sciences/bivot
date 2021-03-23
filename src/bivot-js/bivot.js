@@ -170,11 +170,6 @@ class bivotJs {
       NONE: 'none',
     };
 
-    const { uniforms, vertexShader, fragmentShader } = getShaders();
-    this.uniforms = uniforms;
-    this.vertexShader = vertexShader;
-    this.fragmentShader = fragmentShader;
-
     let defaultOptions = {
       canvasID: 'bivot-canvas',
       configPath: 'bivot-config.json',
@@ -325,17 +320,17 @@ class bivotJs {
 
     this.scans = {};
     this.materials = {};
+    this.renderObjs = [];
+    this.loadReceptor = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
     this.renderRequested = false;
     this.scene = new THREE.Scene();
     this.camera = null;
     this.lights = null;
     this.lights45 = null;
-    this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
     this.meshOrig = null;       // Original mesh provided in mesh textures
     this.meshCache = {};        // Cache of loaded mesh objects
-    this.useDispMap = null;     // True if displacement map is in use
     this.renderer = null;
     this.fxaaPass = null;
     this.toneMappingPass = null;
@@ -374,7 +369,6 @@ class bivotJs {
     let baselineTiltSet = false;
     let loader = null;
     let firstRenderLoaded = false;
-    let brdfTextures = null;
     let gui = null;
 
     let subtitleElem = null;
@@ -443,7 +437,7 @@ class bivotJs {
       }
       this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
 
-      loadScan();
+      loadObjects();
 
       this.renderer = this.initialiseRenderer();
       RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
@@ -483,6 +477,7 @@ class bivotJs {
     }
 
     function setLoadingImage() {
+      return; // !!!!
       if (!_self.opts.materialSet && !_self.opts.thumbnail) {
         return; // No loading image available
       }
@@ -590,34 +585,52 @@ class bivotJs {
 
     function onLoad() {
       unsetLoadingImage();
-
-      // Run post-texture-load operations
       _self.loadingElem.style.display = 'none';
-      _self.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
-      _self.uniforms.normalMap.value = brdfTextures.get('normals');
-      _self.uniforms.specularMap.value = brdfTextures.get('specular');
-      if (brdfTextures.get('displacement') !== undefined) {
-        _self.useDispMap = true;
-        _self.uniforms.displacementMap.value = brdfTextures.get('displacement');
-        if (_self.state.displacementUnits) {
-          _self.uniforms.displacementScale.value = _self.state.displacementUnits;
-          _self.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
-        }
-      } else {
-        _self.useDispMap = false;
-      }
 
-      if (_self.config.dual8Bit) {
-        _self.uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
-        _self.uniforms.normalMapLow.value = brdfTextures.get('normals_low');
-        _self.uniforms.specularMapLow.value = brdfTextures.get('specular_low');
-        if (_self.useDispMap) {
-          _self.uniforms.displacementMapLow.value = brdfTextures.get('displacement_low');
+      for (const [name, dict] of Object.entries(_self.loadReceptor)) {
+        const { loadedMesh, transform, displacementUnits, brdfTextures } = dict;
+        var useDispMap;
+        if (brdfTextures.get('displacement') !== undefined) {
+          useDispMap = true;
         }
-      }
 
-      // Run post-mesh-load operations
-      _self.activateLoadedMesh(_self);
+        var object = {};
+        const { uniforms, vertexShader, fragmentShader } = getShaders();
+        object.uniforms = uniforms;
+        object.vertexShader = vertexShader;
+        object.fragmentShader = fragmentShader;
+
+        // Run post-mesh-load operations
+        const { mesh, geom } = _self.activateLoadedMesh(_self, loadedMesh, transform);
+        object.mesh = mesh;
+        object.geometry = geom;
+        _self.setMeshMaterial(object, useDispMap);
+        console.log('adding mesh to scene:', mesh)
+        _self.scene.add(mesh);
+
+        // Run post-texture-load operations
+        object.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
+        object.uniforms.normalMap.value = brdfTextures.get('normals');
+        object.uniforms.specularMap.value = brdfTextures.get('specular');
+        if (useDispMap) {
+          object.uniforms.displacementMap.value = brdfTextures.get('displacement');
+          if (displacementUnits) {
+            object.uniforms.displacementScale.value = displacementUnits;
+            object.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
+          }
+        }
+
+        if (_self.config.dual8Bit) {
+          object.uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
+          object.uniforms.normalMapLow.value = brdfTextures.get('normals_low');
+          object.uniforms.specularMapLow.value = brdfTextures.get('specular_low');
+          if (useDispMap) {
+            object.uniforms.displacementMapLow.value = brdfTextures.get('displacement_low');
+          }
+        }
+
+        _self.renderObjs.push(object); // !!!!
+      }
 
       // Call loading complete callback, if provided
       if (_self.opts.loadingCompleteCallback) {
@@ -634,6 +647,9 @@ class bivotJs {
       }
       firstRenderLoaded = true;
       baselineTiltSet = false;
+
+      _self.updateLightingGrid();
+      _self.requestRender();
     };
 
     // Merge state from three input state objects (first, second, third in precedence order) into the supplied
@@ -1213,10 +1229,10 @@ class bivotJs {
       }
     }
 
-    function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
+    function loadScansImpl(name, brdfTexturePaths, meshPath, loadManager) {
       updateControlPanel(gui);
-
-      brdfTextures = new Map();
+      var brdfTextures = new Map();
+      _self.loadReceptor[meshPath] = { name, brdfTextures };
 
       // If a materialSet was provided, set the texture format directly from the texture file extensions
       if (_self.opts.material || _self.opts.materialSet) {
@@ -1305,11 +1321,12 @@ class bivotJs {
         console.log('Using meshOverride:', _self.state.meshOverride);
         meshPath = _self.state.meshOverride;
       }
-      _self.loadMesh(_self, meshPath, loadManager);
+
+      _self.loadMesh(_self, _self.loadReceptor, meshPath, loadManager);
     }
 
-    function loadScan() {
-      _self.deactivateMesh();
+    function loadObjects() {
+      // _self.deactivateMesh(); // !!!!
 
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoad;
@@ -1320,23 +1337,26 @@ class bivotJs {
       const keys = Object.keys(_self.config.initialState);
       keys.push('zoom'); // Necessary because zoom is omitted from initialState to support legacy galleries
       if (_self.opts.materialSet) {
-        const material = _self.scans[_self.scan];
-        var location = ''
-        if (material.location.startsWith('http')) {
-          location = material.location;
-        } else {
-          location = getBasePath(_self.opts.materialSet) + '/' + material.location;
+        for (const [name, material] of Object.entries(_self.scans)) {
+          var location = ''
+          if (material.location.startsWith('http')) {
+            location = material.location;
+          } else {
+            location = getBasePath(_self.opts.materialSet) + '/' + material.location;
+          }
+          loadScanFromMaterial(loadManager, name, material, keys, location);
         }
-        loadScanFromMaterial(loadManager, material, keys, location);
       } else if (_self.opts.textures && _self.opts.material) {
-        loadScanFromTextures(loadManager, _self.opts.textures, _self.opts.material, keys);
+        // !!!!
+        loadScanFromTextures(loadManager, _self.opts.textures, 'DUMMY NAME', _self.opts.material, keys);
       } else {
+        // !!!!
         const tex_dir = _self.opts.texturePath + '/' + _self.scan + '/';
         loadScanMetadata(loadManager, tex_dir, keys);
       }
     }
 
-    function loadScanFromMaterial(loadManager, material, keys, location) {
+    function loadScanFromMaterial(loadManager, name, material, keys, location) {
       if (!location.endsWith('/')) {
         location += '/';
       }
@@ -1348,10 +1368,10 @@ class bivotJs {
           textures[key] = location + material.textures[key];
         }
       }
-      return loadScanFromTextures(loadManager, textures, material, keys);
+      return loadScanFromTextures(loadManager, textures, name, material, keys);
     }
 
-    function loadScanFromTextures(loadManager, textures, material, keys) {
+    function loadScanFromTextures(loadManager, textures, name, material, keys) {
       let paths = new Map();
       paths.set('diffuse', {path: textures.basecolor, format: THREE.RGBFormat});
       paths.set('normals', {path: textures.normals, format: THREE.RGBFormat});
@@ -1361,7 +1381,7 @@ class bivotJs {
       }
 
       let scanState = [];
-      const metadata = material.config.renders[_self.scan];
+      const metadata = material.config.renders[material.name];
       if (metadata.hasOwnProperty('state')) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
@@ -1370,7 +1390,7 @@ class bivotJs {
       }
       mergeMetadata(scanState, keys);
       setLoadingImage();
-      loadScansImpl(paths, textures.mesh, loadManager);
+      loadScansImpl(name, paths, textures.mesh, loadManager);
     }
 
     function loadScanMetadata(loadManager, texturePath, keys) {
@@ -1481,7 +1501,8 @@ class bivotJs {
         }
       }
 
-      loadScansImpl(paths, texDir + 'brdf-mesh.obj', loadManager);
+      // !!!!
+      loadScansImpl('DUMMY NAME', paths, texDir + 'brdf-mesh.obj', loadManager);
     }
 
     function onStart(url, itemsLoaded, itemsTotal) {
@@ -1717,39 +1738,46 @@ class bivotJs {
     if (this.meshPathUsed !== meshPath) {
       const _self = this;
       function onLoadUpdateMesh() {
+        // Deactivate existing mesh
+        //_self.deactivateMesh();  // !!!!
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
-        _self.activateLoadedMesh(_self);
       };
       // Reset and show progress bar, then load the mesh
       _self.loadingElem.style.display = 'flex';
       _self.progressBarElem.style.transform = 'scaleX(0)';
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoadUpdateMesh;
-      this.loadMesh(this, meshPath, loadManager);
+      this.loadMesh(this, this.loadReceptor, meshPath, loadManager); // !!!!
     }
   }
 
-  loadMesh(_self, meshPath, loadManager) {
+  loadMesh(_self, receptor, meshPath, loadManager) {
+    const scanName = receptor[meshPath].name;
+    const scan = _self.scans[scanName];
+    const stateDict = scan.config.renders[scanName].state;
+    receptor[meshPath].transform = stateDict.transform;
+    receptor[meshPath].displacementUnits = stateDict.displacementUnits;
+
     _self.meshPathUsed = meshPath;
     if (_self.meshCache.hasOwnProperty(meshPath)) {
       // Mesh cache hit.  Switch to the requested mesh which is already loaded.
-      _self.deactivateMesh();
-      _self.mesh = _self.meshCache[meshPath];
+      // _self.deactivateMesh(); // !!!!
+      receptor[meshPath]['loadedMesh'] = _self.meshCache[meshPath];
       loadManager.onLoad();
     } else {
       // Mesh cache miss.  Load the mesh from the given path.
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
-          _self.deactivateMesh();
-          _self.mesh = null;
+          //_self.deactivateMesh(); // !!!!
+          //_self.mesh = null;
           object.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
-              _self.mesh = child;
+              receptor[meshPath]['loadedMesh'] = child;
             }
           });
-          _self.meshCache[meshPath] = _self.mesh;  // Add to mesh cache
+          _self.meshCache[meshPath] = receptor[meshPath]['loadedMesh'];  // Add to mesh cache
         },
         function (xhr) {},
         function (error) {
@@ -1759,7 +1787,7 @@ class bivotJs {
     }
   }
 
-  deactivateMesh() {
+  deactivateMesh() { // !!!!
     if (this.mesh != null) {
       this.scene.remove(this.mesh); // Remove old mesh from scene and clean up memory
       this.mesh.traverse(
@@ -1773,29 +1801,33 @@ class bivotJs {
     }
   }
 
-  activateLoadedMesh(_self) {
-    // Deactivate existing mesh
-    _self.deactivateMesh();
+  activateLoadedMesh(_self, loadedMesh, transform) {
+    // Given a loaded mesh in _self.mesh (or null if mesh loading failed),
+    // activate the mesh, add it to the scene, and return the mesh details
+    // in an object.
 
-    if (_self.mesh === null) {
+    var mesh;
+    if (loadedMesh === null) {
       console.log('Mesh unavailable; using planar geometry');
-      _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
+      mesh = new THREE.Mesh(_self.getPlaneGeometry());
+    } else {
+      mesh = loadedMesh;
     }
 
-    if (_self.state.transform && _self.mesh) {
+    if (_self.state.transform && mesh) {
       var m4 = new THREE.Matrix4();
-      m4.fromArray(_self.state.transform);
+      m4.fromArray(transform);
       m4.transpose();
-      _self.mesh.matrix.matrixAutoUpdate = false;
-      _self.mesh.applyMatrix4(m4);
-      console.log('Object transform applied: ', _self.mesh.matrix);
+      mesh.matrix.matrixAutoUpdate = false;
+      mesh.applyMatrix4(m4);
+      console.log('Object transform applied: ', mesh.matrix);
     }
 
     // Reset mesh rotation
-    _self.state._meshRotateZDegreesPrevious = 0;
-    _self.updateMeshRotation();
+    _self.state._meshRotateZDegreesPrevious = 0; // !!!!
+    _self.updateMeshRotation(); // !!!!
 
-    var geom = _self.mesh.geometry;
+    var geom = mesh.geometry;
     geom.computeBoundingBox();
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
@@ -1807,25 +1839,29 @@ class bivotJs {
 
     // TODO: This only works on a mesh with indexed geometry.
     //       Our loaded OBJ meshes don't have indexed geometry.
-    // if (_self.useDispMap) {
+    // if (useDispMap) {
     //   console.log('Computing tangents...')
     //   BufferGeometryUtils.computeTangents(geom);
     // }
-    _self.geometry = geom;
+    //_self.geometry = geom;
 
+    return { mesh, geom };
+  }
+
+  setMeshMaterial(object, useDispMap) {
     // Set up the material and attach it to the mesh
     let material = new THREE.ShaderMaterial(
       {
-        fragmentShader: _self.fragmentShader,
-        vertexShader: _self.vertexShader,
-        uniforms: _self.uniforms,
+        fragmentShader: object.fragmentShader,
+        vertexShader: object.vertexShader,
+        uniforms: object.uniforms,
         lights: true
       }
     );
     material.defines = {
       USE_NORMALMAP: 1,
     };
-    if (_self.useDispMap) {
+    if (useDispMap) {
       console.log('Displacement map enabled');
       material.defines['USE_DISPLACEMENTMAP'] = 1;
       material.defines['TANGENTSPACE_NORMALMAP'] = 1;
@@ -1837,18 +1873,14 @@ class bivotJs {
     }
 
     material.extensions.derivatives = true;
-    _self.mesh.traverse(function(child) {
+    object.mesh.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
         child.material = material;
       }
     });
-
-    _self.scene.add(_self.mesh);
-    _self.updateLightingGrid();
-    _self.requestRender();
   }
 
-  updateMeshRotation() {
+  updateMeshRotation() { // !!!!
     if (this.mesh) {
       this.mesh.rotateZ((this.state.meshRotateZDegrees - this.state._meshRotateZDegreesPrevious)*Math.PI/180);
       this.state._meshRotateZDegreesPrevious = this.state.meshRotateZDegrees;
@@ -2010,6 +2042,26 @@ class bivotJs {
     }
   }
 
+  setFrameUniforms() {
+    this.renderObjs.forEach(object => {
+      object.uniforms.uExposure.value = this.exposureGain * this.state.exposure;
+      object.uniforms.uBrightness.value = this.state.brightness;
+      object.uniforms.uContrast.value = this.state.contrast;
+      object.uniforms.uDiffuse.value = this.state.diffuse;
+      object.uniforms.uSpecular.value = this.state.specular;
+      object.uniforms.uRoughness.value = this.state.roughness;
+      object.uniforms.uTint.value = this.state.tint;
+      object.uniforms.uFresnel.value = this.state.fresnel;
+      object.uniforms.uThreeJsShader.value = this.state.threeJsShader;
+      object.uniforms.uBrdfModel.value = this.state.brdfModel;
+      object.uniforms.uBrdfVersion.value = this.state.brdfVersion;
+      object.uniforms.uLoadExr.value = (this.config.textureFormat == 'EXR');
+      object.uniforms.uDual8Bit.value = this.config.dual8Bit;
+      object.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
+      object.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
+    });
+  }
+
   render(timeMs) {
     if (this.shuttingDown) {
       this.doShutdown();
@@ -2039,22 +2091,7 @@ class bivotJs {
         this.updateAutoRotate((timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs);
       }
 
-      this.uniforms.uExposure.value = this.exposureGain * this.state.exposure;
-      this.uniforms.uBrightness.value = this.state.brightness;
-      this.uniforms.uContrast.value = this.state.contrast;
-      this.uniforms.uDiffuse.value = this.state.diffuse;
-      this.uniforms.uSpecular.value = this.state.specular;
-      this.uniforms.uRoughness.value = this.state.roughness;
-      this.uniforms.uTint.value = this.state.tint;
-      this.uniforms.uFresnel.value = this.state.fresnel;
-      this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
-      this.uniforms.uBrdfModel.value = this.state.brdfModel;
-      this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
-      this.uniforms.uLoadExr.value = (this.config.textureFormat == 'EXR');
-      this.uniforms.uDual8Bit.value = this.config.dual8Bit;
-      this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
-      this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
-
+      this.setFrameUniforms();
       this.composer.render();
       if (this.stats) {
         this.stats.end();
@@ -2102,8 +2139,9 @@ class bivotJs {
   }
 
   getDiag() {
-    if (this.geometry) {
-      const box = this.geometry.boundingBox;
+    if (this.renderObjs.length > 0 && this.renderObjs[0].geometry) {
+      const geom = this.renderObjs[0].geometry;
+      const box = geom.boundingBox;
       if (box) {
         const x = box.max.x - box.min.x;
         const y = box.max.y - box.min.y;
