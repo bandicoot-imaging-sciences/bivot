@@ -703,6 +703,7 @@ class bivotJs {
               bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
               render['state'].zoom = [
                 bivotMatRender['controlsMinDistance'],
+                bivotMatRender['controlsMaxDistance'],
                 bivotMatRender['controlsMaxDistance']
               ];
               render['state'].currentZoom = bivotMatRender['cameraPositionZ'];
