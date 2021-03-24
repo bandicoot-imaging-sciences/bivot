@@ -20,6 +20,7 @@ export default function getShaders() {
         'uRoughness': {value: 1.0},
         'uTint': {value: true},
         'uFresnel': {value: false},
+        'uAoStrength': {value: 1.0},
         'uBrdfModel': {value: 0}, // 0: BIS; 1: M/R
         'uThreeJsShader': {value: false},
         'uBrdfVersion': {value: 2.0},
@@ -93,6 +94,7 @@ export default function getShaders() {
     uniform float uRoughness;
     uniform bool  uTint;
     uniform bool  uFresnel;
+    uniform float uAoStrength;
     uniform bool  uThreeJsShader;
 
     uniform int   uBrdfModel;
@@ -219,8 +221,7 @@ export default function getShaders() {
         #include <lights_fragment_maps>
         #include <lights_fragment_end>
 
-        float aoMapIntensity = 1.0;
-        float ambientOcclusion = (aoSurface - 1.0) * aoMapIntensity + 1.0;
+        float ambientOcclusion = (aoSurface - 1.0) * uAoStrength + 1.0;
         reflectedLight.indirectDiffuse *= ambientOcclusion;
 
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);

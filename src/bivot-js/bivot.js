@@ -236,6 +236,7 @@ class bivotJs {
       brdfVersion: 2,
       displacementOffset: 0.0,
       displacementUnits: 0.0,
+      aoStrength: 1.0,
       yFlip: true,
       size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
@@ -2042,6 +2043,7 @@ class bivotJs {
       this.uniforms.uRoughness.value = this.state.roughness;
       this.uniforms.uTint.value = this.state.tint;
       this.uniforms.uFresnel.value = this.state.fresnel;
+      this.uniforms.uAoStrength.value = this.state.aoStrength;
       this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
       this.uniforms.uBrdfModel.value = this.state.brdfModel;
       this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
