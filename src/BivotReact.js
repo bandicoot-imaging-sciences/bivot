@@ -19,6 +19,7 @@ import BackgroundColorControl from './controls/BackgroundColorControl';
 import AutoRotateControl from './controls/AutoRotateControl';
 import DragControl from './controls/DragControl';
 import MeshOverrideControl from './controls/MeshOverrideControl';
+import AmbientOcclusionControl from './controls/AmbientOcclusionControl';
 
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
@@ -168,6 +169,7 @@ function BivotReact(props) {
     dragControlsRotation: false,
     dragControlsPanning: false,
     meshOverride: false,
+    aoStrength: 1.0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -199,6 +201,7 @@ function BivotReact(props) {
     dragControlsRotation: false,
     dragControlsPanning: false,
     meshOverride: false,
+    aoStrength: 1.0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -251,6 +254,7 @@ function BivotReact(props) {
   const [camTiltLimitDegrees, setCamTiltLimitDegrees] = useState(state.camTiltLimitDegrees);
   const [lightTiltLimitDegrees, setLightTiltLimitDegrees] = useState(state.lightTiltLimitDegrees);
   const [meshOverride, setMeshOverride] = useState(state.meshOverride);
+  const [aoStrength, setAoStrength] = useState(state.aoStrength);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -270,6 +274,7 @@ function BivotReact(props) {
   state.camTiltLimitDegrees = camTiltLimitDegrees;
   state.lightTiltLimitDegrees = lightTiltLimitDegrees;
   state.meshOverride = meshOverride;
+  state.aoStrength = aoStrength;
 
   async function onLoad() {
     loadBivot();
@@ -460,7 +465,8 @@ function BivotReact(props) {
       dragControlsPanning,
       camTiltLimitDegrees,
       lightTiltLimitDegrees,
-      meshOverride
+      meshOverride,
+      aoStrength,
     } = stateFields;
 
     updateExposure(exposure);
@@ -478,6 +484,7 @@ function BivotReact(props) {
     updateDragControl('pan', dragControlsPanning);
     updateDragControl('limits', camTiltLimitDegrees > 0);
     updateMeshOverride(meshOverride);
+    updateAoStrength(aoStrength);
 
     // Update initial zoom value after loading state
     zoomInitialVal = zoom;
@@ -530,7 +537,7 @@ function BivotReact(props) {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
-      bloom, meshOverride,
+      bloom, meshOverride, aoStrength,
     }
 
     config.state = { ...config.state, ...savedState };
@@ -679,6 +686,11 @@ function BivotReact(props) {
     }
   }
 
+  function updateAoStrength(val) {
+    setAoStrength(val);
+    renderFrame(false);
+  }
+
   function onEnterFullScreen() {
     savedSize.current = size;
     setSize([window.screen.width, window.screen.height]);
@@ -735,6 +747,7 @@ function BivotReact(props) {
                       onChange={updateMeshOverride}
                     />
                   )}
+                  <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
                 </React.Fragment>
               )}
               <Grid container spacing={2}>
