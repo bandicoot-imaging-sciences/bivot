@@ -22,7 +22,8 @@ export function jsonToState(inDict, outDict, vectorKeys=null) {
   if (vectorKeys == null) {
     vectorKeys = {
       "lightPosition": THREE.Vector3,
-      "lightPositionOffset": THREE.Vector2
+      "lightPositionOffset": THREE.Vector2,
+      "cameraPan": THREE.Vector3,
     };
   }
   for (var key in inDict) {

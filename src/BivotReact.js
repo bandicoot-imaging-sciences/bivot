@@ -524,8 +524,12 @@ function BivotReact(props) {
     const {
       camTiltWithMousePos, camTiltWithDeviceOrient,
       lightTiltWithMousePos, lightTiltWithDeviceOrient,
-      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom
-     } = state;
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
+      cameraPan,
+    } = state;
+
+    // Convert from THREE.Vector3 to array, discarding Z
+    const cameraPanArray = [cameraPan.x, cameraPan.y, 0.0];
 
     const savedState = {
       exposure, brightness, contrast, size,
@@ -534,10 +538,11 @@ function BivotReact(props) {
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
+      meshOverride, aoStrength,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
-      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor,
-      bloom, meshOverride, aoStrength,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
+      cameraPan: cameraPanArray,
     }
 
     config.state = { ...config.state, ...savedState };

@@ -261,6 +261,7 @@ class bivotJs {
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
+      cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
@@ -301,7 +302,8 @@ class bivotJs {
     // Define the keys in state which are vectors, and their type
     this.vectorKeys = {
       "lightPosition": THREE.Vector3,
-      "lightPositionOffset": THREE.Vector2
+      "lightPositionOffset": THREE.Vector2,
+      "cameraPan": THREE.Vector3,
     };
 
     // Store initial state in the config
@@ -945,7 +947,7 @@ class bivotJs {
       controls.panSpeed = 0.3;
       controls.rotateSpeed = 1.0;
       controls.zoomSpeed = 1.0;
-      controls.target.set(0, 0, 0);
+      controls.target = _self.state.cameraPan;
       controls.update();
       controls.enableZoom = (_self.opts.featured === true) ? true : false;
       controls.enableRotate = config.mouseCamControlsRotate;
@@ -2028,6 +2030,7 @@ class bivotJs {
 
       this.renderLoopUpdateCanvas();
 
+      this.controls.target.z = 0.0; // Keep camera pointing somewhere on the Z=0 plane
       this.controls.update();
 
       if (this.state.autoRotatePeriodMs 
