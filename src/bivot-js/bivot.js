@@ -602,6 +602,7 @@ class bivotJs {
       // LoadingManager won't call onLoad once the mesh is actually loaded.
       // This scenario is detected below, and handled by re-calling onLoad()
       // manually from the loadMesh() callback when the mesh finishes loading.
+      // See also: https://github.com/mrdoob/three.js/issues/16311
       if (_self.mesh === null && !_self.meshLoadingFailed) {
         console.log('Mesh pending');
         _self.loadCompleteButMeshMissing = true;
