@@ -325,6 +325,9 @@ class bivotJs {
     this.loadingElem = null;
     this.progressBarElem = null;
 
+    this.meshLoadingFailed = false;
+    this.loadCompleteButMeshMissing = false;
+
     this.scans = {};
     this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
@@ -591,6 +594,22 @@ class bivotJs {
     }
 
     function onLoad() {
+      // Workaround for three.js bug.  If a duplicate load request is made via
+      // the same mesh URL from two Shimmers on the same web page, the three.js
+      // LoadingManager fails to register the second request as a request in
+      // progress.  Depending on timing, that sometimes causes onLoad() to be
+      // called while we are still waiting for the mesh.  In that case, the
+      // LoadingManager won't call onLoad once the mesh is actually loaded.
+      // This scenario is detected below, and handled by re-calling onLoad()
+      // manually from the loadMesh() callback when the mesh finishes loading.
+      if (_self.mesh === null && !_self.meshLoadingFailed) {
+        console.log('Mesh pending');
+        _self.loadCompleteButMeshMissing = true;
+        return;
+      }
+      _self.meshLoadingFailed = false;
+      _self.loadCompleteButMeshMissing = false;
+
       unsetLoadingImage();
 
       // Run post-texture-load operations
@@ -1492,7 +1511,7 @@ class bivotJs {
     }
 
     function onStart(url, itemsLoaded, itemsTotal) {
-      //console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' );
+      //console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
     };
 
     function onProgress(url, itemsLoaded, itemsTotal) {
@@ -1757,9 +1776,15 @@ class bivotJs {
             }
           });
           _self.meshCache[meshPath] = _self.mesh;  // Add to mesh cache
+
+          // Workaround for three.js LoadingManager bug (see onLoad())
+          if (_self.loadCompleteButMeshMissing) {
+            loadManager.onLoad();
+          }
         },
-        function (xhr) {},
+        function (xhr) {console.log('loadMesh xhr');},
         function (error) {
+          _self.meshLoadingFailed = true;
           console.log('Error loading mesh ', meshPath);
         }
       );

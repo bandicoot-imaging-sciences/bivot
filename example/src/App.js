@@ -28,6 +28,10 @@ const styles = {
 // Example public material set
 const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
 
+const ms1 = 'https://publish.bandicootimaging.com.au/ad4b9775/biv_gallery/material-set.json'
+const ms2 = 'https://publish.bandicootimaging.com.au/1e1e55a1/biv_gallery/material-set.json'
+
+
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   const [size, setSize] = useState([undefined, undefined]);
@@ -79,7 +83,7 @@ function App(props) {
         <Grid item xs={12}><Typography>Responsive = false</Typography></Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
           <Bivot
-            materialSet={materialSet}
+            materialSet={ms1}
             id={1}
             width={size[0]}             // Override Shimmer width
             height={size[1]}            // Override Shimmer height
@@ -92,15 +96,16 @@ function App(props) {
         </Grid>
         <Grid item xs={12}><Typography>Responsive = true</Typography></Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
-          {/* <Bivot
-            materialSet={materialSet}
+          <Bivot
+            materialSet={ms2}
             id={2}
             width={size[0]}             // Override Shimmer width
             height={size[1]}            // Override Shimmer height
             responsive={true}
             showEditor={showEditor}
             showAdvancedControls={true}
-          /> */}
+            meshChoices={meshList}
+          />
         </Grid>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
