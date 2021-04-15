@@ -1783,7 +1783,7 @@ class bivotJs {
             loadManager.onLoad();
           }
         },
-        function (xhr) {console.log('loadMesh xhr');},
+        function (xhr) {},
         function (error) {
           _self.meshLoadingFailed = true;
           console.log('Error loading mesh ', meshPath);
