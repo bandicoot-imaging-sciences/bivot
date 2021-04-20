@@ -26,7 +26,7 @@ const styles = {
 };
 
 // Example public material set
-const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
+// const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
 
 const ms1 = 'https://publish.bandicootimaging.com.au/ad4b9775/biv_gallery/material-set.json'
 const ms2 = 'https://publish.bandicootimaging.com.au/1e1e55a1/biv_gallery/material-set.json'
