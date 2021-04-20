@@ -432,10 +432,10 @@ class bivotJs {
         this.config.textureFormat = this.config.textureFormat.toUpperCase();
       }
 
-      console.log('Options:', this.opts);
-      console.log('Config:', this.config);
-      console.log('State:', this.state);
-      console.log('Renders:', this.scans)
+      console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
+      console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
+      console.debug('State:', JSON.parse(JSON.stringify(this.state)));
+      console.debug('Renders:', JSON.parse(JSON.stringify(this.scans)));
 
       orientPermWanted = (this.state.camTiltWithDeviceOrient != 0.0 || this.state.lightTiltWithDeviceOrient != 0.0);
 
@@ -565,7 +565,7 @@ class bivotJs {
       }
       if (!_self.scans || isEmpty(_self.scans)) {
         // materials not provided or failed to load
-        console.log('(Unsetting materialSet option)');
+        console.debug('(Unsetting materialSet option)');
         _self.opts.materialSet = null;
         if (!_self.opts.material) {
           // Load legacy config.json file
@@ -583,7 +583,7 @@ class bivotJs {
             s = keys[n]
           }
         }
-        console.log(`Setting starting scan to ${s}`)
+        console.debug(`Setting starting scan to ${s}`)
         // Set starting scan based on the options, if provided
         _self.scan = s;
       }
@@ -604,7 +604,7 @@ class bivotJs {
       // manually from the loadMesh() callback when the mesh finishes loading.
       // See also: https://github.com/mrdoob/three.js/issues/16311
       if (_self.mesh === null && !_self.meshLoadingFailed) {
-        console.log('Mesh pending');
+        console.debug('Mesh pending');
         _self.loadCompleteButMeshMissing = true;
         return;
       }
@@ -687,7 +687,7 @@ class bivotJs {
     }
 
     async function loadMaterialSet(filename) {
-      console.log('loadMaterialSet(): Loading material set file:', filename);
+      console.debug('loadMaterialSet(): Loading material set file:', filename);
       const materialSet = {};
       if (filename) {
         const jsonMaterialSet = await loadJsonFile(filename);
@@ -740,10 +740,10 @@ class bivotJs {
       }
 
       if (Object.keys(materialSet).length === 0) {
-        console.log('Failed to load materialSet file: ', filename);
+        console.debug('Failed to load materialSet file: ', filename);
         return null;
       } else {
-        console.log('materialSet loaded: ', materialSet);
+        console.debug('materialSet loaded: ', JSON.parse(JSON.stringify(materialSet)));
         return materialSet;
       }
     }
@@ -752,7 +752,7 @@ class bivotJs {
       if (configFilename) {
         const jsonConfig = await loadJsonFile(configFilename);
         if (jsonConfig) {
-          console.log('Loaded:', configFilename);
+          console.debug('Loaded:', configFilename);
 
           // Copy JSON config file into config.
           // For the initialState we do a merge instead of a plain copy.
@@ -767,10 +767,10 @@ class bivotJs {
           // Copy initial state from JSON into the live state
           copyStatesCloneVectors(config.initialState, state, vectorKeys);
         } else {
-          console.log('Error: Failed to load ' + configFilename);
+          console.debug('Error: Failed to load ' + configFilename);
         }
       } else if (optsConfig) {
-        console.log('Using provided config object');
+        console.debug('Using provided config object');
         for (var k in optsConfig) {
           if (k == 'initialState') {
             jsonToState(optsConfig[k], config.initialState, vectorKeys);
@@ -786,7 +786,7 @@ class bivotJs {
       if (renderFilename) {
         const jsonRender = await loadJsonFile(renderFilename);
         if (jsonRender) {
-          console.log(`Loaded ${renderFilename}:`, jsonRender);
+          console.debug(`Loaded ${renderFilename}:`, JSON.parse(JSON.stringify(jsonRender)));
           if (urlFlags.showcase == 1) {
             for (let r in jsonRender.renders) {
               if (jsonRender.renders.hasOwnProperty(r)) {
@@ -799,10 +799,10 @@ class bivotJs {
             scans = jsonRender.renders;
           }
         } else {
-          console.log('Error: Failed to load ' + renderFilename);
+          console.debug('Error: Failed to load ' + renderFilename);
         }
       } else if (material) {
-        console.log('Using provided material object');
+        console.debug('Using provided material object');
         scans = material.config.renders;
         // TODO: Apply showcase flag to this branch
       }
@@ -862,7 +862,7 @@ class bivotJs {
         }
       }
 
-      console.log('URL flags:', dict);
+      console.debug('URL flags:', JSON.parse(JSON.stringify(dict)));
       return dict;
     }
 
@@ -990,7 +990,7 @@ class bivotJs {
       // This can be called at a different point in the config and texture loading sequence, depending on
       // whether we are waiting for the user to grant permission, or if the browser already has permission.
       if (event.alpha || event.beta || event.gamma) {
-        console.log('Gyro detected');
+        console.info('Gyro detected');
         gyroDetected = true;
         window.removeEventListener('deviceorientation', detectGyro, false);
 
@@ -1272,7 +1272,7 @@ class bivotJs {
         throw 'missing webgl extension';
       }
       */
-      console.log(brdfTexturePaths)
+      //console.debug(JSON.parse(JSON.stringify(brdfTexturePaths)));
       for (let [key, value] of brdfTexturePaths) {
         loader.load(value.path,
           function (texture, textureData) {
@@ -1312,12 +1312,12 @@ class bivotJs {
             // iOS does not support WebGL2
             // Textures need to be square powers of 2 for WebGL1
             // texture.repeat.set(matxs/padxs, matxs/padys);
-            //console.log('Loaded:', key, value.path);
+            //console.debug('Loaded:', key, value.path);
             brdfTextures.set(key, texture);
           },
           function (xhr) {},
           function (error) {
-            console.log('Failed to load texture:', key);
+            console.debug('Failed to load texture:', key);
           }
         );
       }
@@ -1325,7 +1325,7 @@ class bivotJs {
       _self.meshOrig = meshPath;
       // Load the override mesh if set, otherwise use given textures mesh
       if (_self.state.meshOverride) {
-        console.log('Using meshOverride:', _self.state.meshOverride);
+        console.debug('Using meshOverride:', _self.state.meshOverride);
         meshPath = _self.state.meshOverride;
       }
       _self.loadMesh(_self, meshPath, loadManager);
@@ -1409,7 +1409,7 @@ class bivotJs {
           if (!err) {
             try {
               const metadata = JSON.parse(data);
-              console.log('Loaded metadata from ' + jsonFilename + ':', metadata);
+              console.debug('Loaded metadata from ' + jsonFilename + ':', metadata);
 
               // Read valid render.json parameters, if present
               if (metadata.hasOwnProperty('state')) {
@@ -1423,7 +1423,7 @@ class bivotJs {
             }
           }
           if (err) {
-            console.log('Render metadata (' + jsonFilename + ') not loaded: ' + err);
+            console.debug('Render metadata (' + jsonFilename + ') not loaded: ' + err);
           }
 
           mergeMetadata(scanState, keys);
@@ -1461,8 +1461,8 @@ class bivotJs {
 
       mergeDictKeys(bivotState, scanState, _self.config.initialState, keys, _self.vectorKeys, _self.state);
 
-      console.log('  BRDF model: ', _self.state.brdfModel);
-      console.log('  BRDF version: ', _self.state.brdfVersion);
+      console.debug('  BRDF model: ', _self.state.brdfModel);
+      console.debug('  BRDF version: ', _self.state.brdfVersion);
 
       if (_self.opts.stateLoadCallback) {
         _self.opts.stateLoadCallback(_self.state);
@@ -1512,12 +1512,12 @@ class bivotJs {
     }
 
     function onStart(url, itemsLoaded, itemsTotal) {
-      //console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
+      //console.debug('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
     };
 
     function onProgress(url, itemsLoaded, itemsTotal) {
       if (itemsLoaded > 0) {
-        console.log(`${itemsLoaded}/${itemsTotal} Loaded ${url}`);
+        console.debug(`${itemsLoaded}/${itemsTotal} Loaded ${url}`);
       }
       const progress = itemsLoaded / itemsTotal;
       _self.progressBarElem.style.transform = `scaleX(${progress})`;
@@ -1786,7 +1786,7 @@ class bivotJs {
         function (xhr) {},
         function (error) {
           _self.meshLoadingFailed = true;
-          console.log('Error loading mesh ', meshPath);
+          console.debug('Error loading mesh ', meshPath);
         }
       );
     }
@@ -1811,7 +1811,7 @@ class bivotJs {
     _self.deactivateMesh();
 
     if (_self.mesh === null) {
-      console.log('Mesh unavailable; using planar geometry');
+      console.warn('Mesh unavailable; using planar geometry');
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
     }
 
@@ -1824,7 +1824,7 @@ class bivotJs {
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
     if (!geom.attributes.hasOwnProperty('normal')) {
-      console.log('Computing vertex normals...');
+      console.debug('Computing vertex normals...');
       geom.computeVertexNormals();
     }
     // END work around.
@@ -1832,7 +1832,7 @@ class bivotJs {
     // TODO: This only works on a mesh with indexed geometry.
     //       Our loaded OBJ meshes don't have indexed geometry.
     // if (_self.useDispMap) {
-    //   console.log('Computing tangents...')
+    //   console.debug('Computing tangents...')
     //   BufferGeometryUtils.computeTangents(geom);
     // }
     _self.geometry = geom;
@@ -1850,7 +1850,7 @@ class bivotJs {
       USE_NORMALMAP: 1,
     };
     if (_self.useDispMap) {
-      console.log('Displacement map enabled');
+      console.debug('Displacement map enabled');
       material.defines['USE_DISPLACEMENTMAP'] = 1;
       material.defines['TANGENTSPACE_NORMALMAP'] = 1;
       // TODO: Define when tangents can be computed in the geometry
