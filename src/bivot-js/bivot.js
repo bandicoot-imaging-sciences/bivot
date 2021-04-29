@@ -211,7 +211,7 @@ class bivotJs {
       fresnel: false,
       ambient: 1.0,
       fxaa: true,
-      bloom: 0.1,
+      bloom: 0.0,
       adaptiveToneMap: false,
       toneMapDarkness: 0.04,
       threeJsShader: true,
