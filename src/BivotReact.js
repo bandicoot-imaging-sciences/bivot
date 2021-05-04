@@ -735,6 +735,13 @@ function BivotReact(props) {
               <LightColorControl value={lightColorControls} onChange={updateLightColor} />
               <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
               <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
+              {meshChoices && (
+                <MeshOverrideControl
+                  overrides={meshChoices}
+                  value={meshOverride}
+                  onChange={updateMeshOverride}
+                />
+              )}
               {showAdvancedControls && (
                 <React.Fragment>
                   <DragControl
@@ -745,13 +752,6 @@ function BivotReact(props) {
                     }}
                     onChange={updateDragControl}
                   />
-                  {meshChoices && (
-                    <MeshOverrideControl
-                      overrides={meshChoices}
-                      value={meshOverride}
-                      onChange={updateMeshOverride}
-                    />
-                  )}
                   <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
                 </React.Fragment>
               )}
