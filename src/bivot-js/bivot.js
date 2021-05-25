@@ -287,6 +287,9 @@ class bivotJs {
       initialState: {},
     };
 
+    // Record default size before anything changes it
+    this.defaultSize = this.state.size.slice();
+
     if (this.opts.state) {
       // Merge in to state only the keys provided in the options; use defaults for others
       for (var k in this.state) {
@@ -1395,7 +1398,22 @@ class bivotJs {
       if (metadata.hasOwnProperty('version')) {
         scanState.brdfVersion = metadata.version;
       }
+
+      var overrideSize = null;
+      if (
+        _self.config.initialState.size[0] > 0 &&
+        _self.config.initialState.size[1] > 0 &&
+        (_self.config.initialState.size[0] != _self.defaultSize[0] ||
+          _self.config.initialState.size[1] != _self.defaultSize[1])
+      ) {
+        // Size update has occurred during loading.  Retain the update after merging state
+        overrideSize = _self.config.initialState.size.slice();
+      }
       mergeMetadata(scanState, keys);
+      if (overrideSize) {
+        _self.state.size = overrideSize.slice();
+      }
+
       setLoadingImage();
       loadScansImpl(paths, textures.mesh, loadManager);
     }
