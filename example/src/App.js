@@ -34,7 +34,7 @@ const ms2 = 'https://publish.bandicootimaging.com.au/1e1e55a1/biv_gallery/materi
 
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
-  const [size, setSize] = useState([undefined, undefined]);
+  const [size, setSize] = useState([200, 200]);
   const [showEditor, setshowEditor] = useState(true);
 
   function onSizeClick() {
@@ -99,8 +99,6 @@ function App(props) {
           <Bivot
             materialSet={ms2}
             id={2}
-            width={size[0]}             // Override Shimmer width
-            height={size[1]}            // Override Shimmer height
             responsive={true}
             showEditor={showEditor}
             showAdvancedControls={true}
