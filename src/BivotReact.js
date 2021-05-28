@@ -279,7 +279,7 @@ function BivotReact(props) {
   async function onLoad() {
     loadBivot();
     if (onClick) {
-      canvasRef.current.addEventListener('click', onClick, false);
+      overlayRef.current.addEventListener('click', onClick, false);
     }
   }
 

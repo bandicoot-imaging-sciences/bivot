@@ -56,6 +56,10 @@ function App(props) {
     'Draped cloth': 'https://hosted.bandicootimaging.com.au/assets/mesh/drape-sphere_inner-square_90k.obj',
   };
 
+  async function onBivotClick() {
+    console.log('Clicked on bivot');
+  }
+
   return (
     <>
       <Container maxWidth='sm' className={clsx(classes.testStyle, className)}>
@@ -92,6 +96,7 @@ function App(props) {
             showEditor={showEditor}
             showAdvancedControls={true}
             meshChoices={meshList}
+            onClick={onBivotClick}
           />
         </Grid>
         <Grid item xs={12}><Typography>Responsive = true</Typography></Grid>
