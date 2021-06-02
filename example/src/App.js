@@ -133,7 +133,7 @@ function App(props) {
           </button>
         </Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
-          {/* <Bivot
+          <Bivot
             materialSet={ms2}
             id={2}
             width={size[0]}
@@ -145,7 +145,7 @@ function App(props) {
             meshChoices={meshList}
             fullScreen={fullScreen2}
             onExitFullScreen={() => setFullScreen2(false)}
-          /> */}
+          />
         </Grid>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
