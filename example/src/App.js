@@ -25,35 +25,48 @@ const styles = {
   }
 };
 
-// Example public material set
-// const materialSet = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
+// Example public material sets
+//const ms1 = 'https://publish.bandicootimaging.com.au/c12fe241/biv_gallery/material-set.json';
+const ms1 = 'https://publish.bandicootimaging.com.au/ad4b9775/biv_gallery/material-set.json';
+const ms2 = 'https://publish.bandicootimaging.com.au/1e1e55a1/biv_gallery/material-set.json';
 
-const ms1 = 'https://publish.bandicootimaging.com.au/ad4b9775/biv_gallery/material-set.json'
-const ms2 = 'https://publish.bandicootimaging.com.au/1e1e55a1/biv_gallery/material-set.json'
-
+const rumpledMeshUrl = 'https://hosted.bandicootimaging.com.au/assets/mesh/rumple_rect_75k.obj';
 
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
   const [size, setSize] = useState([200, 200]);
-  const [showEditor, setshowEditor] = useState(true);
+  const [mesh, setMesh] = useState(rumpledMeshUrl);
+  const [showEditor, setShowEditor] = useState(true);
+  const [fullScreen1, setFullScreen1] = useState(false);
+  const [fullScreen2, setFullScreen2] = useState(false);
 
   function onSizeClick() {
     // Toggle size override
     if (size[0] && size[1]) {
       setSize([undefined, undefined]);
     } else {
-      setSize([630, 420]);
+      setSize([630, 200]);
     }
   }
 
   function onShowEditorClick() {
     // Toggle responsive mode
-    setshowEditor(!showEditor);
+    setShowEditor(!showEditor);
+  }
+
+  function onMeshClick() {
+    // Toggle mesh
+    if (!mesh) {
+      setMesh(rumpledMeshUrl);
+    } else {
+      setMesh(false);
+    }
   }
 
   const meshList = {
     'Default': false,
-    'Draped cloth': 'https://hosted.bandicootimaging.com.au/assets/mesh/drape-sphere_inner-square_90k.obj',
+    //'Draped cloth': 'https://hosted.bandicootimaging.com.au/assets/mesh/drape-sphere_inner-square_90k.obj',
+    'Rumpled cloth': rumpledMeshUrl
   };
 
   async function onBivotClick() {
@@ -82,33 +95,57 @@ function App(props) {
           </button>
           <Typography>({size[0]}, {size[1]})</Typography>
         </Grid>
+        <Grid item>
+          <button onClick={onMeshClick}>
+            Toggle mesh
+          </button>
+          <Typography>({mesh})</Typography>
+        </Grid>
       </Grid>
       <Grid container>
-        <Grid item xs={12}><Typography>Responsive = false</Typography></Grid>
+        <Grid item xs={3}><Typography>Responsive = false</Typography></Grid>
+        <Grid item xs={9}>
+          <button onClick={() => setFullScreen1(true)}>
+            Full screen
+          </button>
+        </Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
           <Bivot
             materialSet={ms1}
             id={1}
-            width={size[0]}             // Override Shimmer width
-            height={size[1]}            // Override Shimmer height
+            width={size[0]}
+            height={size[1]}
             featured={true}
             responsive={false}
+            objectMesh={mesh}
             showEditor={showEditor}
             showAdvancedControls={true}
             meshChoices={meshList}
             onClick={onBivotClick}
+            fullScreen={fullScreen1}
+            onExitFullScreen={() => setFullScreen1(false)}
           />
         </Grid>
-        <Grid item xs={12}><Typography>Responsive = true</Typography></Grid>
+        <Grid item xs={3}><Typography>Responsive = true</Typography></Grid>
+        <Grid item xs={9}>
+          <button onClick={() => setFullScreen2(true)}>
+            Full screen
+          </button>
+        </Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
-          <Bivot
+          {/* <Bivot
             materialSet={ms2}
             id={2}
+            width={size[0]}
+            height={size[1]}
             responsive={true}
+            objectMesh={mesh}
             showEditor={showEditor}
             showAdvancedControls={true}
             meshChoices={meshList}
-          />
+            fullScreen={fullScreen2}
+            onExitFullScreen={() => setFullScreen2(false)}
+          /> */}
         </Grid>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>

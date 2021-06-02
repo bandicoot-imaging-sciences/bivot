@@ -193,6 +193,7 @@ class bivotJs {
       stateLoadCallback: null,
       loadingCompleteCallback: null,
       setZoomCallback: null,
+      onClick: null,
     };
     this.opts = {...defaultOptions, ...options};
 
@@ -435,6 +436,7 @@ class bivotJs {
         this.config.textureFormat = this.config.textureFormat.toUpperCase();
       }
 
+      // TODO: Log unstringifiable content too, like callbacks
       console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
       console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
       console.debug('State:', JSON.parse(JSON.stringify(this.state)));
@@ -898,6 +900,10 @@ class bivotJs {
 
     function initialiseOverlays(overlay) {
       if (overlay) {
+        if (_self.opts.onClick) {
+          _self.registerEventListener(overlay, 'click', _self.opts.onClick, false);
+        }
+
         let loadingDiv = _self.registerElement(document, 'div');
         let progressDiv = _self.registerElement(document, 'div');
         let progressBarDiv = _self.registerElement(document, 'div');

@@ -24,6 +24,7 @@ import AmbientOcclusionControl from './controls/AmbientOcclusionControl';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
+import { isFullScreenAvailable, openFullScreen } from './utils/displayLib';
 
 const styles = {
   bivotGridOverlay: {
@@ -76,9 +77,10 @@ function BivotReact(props) {
     // the same page.
     id,
 
-    // Override the width and height of the Shimmer View.  Bivot resizes
-    // if width or height changes on a live Bivot component. If unset, the
-    // width and height are taken from the materialSet file.
+    // Updates the width and height of the live Shimmer View.  If unset, the
+    // width and height are taken from the materialSet file.  When responsive
+    // is true, it's the aspect ratio of the responsively sized view.  When
+    // responsive is false, it's the absolute width and height.
     width,
     height,
 
@@ -89,8 +91,14 @@ function BivotReact(props) {
     responsive,
 
     // ========== Advanced props ==========
+    // When fullScreen is set to true, Bivot will enter full screen mode.  Bivot
+    // calls back into onExitFullScreen when full screen is exited.  This callback
+    // should reset fullScreen to false, and may additionally perform any other
+    // user action desired.
+    fullScreen,
+    onExitFullScreen,
 
-    // If set to True, the Shimmer View is embedded as the featured element of
+    // If set to true, the Shimmer View is embedded as the featured element of
     // the web page.  This allows scroll wheel to zoom the Shimmer directly,
     // rather than requiring the ctrl key to be held down to zoom.
     featured,
@@ -98,9 +106,14 @@ function BivotReact(props) {
     // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
 
-    // If set to True or False, overrides the autoRotate setting in the
+    // If set to true or false, overrides the autoRotate setting in the
     // material set definition.
     autoRotate,
+
+    // If set, the URL for an object mesh to render the Shimmer on.
+    // Set to false to revert the the default mesh for the Shimmer.
+    // This should only be used for Flat mode scans.
+    objectMesh,
 
     // An object containing a material object defining a Shimmer View to
     // display in the Bivot viewer, as an alternative to the materialSet
@@ -118,11 +131,11 @@ function BivotReact(props) {
 
     // ========== Editor props ==========
 
-    // Set to True to show the Bivot editor.
+    // Set to true to show the Bivot editor.
     // (Currently only supported for internal use)
     showEditor,
 
-    // Set to True to show advanced controls in the Bivot editor.
+    // Set to true to show advanced controls in the Bivot editor.
     // (Currently only supported for internal use)
     showAdvancedControls,
 
@@ -278,9 +291,6 @@ function BivotReact(props) {
 
   async function onLoad() {
     loadBivot();
-    if (onClick) {
-      overlayRef.current.addEventListener('click', onClick, false);
-    }
   }
 
   // Load bivot
@@ -316,6 +326,18 @@ function BivotReact(props) {
       updateSize([w, h]);
     }
   }, [width, height]);
+
+  useEffect(() => {
+    if (isFullScreenAvailable() && fullScreen) {
+      openFullScreen(getFullScreenElement(), handleEnterFullScreen, handleExitFullScreen);
+    }
+  }, [fullScreen]);
+
+  useEffect(() => {
+    if (objectMesh !== undefined) {
+      updateMeshOverride(objectMesh);
+    }
+  }, [objectMesh]);
 
   // Shut down bivot when the component closes
   useEffect(() => {
@@ -433,7 +455,8 @@ function BivotReact(props) {
       stateLoadCallback,
       loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
-      canvasID
+      canvasID,
+      onClick,
     };
     //console.log(options);
     bivot.current = new Bivot(options);
@@ -474,7 +497,10 @@ function BivotReact(props) {
     updateContrast(contrast);
     updateLightType(lightType, areaLightWidth / referenceAreaLightWidth);
     updateRotation(meshRotateZDegrees);
-    updateSize(size);
+    // Only update size if not overridden via props
+    if (!width && !height) {
+      updateSize(size);
+    }
     setZoom(zoom);
     setCurrentZoom(currentZoom);
     updateLightColor(rgbArrayToColorObj(lightColor));
@@ -696,18 +722,21 @@ function BivotReact(props) {
     renderFrame(false);
   }
 
-  function onEnterFullScreen() {
+  function handleEnterFullScreen() {
     savedSize.current = size;
     setSize([window.screen.width, window.screen.height]);
     renderFrame(true);
   }
 
-  function onExitFullScreen() {
+  function handleExitFullScreen() {
     setSize(savedSize.current);
     renderFrame(true);
+    if (onExitFullScreen) {
+      onExitFullScreen();
+    }
   }
 
-  function getFullscreenElement() {
+  function getFullScreenElement() {
     if (canvasRef.current) {
       // If the overlay div exists yet, select it as the full screen element
       return canvasRef.current.parentNode;
@@ -760,9 +789,10 @@ function BivotReact(props) {
                 <ResetButton onChange={stateReset} />
                 <div style={styles.grow} />
                 <FullscreenButton
-                  getFullscreenElement={getFullscreenElement}
-                  onEnterFullScreen={onEnterFullScreen}
-                  onExitFullScreen={onExitFullScreen}
+                  getFullscreenElement={getFullScreenElement}
+                  onEnterFullScreen={handleEnterFullScreen}
+                  onExitFullScreen={handleExitFullScreen}
+                  fullScreen={fullScreen}
                 />
               </Grid>
             </Paper>
