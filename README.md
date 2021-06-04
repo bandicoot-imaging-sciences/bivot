@@ -86,10 +86,12 @@ A complete example app is provided in the `example` directory of the source repo
       // the same page.
       id,
     
-      // Override the width and height of the Shimmer View when responsive
-      // is set to false.  Bivot resizes responsively if width or height
-      // changes on a live Bivot component.  If unset, the width and height
-      // are taken from the materialSet file.
+      // Updates the width and height of the live Shimmer View.  If unset, the
+      // width and height are taken from the materialSet file.  When responsive
+      // is true, it's the aspect ratio of the responsively sized view.  When
+      // responsive is false, it's the absolute width and height.
+      // NOTE: If width and height are overridden on the initial Bivot component
+      //       while loading, the loading image may be inconsistently scaled.
       width,
       height,
     
@@ -100,7 +102,15 @@ A complete example app is provided in the `example` directory of the source repo
       responsive,
 
       // ========== Advanced props ==========
-    
+
+      // When fullScreen is set to true, Bivot will enter full screen mode.  Bivot
+      // calls back into onExitFullScreen when full screen is exited.  This callback
+      // should reset fullScreen to false, and may additionally perform any other
+      // user action desired.
+      // NOTE: fullScreen is not yet supported for iOS devices.
+      fullScreen,
+      onExitFullScreen,
+
       // If set to True, the Shimmer View is embedded as the featured element of
       // the web page.  This allows scroll wheel to zoom the Shimmer directly,
       // rather than requiring the ctrl key to be held down to zoom.
@@ -112,7 +122,12 @@ A complete example app is provided in the `example` directory of the source repo
       // If set to True or False, overrides the autoRotate setting in the
       // material set definition.
       autoRotate,
-      
+
+      // If set, the URL for an object mesh to render the Shimmer on.
+      // Set to false to revert the the default mesh for the Shimmer.
+      // NOTE: This should only be used for Flat mode scans.
+      objectMesh,
+
       // An object containing a material object defining a Shimmer View to
       // display in the Bivot viewer, as an alternative to the materialSet
       // filename.
@@ -145,6 +160,11 @@ A complete example app is provided in the `example` directory of the source repo
       // the "save" operation of the editor.
       // (Currently only supported for internal use)
       onSaveScreenshot,
+
+      // If supplied, a list of absolute paths to OBJ mesh files over which the
+      // textures can be rendered.
+      // (Currently only supported for internal use)
+      meshChoices,
     }
 
 ## Embedding - JavaScript
@@ -152,7 +172,7 @@ A complete example app is provided in the `example` directory of the source repo
 You can also embed Bivot into a web page using JavaScript.  For example:
 <pre><code>&lt;canvas id="bivot-canvas">&lt;/canvas>
 &lt;script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.9.6</b>/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.10.0</b>/src/bivot-js/dist/index.js';
   const materialSet = '<b>https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json</b>';
   import(bivSrc).then(m => {const bivot = new m.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});
 &lt;/script></code></pre>
@@ -160,7 +180,7 @@ You can also embed Bivot into a web page using JavaScript.  For example:
 By default, the Shimmer is responsive, and fills the width of its container at a fixed aspect ratio.
 
 Customisable parts of the embed snippet include:
-*	**`@v3.9.6`** - The version of Bivot JS to use
+*	**`@v3.10.0`** - The version of Bivot JS to use
 *	**`https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json`** - Specify the Shimmer to embed
 
 A complete example page with responsive layout is provided at `src/bivot-js/example/embed-bivot-js.html` in the source repo.

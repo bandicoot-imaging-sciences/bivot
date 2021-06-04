@@ -81,6 +81,8 @@ function BivotReact(props) {
     // width and height are taken from the materialSet file.  When responsive
     // is true, it's the aspect ratio of the responsively sized view.  When
     // responsive is false, it's the absolute width and height.
+    // NOTE: If width and height are overridden on the initial Bivot component
+    //       while loading, the loading image may be inconsistently scaled.
     width,
     height,
 
@@ -95,6 +97,7 @@ function BivotReact(props) {
     // calls back into onExitFullScreen when full screen is exited.  This callback
     // should reset fullScreen to false, and may additionally perform any other
     // user action desired.
+    // NOTE: fullScreen is not yet supported for iOS devices.
     fullScreen,
     onExitFullScreen,
 
@@ -112,7 +115,7 @@ function BivotReact(props) {
 
     // If set, the URL for an object mesh to render the Shimmer on.
     // Set to false to revert the the default mesh for the Shimmer.
-    // This should only be used for Flat mode scans.
+    // NOTE: This should only be used for Flat mode scans.
     objectMesh,
 
     // An object containing a material object defining a Shimmer View to
