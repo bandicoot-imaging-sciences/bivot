@@ -34,7 +34,8 @@ const rumpledMeshUrl = 'https://hosted.bandicootimaging.com.au/assets/mesh/rumpl
 
 function App(props) {
   const { classes, className, /* children, ...other */ } = props;
-  const [size, setSize] = useState([200, 200]);
+  //const [size, setSize] = useState([200, 200]);
+  const [size, setSize] = useState([1920, 1080]);
   const [mesh, setMesh] = useState(rumpledMeshUrl);
   const [showEditor, setShowEditor] = useState(true);
   const [fullScreen1, setFullScreen1] = useState(false);

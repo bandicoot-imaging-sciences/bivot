@@ -405,9 +405,19 @@ function BivotReact(props) {
         const { userId, materialId, materialUserPath } = material;
         const fileUserPaths = { 'ms': materialUserPath };
         const url = await fetchFilesWrapper(fileUserPaths, userId);
-        basePath = `gallery/${materialId}/biv_gallery`;
-        filename = url['ms'];
-        context = userId;
+        if (materialUserPath.startsWith('material-sets')) {
+          // Shopfront-specific materialUserPath with assumed split directory layout
+          basePath = `gallery/${materialId}/biv_gallery`;
+          filename = url['ms'];
+          context = userId;
+        } else {
+          // General materialUserPath with material assumed to be in same directory as material set
+          var parts = materialUserPath.split('/');
+          parts.pop();
+          basePath = parts.join('/');
+          filename = url['ms'];
+          context = userId;
+        }
       } else if (materialSet) {
         var parts = materialSet.split('/');
         parts.pop();
