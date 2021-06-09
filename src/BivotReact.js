@@ -798,7 +798,9 @@ function BivotReact(props) {
                 </React.Fragment>
               )}
               <Grid container spacing={2}>
-                <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
+                {onSaveScreenshot && (
+                  <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
+                )}
                 <ResetButton onChange={stateReset} />
                 <div style={styles.grow} />
                 <FullscreenButton
