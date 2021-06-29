@@ -113,6 +113,12 @@ function BivotReact(props) {
     // material set definition.
     autoRotate,
 
+    // If > 0, a minimum target frames per second value which the render
+    // resolution of the Shimmer will be adapted to meet.  Set to 0 to always
+    // produce one one rendered pixel for each display pixel, regardless of
+    // framerate.
+    adaptFps,
+
     // If set, the URL for an object mesh to render the Shimmer on.
     // Set to false to revert the the default mesh for the Shimmer.
     // NOTE: This should only be used for Flat mode scans.
@@ -195,7 +201,7 @@ function BivotReact(props) {
     lightTiltWithDeviceOrient: 2.8,
     lightTiltLimitDegrees: 50.0,
     autoRotatePeriodMs: 8000,
-    autoRotateFps: 30,
+    autoRotateFps: 30, // Deprecated
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
     bloom: 0.0,
@@ -227,7 +233,7 @@ function BivotReact(props) {
     lightTiltWithDeviceOrient: 2.8,
     lightTiltLimitDegrees: 50.0,
     autoRotatePeriodMs: 8000,
-    autoRotateFps: 30,
+    autoRotateFps: 30, // Deprecated
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
     bloom: 0.0,
@@ -465,6 +471,7 @@ function BivotReact(props) {
       state,
       featured,
       responsive,
+      adaptFps,
       stateLoadCallback,
       loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,

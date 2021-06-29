@@ -189,6 +189,7 @@ class bivotJs {
       useTouch: null,
       featured: false,
       responsive: true,
+      adaptFps: 30,
       state: null,
       stateLoadCallback: null,
       loadingCompleteCallback: null,
@@ -365,6 +366,25 @@ class bivotJs {
     this.stats = null;
     this.statsVisible = false;
 
+    this.iOSDetected = false;
+
+    this.adaptFramerate = {
+      // Configuration
+      targetFps: 30,          // The target framerate
+      framesCollected: 30,    // Number of frames to measure framerate over
+      outliersDropped: 15,    // Number of frame time outliers to drop
+      underSpeedRatio: 0.75,  // Threshold of target framerate below which render size will be adapted
+      iosRenderScale: 0.5,    // Scale in X and Y applied immediately (pre-measurement) on iOS
+
+      // Measurement
+      measuring: true,        // Setting to true to begin measurement; will automatically reset to false when done
+      frameTimes: [],         // Storage for measured frame times
+
+      // Output
+      renderedPixels: 0,      // 0 if not yet determined.  Once determined, the number of pixels
+                              // to render per frame which meets framerate target
+    }
+
     // Tracking to handle cleanup
     this.shuttingDown = false;
     this.timeouts = [];
@@ -403,8 +423,8 @@ class bivotJs {
     let iOSVersion = null;
     let iOSVersionOrientBlocked = false;
     let iOSVersionTimeoutID = null;
-    const iOSDetected = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (iOSDetected) {
+    this.iOSDetected = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (this.iOSDetected) {
       iOSVersion = navigator.userAgent.match(/OS [\d_]+/i)[0].substr(3).split('_').map(n => parseInt(n));
       iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
     }
@@ -414,6 +434,19 @@ class bivotJs {
 
     if (Object.values(this.controlModes).indexOf(urlFlags.controls) > -1) {
       this.opts.controlMode = urlFlags.controls;
+    }
+
+    if (this.opts.adaptFps !== undefined) {
+      if (this.opts.adaptFps == 0) {
+        this.adaptFramerate['measuring'] = false;
+        this.adaptFramerate['frameTimes'] = [];
+        this.adaptFramerate['renderedPixels'] = 0;
+      } else if (this.opts.adaptFps > 0) {
+        this.adaptFramerate['targetFps'] = this.opts.adaptFps;
+        this.adaptFramerate['measuring'] = true;
+      } else {
+        console.warn('Invalid value for adaptFps option, ignoring');
+      }
     }
 
     this.stats = new Stats();
@@ -839,6 +872,9 @@ class bivotJs {
         showcase: ['1'],
         textureFormat: ['JPG', 'PNG', 'EXR'],
         bivotFps: ['1'],
+        adaptFps: 'NON_NEG_INT',
+        // adaptFpsCount: 'NON_NEG_INT',  // Debugging
+        // iosRenderScale: 'FLOAT',       // Debugging
       };
 
       const parsedUrl = new URL(window.location.href);
@@ -861,6 +897,20 @@ class bivotJs {
             } else {
               console.warn('Invalid characters in string value for key:', key);
             }
+          } else if (validValues == 'NON_NEG_INT') {
+            const n = Number(decodeValue);
+            if (Number.isInteger(n) && n >= 0) {
+              dict[key] = n;
+            } else {
+              console.warn('Invalid non-negative integer value for key:', key);
+            }
+          } else if (validValues == 'FLOAT') {
+            const n = Number(decodeValue);
+            if (!isNaN(n)) {
+              dict[key] = n;
+            } else {
+              console.warn('Invalid float value for key:', key);
+            }
           }
         } else {
           console.warn('Invalid keys found in query parameters');
@@ -881,6 +931,29 @@ class bivotJs {
       if (urlFlags.hasOwnProperty('bivotFps')) {
         showStats(true);
       }
+      if (urlFlags.hasOwnProperty('adaptFps')) {
+        if (urlFlags['adaptFps'] == 0) {
+          // Disable adaptive FPS
+          _self.adaptFramerate['measuring'] = false;
+          _self.adaptFramerate['frameTimes'] = [];
+          _self.adaptFramerate['renderedPixels'] = 0;
+        } else if (urlFlags['adaptFps'] == 1) {
+          // Enable adaptive FPS, use default framerate
+          _self.adaptFramerate['measuring'] = true;
+        } else {
+          // Enable adaptive FPS, use given framerate
+          _self.adaptFramerate['measuring'] = true;
+          _self.adaptFramerate['targetFps'] = urlFlags['adaptFps'];
+        }
+      }
+      // Debugging options, disabled for now
+      // if (urlFlags.hasOwnProperty('adaptFpsCount')) {
+      //   _self.adaptFramerate['framesCollected'] = urlFlags['adaptFpsCount'];
+      //   _self.adaptFramerate['outliersDropped'] = urlFlags['adaptFpsCount'] / 2;
+      // }
+      // if (urlFlags.hasOwnProperty('iosRenderScale')) {
+      //   _self.adaptFramerate['iosRenderScale'] = urlFlags['iosRenderScale'];
+      // }
     }
 
     function onIntersection(entries, observer) {
@@ -1924,18 +1997,51 @@ class bivotJs {
     );
   }
 
+  setFxaaResolution() {
+    var fxaaUniforms = this.fxaaPass.material.uniforms;
+    const pixelRatio = this.renderer.getPixelRatio();
+    var val = 1.0 / pixelRatio;
+    if (!this.state.fxaa) {
+      val = 0.0;
+    }
+    fxaaUniforms['resolution'].value.x = val / window.innerWidth; // FIXME: Should be canvas width?
+    fxaaUniforms['resolution'].value.y = val / window.innerHeight; // FIXME: Should be canvas height?
+  }
+
+  updateRenderSize(width, height) {
+    // Update resolution of the rendered pixel buffer (not the canvas).
+    //console.log('updateRenderSize:', width, height);
+    this.renderer.setSize(width, height, false);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.composer.setSize(width, height);
+    this.setFxaaResolution();
+  }
+
+  getClientSize() {
+    // Get the size of the container to render within, or a hard-coded size if specified.
+    var pixelWidth, pixelHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    if (this.opts.responsive) {
+      const aspectRatio = this.state.size[0] / this.state.size[1];
+      pixelWidth = this.canvas.clientWidth * pixelRatio;
+      pixelHeight = pixelWidth / aspectRatio;
+    } else {
+      pixelWidth = this.state.size[0] * pixelRatio;
+      pixelHeight = this.state.size[1] * pixelRatio;
+    }
+    //console.log('getClientSize:', pixelWidth, pixelHeight);
+    return { pixelWidth, pixelHeight };
+  }
+
   // Update the canvas sizing.  Only call from within the render loop,
   // to time the resize immediately prior to the next frame render.
   renderLoopUpdateCanvas() {
     if (this.canvas && this.needsResize) {
       this.needsResize = false;
 
-      const pixelRatio = window.devicePixelRatio || 1;
-      var pixelWidth, pixelHeight;
+      var { pixelWidth, pixelHeight } = this.getClientSize();
       if (this.opts.responsive) {
-        const aspectRatio = this.state.size[0] / this.state.size[1];
-        pixelWidth = this.canvas.clientWidth * pixelRatio;
-        pixelHeight = pixelWidth / aspectRatio;
         this.canvas.style.width = '100%';
         this.canvas.style.height = 'auto';
         this.canvas.width = undefined;
@@ -1945,8 +2051,6 @@ class bivotJs {
           this.overlay.style.height = '100%';
         }
       } else {
-        pixelWidth = this.state.size[0] * pixelRatio;
-        pixelHeight = this.state.size[1] * pixelRatio;
         this.canvas.style.width = this.state.size[0] + 'px';
         this.canvas.style.height = this.state.size[1] + 'px';
         this.canvas.width = pixelWidth;
@@ -1956,11 +2060,14 @@ class bivotJs {
           this.overlay.style.height = this.canvas.style.height;
         }
       }
-      this.renderer.setSize(pixelWidth, pixelHeight, false);
-      this.camera.aspect = pixelWidth / pixelHeight;
-      this.camera.updateProjectionMatrix();
-      this.composer.setSize(pixelWidth, pixelHeight);
-      this.setFxaaResolution();
+      var targetPixelCount = this.adaptFramerate['renderedPixels'];
+      var ratio = targetPixelCount <= 0.0 ? 1.0 : Math.sqrt(targetPixelCount / (pixelWidth * pixelHeight));
+      if (ratio > 1.0) {
+        ratio = 1.0;  // Avoid oversampling
+      }
+      const renderWidth = Math.floor(pixelWidth * ratio);
+      const renderHeight = Math.floor(pixelHeight * ratio);
+      this.updateRenderSize(renderWidth, renderHeight);
     }
   }
 
@@ -2027,20 +2134,82 @@ class bivotJs {
     return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
   }
 
-  setFxaaResolution() {
-    var fxaaUniforms = this.fxaaPass.material.uniforms;
-    const pixelRatio = this.renderer.getPixelRatio();
-    var val = 1.0 / pixelRatio;
-    if (!this.state.fxaa) {
-      val = 0.0;
+  updateAnimation(timeMs, elapsed) {
+    if (this.adaptFramerate['measuring']) {
+      var times = this.adaptFramerate['frameTimes'];
+      if (this.iOSDetected && this.adaptFramerate['iosRenderScale'] > 0 && times.length == 0 && this.adaptFramerate['renderedPixels'] == 0) {
+        // Immediately downscale 50%, then measure for further possible change
+        var { pixelWidth, pixelHeight } = this.getClientSize();
+        const width = Math.floor(pixelWidth * this.adaptFramerate['iosRenderScale']);
+        const height = Math.floor(pixelHeight * this.adaptFramerate['iosRenderScale']);
+        // console.log('Pre-downscale (iOS); width, height:', width, height);
+        this.updateRenderSize(width, height);
+        this.adaptFramerate['renderedPixels'] = width * height;
+      } else {
+        times.push(timeMs);
+        if (times.length == this.adaptFramerate['framesCollected']) {
+          var diffs = [];
+          times.forEach((val, i) => {
+            if (i > 0) {
+              diffs.push(val - times[i - 1]);
+            }
+          });
+          // console.log('Measured frame intervals (ms):', diffs);
+
+          for (i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
+            const sum = diffs.reduce((a, b) => a + b, 0);
+            const avg = (sum / diffs.length);
+            maxDiff = 0;
+            maxDiffIndex = 0;
+            diffs.forEach((val, i) => {
+              if (Math.abs(val - avg) > maxDiff) {
+                maxDiff = Math.abs(val);
+                maxDiffIndex = i;
+              }
+            });
+            diffs.splice(maxDiffIndex, 1);
+          }
+          const sum = diffs.reduce((a, b) => a + b, 0);
+          const avg = (sum / diffs.length);
+          const fr = 1000 / avg;
+          if (fr < this.adaptFramerate['underSpeedRatio'] * this.adaptFramerate['targetFps']) {
+            var factor = Math.sqrt(fr / this.adaptFramerate['targetFps']);
+            var { pixelWidth, pixelHeight } = this.getClientSize();
+            if (this.adaptFramerate['renderedPixels'] > 0) {
+              factor *= Math.sqrt(this.adaptFramerate['renderedPixels'] / (pixelWidth * pixelHeight));
+            }
+            console.debug('FPS target:', this.adaptFramerate['targetFps'], '; Scaling render dims by factor:', factor);
+            const width = Math.floor(pixelWidth * factor);
+            const height = Math.floor(pixelHeight * factor);
+            this.updateRenderSize(width, height);
+            this.adaptFramerate['renderedPixels'] = width * height;
+            this.adaptFramerate['measuring'] = false;
+          }
+        }
+      }
     }
-    fxaaUniforms['resolution'].value.x = val / window.innerWidth; // FIXME: Should be canvas width?
-    fxaaUniforms['resolution'].value.y = val / window.innerHeight; // FIXME: Should be canvas height?
+
+    // Request next frame a little faster than target frame-rate, to compensate for
+    // buffering caused by requestAnimationFrame()
+    const timeoutFactor = 0.9;
+    const waitTime = timeoutFactor * Math.max(1000 / this.adaptFramerate['targetFps'] - elapsed, 0);
+    var updated = false;
+    if (
+      this.state.autoRotatePeriodMs &&
+      (this.state.lightMotion == 'mouse' || this.state.lightMotion == 'animate')
+    ) {
+      updated = this.updateAutoRotate(timeMs, waitTime);
+    }
+
+    // Request another rendered frame if one wasn't requested via updateAutoRotate.
+    if (this.adaptFramerate['measuring'] && !updated) {
+      this.timeouts.push(setTimeout(() => this.requestRender(), waitTime));
+    }
   }
 
-  updateAutoRotate(loopValue) {
+  updateAutoRotate(timeMs, waitTime) {
     if (this.isVisible && (!this.mouseInCanvas || this.state.lightMotion == 'animate')) {
-      // loopValue is between 0 and 1
+      const loopValue = (timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs;
       const angle = 2 * Math.PI * loopValue;
       const xy = new THREE.Vector2(
         -Math.sin(angle),
@@ -2052,10 +2221,31 @@ class bivotJs {
       this.timeouts.push(
         setTimeout(
           () => this.updateCamsAndLightsFromXY(xy, lightSensitivity, camSensitivity),
-          1000 / this.state.autoRotateFps
+          waitTime
         )
       );
+      return true;
     }
+    return false;
+  }
+
+  updateUniforms() {
+    this.uniforms.uExposure.value = this.exposureGain * this.state.exposure;
+    this.uniforms.uBrightness.value = this.state.brightness;
+    this.uniforms.uContrast.value = this.state.contrast;
+    this.uniforms.uDiffuse.value = this.state.diffuse;
+    this.uniforms.uSpecular.value = this.state.specular;
+    this.uniforms.uRoughness.value = this.state.roughness;
+    this.uniforms.uTint.value = this.state.tint;
+    this.uniforms.uFresnel.value = this.state.fresnel;
+    this.uniforms.uAoStrength.value = this.state.aoStrength;
+    this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
+    this.uniforms.uBrdfModel.value = this.state.brdfModel;
+    this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
+    this.uniforms.uLoadExr.value = (this.config.textureFormat == 'EXR');
+    this.uniforms.uDual8Bit.value = this.config.dual8Bit;
+    this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
+    this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
   }
 
   render(timeMs) {
@@ -2065,6 +2255,7 @@ class bivotJs {
       if (this.stats) {
         this.stats.begin();
       }
+      const frameStartTimeMs = Date.now();
 
       // FIXME: Remove forced true after adding canvas client size event handler.
       if (this.state.dirty) {
@@ -2083,29 +2274,12 @@ class bivotJs {
       this.controls.target.z = 0.0; // Keep camera pointing somewhere on the Z=0 plane
       this.controls.update();
 
-      if (this.state.autoRotatePeriodMs 
-        && (this.state.lightMotion == 'mouse' || this.state.lightMotion == 'animate')) {
-        this.updateAutoRotate((timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs);
-      }
+      const frameElapsedMs = Date.now() - frameStartTimeMs;
+      this.updateAnimation(timeMs, frameElapsedMs);
 
-      this.uniforms.uExposure.value = this.exposureGain * this.state.exposure;
-      this.uniforms.uBrightness.value = this.state.brightness;
-      this.uniforms.uContrast.value = this.state.contrast;
-      this.uniforms.uDiffuse.value = this.state.diffuse;
-      this.uniforms.uSpecular.value = this.state.specular;
-      this.uniforms.uRoughness.value = this.state.roughness;
-      this.uniforms.uTint.value = this.state.tint;
-      this.uniforms.uFresnel.value = this.state.fresnel;
-      this.uniforms.uAoStrength.value = this.state.aoStrength;
-      this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
-      this.uniforms.uBrdfModel.value = this.state.brdfModel;
-      this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
-      this.uniforms.uLoadExr.value = (this.config.textureFormat == 'EXR');
-      this.uniforms.uDual8Bit.value = this.config.dual8Bit;
-      this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
-      this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
-
+      this.updateUniforms();
       this.composer.render();
+
       if (this.stats) {
         this.stats.end();
       }
