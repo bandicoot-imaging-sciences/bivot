@@ -123,6 +123,12 @@ A complete example app is provided in the `example` directory of the source repo
       // material set definition.
       autoRotate,
 
+      // If > 0, a minimum target frames per second value which the render
+      // resolution of the Shimmer will be adapted to meet.  Set to 0 to always
+      // produce one one rendered pixel for each display pixel, regardless of
+      // framerate.
+      adaptFps,
+
       // If set, the URL for an object mesh to render the Shimmer on.
       // Set to false to revert the the default mesh for the Shimmer.
       // NOTE: This should only be used for Flat mode scans.
@@ -172,7 +178,7 @@ A complete example app is provided in the `example` directory of the source repo
 You can also embed Bivot into a web page using JavaScript.  For example:
 <pre><code>&lt;canvas id="bivot-canvas">&lt;/canvas>
 &lt;script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.11.0</b>/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot<b>@v3.11.1</b>/src/bivot-js/dist/index.js';
   const materialSet = '<b>https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json</b>';
   import(bivSrc).then(m => {const bivot = new m.newBivot({materialSet}); bivot.checkWebGL(); bivot.startRender();});
 &lt;/script></code></pre>
@@ -180,7 +186,7 @@ You can also embed Bivot into a web page using JavaScript.  For example:
 By default, the Shimmer is responsive, and fills the width of its container at a fixed aspect ratio.
 
 Customisable parts of the embed snippet include:
-*	**`@v3.11.0`** - The version of Bivot JS to use
+*	**`@v3.11.1`** - The version of Bivot JS to use
 *	**`https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json`** - Specify the Shimmer to embed
 
 A complete example page with responsive layout is provided at `src/bivot-js/example/embed-bivot-js.html` in the source repo.

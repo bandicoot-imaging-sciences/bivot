@@ -2156,11 +2156,11 @@ class bivotJs {
           });
           // console.log('Measured frame intervals (ms):', diffs);
 
-          for (i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
+          for (var i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
             const sum = diffs.reduce((a, b) => a + b, 0);
             const avg = (sum / diffs.length);
-            maxDiff = 0;
-            maxDiffIndex = 0;
+            var maxDiff = 0;
+            var maxDiffIndex = 0;
             diffs.forEach((val, i) => {
               if (Math.abs(val - avg) > maxDiff) {
                 maxDiff = Math.abs(val);
