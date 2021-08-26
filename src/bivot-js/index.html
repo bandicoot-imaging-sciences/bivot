@@ -36,8 +36,25 @@
     //const bivSrc = "./dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
+    const stateUpdate = {
+      autoRotatePeriodMs: 0,
+      dragControlsRotation: true,
+      camTiltWithMousePos: 0.0,
+      camTiltWithDeviceOrient: 0.0,
+      lightTiltWithMousePos: 0.0,
+      lightTiltWithDeviceOrient: 0.0,
+    };
+    const bivotOptions = {
+      materialSet,
+      state: stateUpdate,
+      useTouch: true,
+    };
     import(bivSrc).then(module => {
-      const bivot = new module.newBivot({ materialSet });
+      const bivot = new module.newBivot(bivotOptions);
+      bivot.opts.loadingCompleteCallback = () => {
+        bivot.state = { ...bivot.state, ...stateUpdate };
+        bivot.requestRender();
+      };
       bivot.checkWebGL();
       bivot.startRender();
     });
