@@ -54,6 +54,7 @@ import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
 import { getBasePath } from '../utils/pathLib.js';
 import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
+import { getWhiteBalanceMatrix } from './colour.js';
 
 const styles = {
   'bivot-canvas': {
@@ -239,6 +240,8 @@ class bivotJs {
       displacementOffset: 0.0,
       displacementUnits: 0.0,
       aoStrength: 1.0,
+      colorTemperature: 6500,
+      colorTransform: new THREE.Matrix3(),
       yFlip: true,
       size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
@@ -2114,6 +2117,11 @@ class bivotJs {
     this.requestRender();
   }
 
+  updateColor() {
+    this.state.colorTransform.copy(getWhiteBalanceMatrix(this.state.colorTemperature));
+    // console.log('colorTransform:', JSON.parse(JSON.stringify(this.state.colorTransform)));
+  }
+
   updateCamTiltLimit(controls, limitDeg) {
     if (controls) {
       let tiltLimitRadians = Math.PI * limitDeg / 180;
@@ -2239,6 +2247,7 @@ class bivotJs {
     this.uniforms.uTint.value = this.state.tint;
     this.uniforms.uFresnel.value = this.state.fresnel;
     this.uniforms.uAoStrength.value = this.state.aoStrength;
+    this.uniforms.uColorTransform.value = this.state.colorTransform;
     this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
     this.uniforms.uBrdfModel.value = this.state.brdfModel;
     this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
@@ -2266,6 +2275,7 @@ class bivotJs {
         this.updateMeshRotation();
         this.updateCanvas();
         this.updateZoom();
+        this.updateColor();
         this.updateControls(this.controls);
       }
 

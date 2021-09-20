@@ -33,6 +33,7 @@ export default function getShaders() {
         'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
         'uBrightness': {value: 1.0},
         'uContrast': {value: 0.5},
+        'uColorTransform': { value: new THREE.Matrix3() }, // Default: Identity matrix
         'displacementMap': {value: null},
         'displacementScale': {value: 0.05},
         'displacementBias': {value: 0.0},
@@ -96,6 +97,7 @@ export default function getShaders() {
     uniform bool  uFresnel;
     uniform float uAoStrength;
     uniform bool  uThreeJsShader;
+    uniform mat3  uColorTransform;
 
     uniform int   uBrdfModel;
     uniform float uBrdfVersion;
@@ -208,6 +210,9 @@ export default function getShaders() {
           diffuseSurface *= 65535.0;
         }
       }
+
+      // Apply colour adjustment transform to basecolor
+      diffuseSurface = vec4(uColorTransform * diffuseSurface.rgb, diffuseSurface.a);
 
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
