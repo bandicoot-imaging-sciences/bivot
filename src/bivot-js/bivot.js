@@ -242,6 +242,8 @@ class bivotJs {
       aoStrength: 1.0,
       colorTemperature: 6500,
       colorTransform: new THREE.Matrix3(),
+      hue: 0.0,
+      saturation: 0.0,
       yFlip: true,
       size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
@@ -1948,6 +1950,8 @@ class bivotJs {
     );
     material.defines = {
       USE_NORMALMAP: 1,
+      COLOR_TRANSFORM: 1,
+      HUE_SATURATION: 1,
     };
     if (_self.useDispMap) {
       console.debug('Displacement map enabled');
@@ -2248,6 +2252,8 @@ class bivotJs {
     this.uniforms.uFresnel.value = this.state.fresnel;
     this.uniforms.uAoStrength.value = this.state.aoStrength;
     this.uniforms.uColorTransform.value = this.state.colorTransform;
+    this.uniforms.uHue.value = this.state.hue;
+    this.uniforms.uSaturation.value = this.state.saturation;
     this.uniforms.uThreeJsShader.value = this.state.threeJsShader;
     this.uniforms.uBrdfModel.value = this.state.brdfModel;
     this.uniforms.uBrdfVersion.value = this.state.brdfVersion;

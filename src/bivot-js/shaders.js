@@ -33,6 +33,8 @@ export default function getShaders() {
         'ltc_2': {value: null}, // Linearly Transformed Cosines look-up table 2 for area lighting
         'uBrightness': {value: 1.0},
         'uContrast': {value: 0.5},
+        'uHue': {value: 0.0},
+        'uSaturation': {value: 0.0},
         'uColorTransform': { value: new THREE.Matrix3() }, // Default: Identity matrix
         'displacementMap': {value: null},
         'displacementScale': {value: 0.05},
@@ -98,6 +100,8 @@ export default function getShaders() {
     uniform float uAoStrength;
     uniform bool  uThreeJsShader;
     uniform mat3  uColorTransform;
+    uniform float uHue;
+    uniform float uSaturation;
 
     uniform int   uBrdfModel;
     uniform float uBrdfVersion;
@@ -155,6 +159,94 @@ export default function getShaders() {
       return visibility * t*t / pi;
     }
 
+    const mat3 RGB_TO_XYZ = (mat3(
+      0.4124564, 0.2126729, 0.0193339,
+      0.3575761, 0.7151522, 0.1191920,
+      0.1804375, 0.0721750, 0.9503041
+    ));
+
+    const mat3 XYZ_TO_RGB = (mat3(
+       3.2404542, -0.9692660,  0.0556434,
+      -1.5371385,  1.8760108, -0.2040259,
+      -0.4985314,  0.0415560,  1.0572252
+    ));
+
+
+    // Carmack approximation to cube root
+    float cbrt(float x)
+    {
+      float y = sign(x) * uintBitsToFloat(floatBitsToUint(abs(x)) / 3u + 0x2a514067u);
+
+      // Newton iterations
+      for (int i = 0; i < 2; i++) {
+          y = (2.0 * y + x / (y * y)) * 0.333333333;
+      }
+      // Halley iterations
+      for (int i = 0; i < 1; i++) {
+        float y3 = y * y * y;
+        y *= (y3 + 2.0 * x) / (2.0 * y3 + x);
+      }
+
+      return y;
+    }
+
+    vec3 rgbToXyz(vec3 rgb) {
+      return RGB_TO_XYZ * rgb;
+    }
+    vec3 xyzToRgb(vec3 xyz) {
+      return XYZ_TO_RGB * xyz;
+    }
+
+    const float LAB_EPS = 216.0 / 24389.0;
+    const float LAB_KAP = 24389.0 / 27.0;
+    const vec3 D65 = vec3(0.95047, 1.0, 1.08883);
+    const float UW = 4.0 * D65.x / (D65.x + 15.0 * D65.y + 3.0 * D65.z);
+    const float VW = 9.0 * D65.y / (D65.x + 15.0 * D65.y + 3.0 * D65.z);
+
+    vec3 xyzToLuv(vec3 xyz) {
+      float den = xyz.x + 15.0 * xyz.y + 3.0 * xyz.z;
+      if (den == 0.0) {
+        return vec3(0.0);
+      }
+      float uI = 4.0 * xyz.x / den;
+      float vI = 9.0 * xyz.y / den;
+      float yR = xyz.y / D65.y;
+      float L = (yR > LAB_EPS) ? 116.0 * cbrt(yR) - 16.0 : LAB_KAP * yR;
+      float u = 13.0 * L * (uI - UW);
+      float v = 13.0 * L * (vI - VW);
+      return vec3(L, u, v);
+    }
+
+    vec3 luvToXyz(vec3 luv) {
+      float L0 = (luv.x + 16.0) / 116.0;
+      float y = (luv.x > LAB_KAP * LAB_EPS) ? L0 * L0 * L0 : luv.x / LAB_KAP;
+      float a = luv.x > 0.0 ? (52.0 * luv.x / (luv.y + 13.0 * luv.x * UW) - 1.0) / 3.0 : 0.0;
+      float b = -5.0 * y;
+      float c = -0.333333333;
+      float d = luv.x > 0.0 ? y * (39.0 * luv.x / (luv.z + 13.0 * luv.x * VW) - 5.0) : 0.0;
+      float x = (d - b) / (a - c);
+      float z = x * a + b;
+      return vec3(x, y, z);
+    }
+
+    vec3 luvToLCHuv(vec3 luv) {  // Note: returns h radians
+      float c = length(vec2(luv.y, luv.z));
+      float h = atan(luv.z, luv.y);
+      return vec3(luv.x, c, h);
+    }
+
+    vec3 lchUVToLuv(vec3 lch) {  // Note: expects h in radians
+      float u = lch.y * cos(lch.z);
+      float v = lch.y * sin(lch.z);
+      return vec3(lch.x, u, v);
+    }
+
+    vec3 hueSatShift(vec3 rgb, float hue, float saturation) {
+      vec3 lch = luvToLCHuv(xyzToLuv(rgbToXyz(rgb)));
+      lch.y = max(lch.y + saturation, 0.0);
+      lch.z += hue;
+      return xyzToRgb(luvToXyz(lchUVToLuv(lch)));
+    }
 
     void main() {
       vec4 diffuseSurface = texture2D(diffuseMap, vUv);
@@ -211,8 +303,15 @@ export default function getShaders() {
         }
       }
 
-      // Apply colour adjustment transform to basecolor
-      diffuseSurface = vec4(uColorTransform * diffuseSurface.rgb, diffuseSurface.a);
+      #ifdef COLOR_TRANSFORM
+        // Apply white balance transform to basecolor
+        diffuseSurface = vec4(uColorTransform * diffuseSurface.rgb, diffuseSurface.a);
+      #endif
+
+      #ifdef HUE_SATURATION
+        // Apply hue and saturation transform
+        diffuseSurface = vec4(hueSatShift(diffuseSurface.rgb, uHue, uSaturation), diffuseSurface.a);
+      #endif
 
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );

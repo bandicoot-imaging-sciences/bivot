@@ -1989,13 +1989,13 @@ export function getCatMatrix(src_xyz, dst_xyz) {
   return M;
 }
 
-export function getWhiteBalanceMatrix(cct_dst, cct_src=6500) {
+export function getWhiteBalanceMatrix(cct_src, cct_dst=6500) {
   var xyzToLsrgbMat = loadMatFromArray(xyzToLsrgb);
   var lsrgbToXyzMat = loadMatFromArray(lsrgbToXyz);
 
-  const chroma_d65 = cctToXyz(cct_src);
-  const chroma_target = cctToXyz(cct_dst);
-  const cat = getCatMatrix(chroma_d65, chroma_target);
+  const chroma_src = cctToXyz(cct_src);
+  const chroma_dst = cctToXyz(cct_dst);
+  const cat = getCatMatrix(chroma_src, chroma_dst);
 
   var M = new THREE.Matrix3();
   M.copy(xyzToLsrgbMat);

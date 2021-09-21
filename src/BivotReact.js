@@ -21,6 +21,8 @@ import DragControl from './controls/DragControl';
 import MeshOverrideControl from './controls/MeshOverrideControl';
 import AmbientOcclusionControl from './controls/AmbientOcclusionControl';
 import ColorTemperatureControl from './controls/ColorTemperatureControl';
+import HueControl from './controls/HueControl';
+import SaturationControl from './controls/SaturationControl';
 
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
@@ -194,6 +196,8 @@ function BivotReact(props) {
     meshOverride: false,
     aoStrength: 1.0,
     colorTemperature: 6500,
+    hue: 0.0,
+    saturation: 0.0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -227,6 +231,8 @@ function BivotReact(props) {
     meshOverride: false,
     aoStrength: 1.0,
     colorTemperature: 6500,
+    hue: 0.0,
+    saturation: 0.0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -281,6 +287,8 @@ function BivotReact(props) {
   const [meshOverride, setMeshOverride] = useState(state.meshOverride);
   const [aoStrength, setAoStrength] = useState(state.aoStrength);
   const [colorTemperature, setColorTemperature] = useState(state.colorTemperature);
+  const [hue, setHue] = useState(state.hue);
+  const [saturation, setSaturation] = useState(state.saturation);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -302,6 +310,8 @@ function BivotReact(props) {
   state.meshOverride = meshOverride;
   state.aoStrength = aoStrength;
   state.colorTemperature = colorTemperature;
+  state.hue = hue;
+  state.saturation = saturation;
 
   async function onLoad() {
     loadBivot();
@@ -516,6 +526,8 @@ function BivotReact(props) {
       meshOverride,
       aoStrength,
       colorTemperature,
+      hue,
+      saturation,
     } = stateFields;
 
     updateExposure(exposure);
@@ -538,6 +550,8 @@ function BivotReact(props) {
     updateMeshOverride(meshOverride);
     updateAoStrength(aoStrength);
     updateColorTemperature(colorTemperature);
+    updateHue(hue);
+    updateSaturation(saturation);
 
     // Update initial zoom value after loading state
     zoomInitialVal = zoom;
@@ -591,7 +605,7 @@ function BivotReact(props) {
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
-      meshOverride, aoStrength, colorTemperature,
+      meshOverride, aoStrength, colorTemperature, hue, saturation,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
@@ -719,6 +733,16 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function updateHue(val) {
+    setHue(val);
+    renderFrame(false);
+  }
+
+  function updateSaturation(val) {
+    setSaturation(val);
+    renderFrame(false);
+  }
+
   function updateAutoRotate(val) {
     setAutoRotatePeriodMs(val);
     renderFrame(true);
@@ -806,6 +830,8 @@ function BivotReact(props) {
               {showAdvancedControls && (
                 <React.Fragment>
                   <ColorTemperatureControl value={colorTemperature} onChange={updateColorTemperature} />
+                  <HueControl value={hue} onChange={updateHue} />
+                  <SaturationControl value={saturation} onChange={updateSaturation} />
                   <DragControl
                     value={{
                       rotate: dragControlsRotation,
