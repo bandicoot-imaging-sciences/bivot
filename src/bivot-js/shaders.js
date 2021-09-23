@@ -245,7 +245,7 @@ export default function getShaders() {
 
     vec3 hueSatShift(vec3 rgb, float hue, float saturation) {
       vec3 lch = luvToLCHuv(xyzToLuv(rgbToXyz(rgb)));
-      lch.y = max(lch.y + saturation, 0.0);
+      lch.y = max(lch.y + lch.x * saturation, 0.0);
       lch.z += hue;
       return xyzToRgb(luvToXyz(lchUVToLuv(lch)));
     }

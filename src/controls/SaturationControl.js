@@ -12,9 +12,9 @@ function SaturationControl({ value, onChange }) {
           value={value}
           onChange={(event, newValue) => onChange(newValue)}
           valueLabelDisplay="auto"
-          step={0.1}
-          min={-100}
-          max={100}
+          step={0.01}
+          min={-2}
+          max={2}
         />
       </Grid>
     </Grid>
