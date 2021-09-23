@@ -172,21 +172,23 @@ export default function getShaders() {
     ));
 
 
-    // Carmack approximation to cube root
-    float cbrt(float x)
-    {
-      float y = sign(x) * uintBitsToFloat(floatBitsToUint(abs(x)) / 3u + 0x2a514067u);
+    float cbrt(float x) {
+      #ifdef HAS_BITS_TO_FLOAT
+        // Carmack approximation to cube root
+        float y = sign(x) * uintBitsToFloat(floatBitsToUint(abs(x)) / 3u + 0x2a514067u);
 
-      // Newton iterations
-      for (int i = 0; i < 2; i++) {
-          y = (2.0 * y + x / (y * y)) * 0.333333333;
-      }
-      // Halley iterations
-      for (int i = 0; i < 1; i++) {
-        float y3 = y * y * y;
-        y *= (y3 + 2.0 * x) / (2.0 * y3 + x);
-      }
-
+        // Newton iterations
+        for (int i = 0; i < 2; i++) {
+            y = (2.0 * y + x / (y * y)) * 0.333333333;
+        }
+        // Halley iterations
+        for (int i = 0; i < 1; i++) {
+          float y3 = y * y * y;
+          y *= (y3 + 2.0 * x) / (2.0 * y3 + x);
+        }
+      #else
+        float y = pow(x, 0.333333333);
+      #endif
       return y;
     }
 
