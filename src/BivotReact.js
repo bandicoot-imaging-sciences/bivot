@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
+import { AppBar, Tabs, Tab, Tooltip, Typography } from '@material-ui/core';
+import LightingIcon from '@material-ui/icons/WbSunny';
+import ColourIcon from '@material-ui/icons/Palette';
+import LayoutIcon from '@material-ui/icons/SquareFoot';
+
 import Bivot from './bivot-js/bivot';
 import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
 
@@ -29,6 +34,8 @@ import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
 import { isFullScreenAvailable, openFullScreen } from './utils/displayLib';
 
+const tabHeight = '48px';
+
 const styles = {
   bivotGridOverlay: {
     textAlign: 'center',
@@ -47,10 +54,22 @@ const styles = {
   },
   controlPanel: {
     width: 325,
-    padding: '0.5em',
+    height: '100%',
   },
-  grow: {
-    flexGrow: 1,
+  controlContents: {
+    padding: '1em',
+    paddingLeft: '0.3em',
+    height: `calc(100% - ${tabHeight})`,
+    display: 'flex',
+    justifyContent: 'space-between',
+    flexDirection: 'column',
+  },
+  tabs: {
+    marginBottom: '1em',
+  },
+  tab: {
+    height: tabHeight,
+    minWidth: 100,
   },
 };
 
@@ -150,6 +169,10 @@ function BivotReact(props) {
     // Set to true to show advanced controls in the Bivot editor.
     // (Currently only supported for internal use)
     showAdvancedControls,
+
+    // A dictionary of decorators to display beside each control.
+    // (Currently only supported for internal use)
+    decorators,
 
     // If supplied, this callback is called upon pressing "Save" in the editor.
     // (Currently only supported for internal use)
@@ -261,6 +284,8 @@ function BivotReact(props) {
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState(0.25);
   const savedSize = useRef(null);
+
+  const [tabValue, setTabValue] = useState(0);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -801,6 +826,10 @@ function BivotReact(props) {
     }
   }
 
+  function handleTabChange(event, newValue) {
+    setTabValue(parseInt(newValue));
+  }
+
   return (
     <div
       ref={overlayRef}
@@ -809,52 +838,141 @@ function BivotReact(props) {
       <Grid container spacing={2} wrap='nowrap'>
         {showEditor && (
           <Grid item>
-            <Paper style = {styles.controlPanel}>
-              <IntensityControl value={exposure} onChange={updateExposure} />
-              <BrightnessControl value={brightness} onChange={updateBrightness} />
-              <ContrastControl value={contrast} onChange={updateContrast} />
-              <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
-              <MaterialRotationControl value={rotation} onChange={addRotation} />
-              <AspectControl value={size} onChange={updateAspect} />
-              <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
-              <LightColorControl value={lightColorControls} onChange={updateLightColor} />
-              <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
-              <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
-              {meshChoices && (
-                <MeshOverrideControl
-                  overrides={meshChoices}
-                  value={meshOverride}
-                  onChange={updateMeshOverride}
-                />
-              )}
-              {showAdvancedControls && (
-                <React.Fragment>
-                  <ColorTemperatureControl value={colorTemperature} onChange={updateColorTemperature} />
-                  <HueControl value={hue} onChange={updateHue} />
-                  <SaturationControl value={saturation} onChange={updateSaturation} />
-                  <DragControl
-                    value={{
-                      rotate: dragControlsRotation,
-                      pan: dragControlsPanning,
-                      limits: (camTiltLimitDegrees > 0)
-                    }}
-                    onChange={updateDragControl}
-                  />
-                  <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
-                </React.Fragment>
-              )}
-              <Grid container spacing={2}>
-                {onSaveScreenshot && (
-                  <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
-                )}
-                <ResetButton onChange={stateReset} />
-                <div style={styles.grow} />
-                <FullscreenButton
-                  getFullscreenElement={getFullScreenElement}
-                  onEnterFullScreen={handleEnterFullScreen}
-                  onExitFullScreen={handleExitFullScreen}
-                  fullScreen={fullScreen}
-                />
+            <Paper style={styles.controlPanel}>
+              <AppBar position='static' style={styles.tabs}>
+                <Tabs
+                  value={tabValue}
+                  onChange={handleTabChange}
+                  indicatorColor='secondary'
+                  textColor='inherit'
+                  variant='fullWidth'
+                >
+                  <Tooltip title='Lighting'>
+                    <Tab style={styles.tab} icon={<LightingIcon />} />
+                  </Tooltip>
+                  <Tooltip title='Colour'>
+                    <Tab style={styles.tab} icon={<ColourIcon />} />
+                  </Tooltip>
+                  <Tooltip title='Layout'>
+                    <Tab style={styles.tab} icon={<LayoutIcon />} />
+                  </Tooltip>
+                </Tabs>
+              </AppBar>
+              <Grid container spacing={2} style={styles.controlContents} wrap='nowrap' >
+                <Grid item>
+                  <Grid container spacing={2}>
+                    {tabValue === 0 && (<React.Fragment>
+                      <Grid item xs={1}>{decorators['exposure'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <IntensityControl value={exposure} onChange={updateExposure} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['lightWidth'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['lightColor'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <LightColorControl value={lightColorControls} onChange={updateLightColor} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['aoStrength'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
+                      </Grid>
+                    </ React.Fragment>)}
+                    {tabValue === 1 && (<React.Fragment>
+                      <Grid item xs={1}>{decorators['colorTemperature'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <ColorTemperatureControl value={colorTemperature} onChange={updateColorTemperature} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['hue'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <HueControl value={hue} onChange={updateHue} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['saturation'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <SaturationControl value={saturation} onChange={updateSaturation} />
+                      </Grid>
+                      <Grid item xs={1}></Grid>
+                      <Grid item xs={11}>
+                        <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['brightness'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <BrightnessControl value={brightness} onChange={updateBrightness} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['contrast'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <ContrastControl value={contrast} onChange={updateContrast} />
+                      </Grid>
+                    </React.Fragment>)}
+                    {tabValue === 2 && (<React.Fragment>
+                      <Grid item xs={1}>{decorators['aspectRatio'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <AspectControl value={size} onChange={updateAspect} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['zoom'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['rotation'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <MaterialRotationControl value={rotation} onChange={addRotation} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators['autoRotate'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
+                      </Grid>
+                      {meshChoices && (
+                        <React.Fragment>
+                          <Grid item xs={1}>{decorators['objectMesh'] || ''}</Grid>
+                          <Grid item xs={11}>
+                            <MeshOverrideControl
+                              overrides={meshChoices}
+                              value={meshOverride}
+                              onChange={updateMeshOverride}
+                            />
+                          </Grid>
+                        </ React.Fragment>
+                      )}
+                      <Grid item xs={1}>{decorators['dragControl'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <DragControl
+                          value={{
+                            rotate: dragControlsRotation,
+                            pan: dragControlsPanning,
+                            limits: (camTiltLimitDegrees > 0)
+                          }}
+                          onChange={updateDragControl}
+                          advancedMode={showAdvancedControls}
+                        />
+                      </Grid>
+                    </React.Fragment>)}
+                  </Grid>
+                </Grid>
+                <Grid item>
+                  <Grid container direction='row' wrap='nowrap' justify='space-between'>
+                    <Grid item>
+                    <Grid container spacing={0}>
+                    <Grid item>
+                      {onSaveScreenshot && (
+                        <SaveButton onChange={() => stateSave(onSaveScreenshot)} />
+                      )}
+                    </Grid>
+                    <Grid item>
+                      <ResetButton onChange={stateReset} />
+                    </Grid>
+                    </Grid>
+                    </Grid>
+                    <Grid item>
+                      <FullscreenButton
+                        getFullscreenElement={getFullScreenElement}
+                        onEnterFullScreen={handleEnterFullScreen}
+                        onExitFullScreen={handleExitFullScreen}
+                        fullScreen={fullScreen}
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
               </Grid>
             </Paper>
           </Grid>

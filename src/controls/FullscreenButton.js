@@ -15,18 +15,16 @@ function FullscreenButton({ getFullscreenElement, onEnterFullScreen, onExitFullS
   const classes = useStyles();
 
   return (
-    <Grid item>
-      {isFullScreenAvailable() && (
-        <Button
-          id='fullscreenButton'
-          color='primary'
-          onClick={() => openFullScreen(getFullscreenElement(), onEnterFullScreen, onExitFullScreen)}
-        >
-          <AspectRatio className={classes.icon} />
-          Fullscreen
-        </Button>
-      )}
-    </Grid>
+    isFullScreenAvailable() ? (
+      <Button
+        id='fullscreenButton'
+        color='primary'
+        onClick={() => openFullScreen(getFullscreenElement(), onEnterFullScreen, onExitFullScreen)}
+      >
+        <AspectRatio className={classes.icon} />
+        Fullscreen
+      </Button>
+    ) : ''
   );
 }
 

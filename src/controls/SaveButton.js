@@ -3,18 +3,16 @@ import { Grid, Tooltip, Button } from '@material-ui/core';
 
 function SaveButton({ onChange }) {
   return (
-    <Grid item>
-      <Tooltip title="Save the current display settings">
-        <Button
-          id="saveButton"
-          variant="contained"
-          color="primary"
-          onClick={() => {onChange()}}
-        >
-          Save
-        </Button>
-      </Tooltip>
-    </Grid>
+    <Tooltip title="Save the current display settings">
+      <Button
+        id="saveButton"
+        variant="contained"
+        color="primary"
+        onClick={() => {onChange()}}
+      >
+        Save
+      </Button>
+    </Tooltip>
   );
 }
 

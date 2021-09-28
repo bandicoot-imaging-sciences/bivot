@@ -1,8 +1,5 @@
 import React, { useState } from 'react'
-import Container from '@material-ui/core/Container';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
-import Grid from '@material-ui/core/Grid';
+import { Container, Typography, Box, Grid, Tooltip } from '@material-ui/core';
 import clsx from 'clsx';
 import { withStyles } from '@material-ui/core/styles';
 
@@ -69,6 +66,11 @@ function App(props) {
     //'Draped cloth': 'https://hosted.bandicootimaging.com.au/assets/mesh/drape-sphere_inner-square_90k.obj',
     'Rumpled cloth': rumpledMeshUrl
   };
+
+  const activeDecorator = <Tooltip title='Example decorator'><span role="img" aria-label="donut">🍩</span></Tooltip>;
+  const decorators = {
+    exposure: activeDecorator
+  }
 
   async function onBivotClick() {
     console.log('Clicked on bivot');
@@ -145,6 +147,7 @@ function App(props) {
             showAdvancedControls={true}
             meshChoices={meshList}
             fullScreen={fullScreen2}
+            decorators={decorators}
             onExitFullScreen={() => setFullScreen2(false)}
           />
         </Grid>
