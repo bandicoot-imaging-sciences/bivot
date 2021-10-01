@@ -1,0 +1,126 @@
+<!-- Bivot material viewer -->
+<!-- https://github.com/bandicoot-imaging-sciences/bivot -->
+<!-- Copyright (C) Bandicoot Imaging Sciences 2020 -->
+
+<!-- Embed example with responsive layout control for speed testing. -->
+<!-- 
+  Open this page with this query string to get an FPS counter:
+  ?bivotFps=1
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <!-- Disable favicon request until we make an icon -->
+    <link rel="icon" href="data:,">
+    <!-- This viewport tag is recommended for Bivot. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bivot material viewer</title>
+    <style>
+      .bivot-container {
+        /* Only the CSS width is needed. The height is set from the materialSet aspect ratio. */
+        width: 80vw;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id='headline'>Bivot speed test</h1>
+    <div class="bivot-container">
+      <!-- Bivot element -->
+      <!-- The ID can be changed using options in the Bivot() call. -->
+      <canvas id="bivot-canvas"></canvas>
+    </div>
+    <p>Excerpt from <i>Pride and Predujice</i> by Jane Austen:</p>
+
+    <p>“How can you contrive to write so even?”</p>
+
+    <p>He was silent.</p>
+
+    <p>“Tell your sister I am delighted to hear of her improvement on the harp; and pray let her know that I am quite in raptures with her beautiful little design for a table, and I think it infinitely superior to Miss Grantley’s.”</p>
+
+    <p>“Will you give me leave to defer your raptures till I write again? At present I have not room to do them justice.”</p>
+
+    <p>“Oh! it is of no consequence. I shall see her in January. But do you always write such charming long letters to her, Mr. Darcy?”</p>
+
+    <p>“They are generally long; but whether always charming it is not for me to determine.”</p>
+
+    <p>“It is a rule with me, that a person who can write a long letter with ease, cannot write ill.”</p>
+
+    <p>“That will not do for a compliment to Darcy, Caroline,” cried her brother, “because he does not write with ease. He studies too much for words of four syllables. Do not you, Darcy?”</p>
+
+    <p>“My style of writing is very different from yours.”</p>
+
+    <p>“Oh!” cried Miss Bingley, “Charles writes in the most careless way imaginable. He leaves out half his words, and blots the rest.”</p>
+
+    <p>“My ideas flow so rapidly that I have not time to express them--by which means my letters sometimes convey no ideas at all to my correspondents.”</p>
+
+    <p>“Your humility, Mr. Bingley,” said Elizabeth, “must disarm reproof.”</p>
+
+    <p>“Nothing is more deceitful,” said Darcy, “than the appearance of humility. It is often only carelessness of opinion, and sometimes an indirect boast.”</p>
+
+    <p>“And which of the two do you call my little recent piece of modesty?”</p>
+
+    <p>“The indirect boast; for you are really proud of your defects in writing, because you consider them as proceeding from a rapidity of thought and carelessness of execution, which, if not estimable, you think at least highly interesting. The power of doing anything with quickness is always prized much by the possessor, and often without any attention to the imperfection of the performance. When you told Mrs. Bennet this morning that if you ever resolved upon quitting Netherfield you should be gone in five minutes, you meant it to be a sort of panegyric, of compliment to yourself--and yet what is there so very laudable in a precipitance which must leave very necessary business undone, and can be of no real advantage to yourself or anyone else?”</p>
+
+    <p>“Nay,” cried Bingley, “this is too much, to remember at night all the foolish things that were said in the morning. And yet, upon my honour, I believe what I said of myself to be true, and I believe it at this moment. At least, therefore, I did not assume the character of needless precipitance merely to show off before the ladies.”</p>
+
+    <p>“I dare say you believed it; but I am by no means convinced that you would be gone with such celerity. Your conduct would be quite as dependent on chance as that of any man I know; and if, as you were mounting your horse, a friend were to say, ‘Bingley, you had better stay till next week,’ you would probably do it, you would probably not go--and at another word, might stay a month.”</p>
+
+    <p>“You have only proved by this,” cried Elizabeth, “that Mr. Bingley did not do justice to his own disposition. You have shown him off now much more than he did himself.”</p>
+
+    <p>“I am exceedingly gratified,” said Bingley, “by your converting what my friend says into a compliment on the sweetness of my temper. But I am afraid you are giving it a turn which that gentleman did by no means intend; for he would certainly think better of me, if under such a circumstance I were to give a flat denial, and ride off as fast as I could.”</p>
+
+    <p>“Would Mr. Darcy then consider the rashness of your original intentions as atoned for by your obstinacy in adhering to it?”</p>
+
+    <p>“Upon my word, I cannot exactly explain the matter; Darcy must speak for himself.”</p>
+
+    <p>“You expect me to account for opinions which you choose to call mine, but which I have never acknowledged. Allowing the case, however, to stand according to your representation, you must remember, Miss Bennet, that the friend who is supposed to desire his return to the house, and the delay of his plan, has merely desired it, asked it without offering one argument in favour of its propriety.”</p>
+  </body>
+  <!-- Import and start Bivot, pegged to the specified version -->
+  <!-- <script type="module">
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.11.1/src/bivot-js/dist/index.js";
+    // const bivSrc = "../dist/index.js";
+    // Specify the material to view.  Can be any material set file, local or remote
+    const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
+    // const materialSet = './ladybug/biv_gallery/material-set.json';
+    import(bivSrc).then(module => {
+      const bivot = new module.newBivot({ materialSet });
+      bivot.checkWebGL();
+      bivot.startRender();
+    });
+  </script> -->
+<canvas id="bivot-canvas"></canvas>
+<script type="module">
+  const bivVersion = 'v3.14.0';
+  const bivSrc = `https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@${bivVersion}/src/bivot-js/dist/index.js`;
+  // const bivSrc = "../dist/index.js";
+  const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
+  const bivOptions = {
+    adaptFps: 0,
+    controlMode: 'none',
+    materialSet,
+    useTouch: false,
+  };
+  const stateUpdate = {
+    camTiltWithMousePos: 0.0,
+    camTiltWithDeviceOrient: 0.0,
+    lightMotion: 'animate',
+    lightTiltWithMousePos: 0.0,
+    lightTiltWithDeviceOrient: 0.0
+  };
+  const targetFps = 200;
+
+  import(bivSrc).then(module => {
+    const bivot = new module.newBivot(bivOptions); 
+    bivot.opts.loadingCompleteCallback = () => {
+      bivot.adaptFramerate['targetFps'] = targetFps;
+      bivot.state = { ...bivot.state, ...stateUpdate };
+    };
+    bivot.checkWebGL(); 
+    bivot.startRender();
+  });
+  document.getElementById('headline').innerHTML += ` ${bivVersion}`;
+</script>
+
+</html>
