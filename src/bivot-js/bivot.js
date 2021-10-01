@@ -263,7 +263,6 @@ class bivotJs {
       tiltZeroOnMouseOut: false, // If true, reset the tilt to zero when the mouse moves out of the window.
       portrait: false,
       autoRotatePeriodMs: 0,
-      autoRotateFps: 30,
       autoRotateCamFactor: 0.5,
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
