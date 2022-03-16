@@ -4,7 +4,7 @@ import { Grid, Typography, Slider, Tooltip } from '@material-ui/core';
 function ColorTemperatureControl({ value, onChange }) {
   return (
     <Grid container spacing={2}>
-      <Grid item><Tooltip title="A color temperature to use for the basecolor">
+      <Grid item><Tooltip title="The input color temperature for the scan">
         <Typography id="ctemp-slider" gutterBottom>Color temperature</Typography>
       </Tooltip></Grid>
       <Grid item xs>

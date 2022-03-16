@@ -266,6 +266,7 @@ class bivotJs {
       autoRotateCamFactor: 0.5,
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
+      showSeams: false,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
       _camPositionOffset: new THREE.Vector2(0, 0),
@@ -363,6 +364,8 @@ class bivotJs {
     this.mouseInCanvas = false;
     this.intersectionObserver = null;
     this.isVisible = false;
+    this.seamsShowing = false;
+    this.noSeamsBaseColor = null;
 
     this.needsResize = false;
     this.inFullScreen = false;
@@ -2240,6 +2243,30 @@ class bivotJs {
     return false;
   }
 
+  updateShowSeams() {
+    console.log('00000', this.state.showSeams, this.seamsShowing);
+    if (this.state.showSeams && !this.seamsShowing) {
+      console.log('AAAAA');
+      console.log(this.uniforms.diffuseMap)
+      console.log(this.uniforms.diffuseMap.value)
+      console.log(this.uniforms.diffuseMap.value.image)
+      //console.log(this.uniforms.diffuseMap.value.image[500, 500])
+      //this.noSeamsBaseColor = this.uniforms.diffuseMap.value.image.data;//.slice();
+      this.uniforms.diffuseMap.value.repeat = new THREE.Vector2(3, 3);
+      this.uniforms.diffuseMap.value.matrix.set(0.333, 0.0, 0.0, 0.0, 0.333, 0.0, 0.0, 0.0, 0.333);
+      //console.log(this.uniforms.diffuseMap.value.image.data);
+      //console.log(this.uniforms.diffuseMap.value.image.data[400, 400]);
+      //this.uniforms.diffuseMap.needsUpdate = true;
+      this.seamsShowing = true;
+    } else if (!this.state.showSeams && this.seamsShowing) {
+      console.log('BBBBB');
+      this.uniforms.diffuseMap.value.repeat = new THREE.Vector2(1, 1);
+      //this.uniforms.diffuseMap.value.image.data = this.noSeamsBaseColor;//.slice();
+      //this.uniforms.diffuseMap.needsUpdate = true;
+      this.seamsShowing = false;
+    }
+  }
+
   updateUniforms() {
     this.uniforms.uExposure.value = this.exposureGain * this.state.exposure;
     this.uniforms.uBrightness.value = this.state.brightness;
@@ -2281,6 +2308,7 @@ class bivotJs {
         this.updateCanvas();
         this.updateZoom();
         this.updateColor();
+        this.updateShowSeams();
         this.updateControls(this.controls);
       }
 
