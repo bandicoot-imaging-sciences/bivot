@@ -1,6 +1,6 @@
 {
   "name": "@bandicoot/bivot",
-  "version": "3.14.0",
+  "version": "3.14.2",
   "description": "Viewer for Bandicoot Shimmer View images",
   "homepage": "https://github.com/bandicoot-imaging-sciences/bivot",
   "author": "dkarlov",
@@ -34,7 +34,7 @@
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {
-    "@material-ui/core": ">=4.11.0",
+    "@material-ui/core": ">=3.0.0",
     "react": ">=16.8.0"
   },
   "devDependencies": {
