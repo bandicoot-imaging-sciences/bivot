@@ -13,6 +13,7 @@ export default function getShaders() {
         'diffuseMap': {value: null},
         'normalMap': {value: null}, // Three.js shader chunks assume normal map is called normalMap.
         'specularMap': {value: null},
+        'overlayMap': {value: null},
         'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
         'uExposure': {value: 1.0},
         'uDiffuse': {value: 1.0},
@@ -88,6 +89,8 @@ export default function getShaders() {
     uniform sampler2D diffuseMapLow;
     uniform sampler2D normalMapLow;
     uniform sampler2D specularMapLow;
+
+    uniform sampler2D overlayMap;
 
     uniform float uExposure;
     uniform float uBrightness;
@@ -264,6 +267,10 @@ export default function getShaders() {
         normalSurface = normalSurface + normalSurfaceLow;
         specularTexel = specularTexel + specularTexelLow;
       }
+
+      // Composite the overlay onto the basecolor
+      vec4 overlaySurface = texture2D(overlayMap, vUv);
+      diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
 
       float s = 1.0;
       float white_L = 1.0;

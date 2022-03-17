@@ -239,6 +239,7 @@ class bivotJs {
       brdfVersion: 2,
       displacementOffset: 0.0,
       displacementUnits: 0.0,
+      texDims: undefined,
       aoStrength: 1.0,
       colorTemperature: 6500,
       colorTransform: new THREE.Matrix3(),
@@ -2244,27 +2245,81 @@ class bivotJs {
   }
 
   updateShowSeams() {
-    console.log('00000', this.state.showSeams, this.seamsShowing);
-    if (this.state.showSeams && !this.seamsShowing) {
-      console.log('AAAAA');
-      console.log(this.uniforms.diffuseMap)
-      console.log(this.uniforms.diffuseMap.value)
-      console.log(this.uniforms.diffuseMap.value.image)
-      //console.log(this.uniforms.diffuseMap.value.image[500, 500])
-      //this.noSeamsBaseColor = this.uniforms.diffuseMap.value.image.data;//.slice();
-      this.uniforms.diffuseMap.value.repeat = new THREE.Vector2(3, 3);
-      this.uniforms.diffuseMap.value.matrix.set(0.333, 0.0, 0.0, 0.0, 0.333, 0.0, 0.0, 0.0, 0.333);
-      //console.log(this.uniforms.diffuseMap.value.image.data);
-      //console.log(this.uniforms.diffuseMap.value.image.data[400, 400]);
-      //this.uniforms.diffuseMap.needsUpdate = true;
-      this.seamsShowing = true;
-    } else if (!this.state.showSeams && this.seamsShowing) {
-      console.log('BBBBB');
-      this.uniforms.diffuseMap.value.repeat = new THREE.Vector2(1, 1);
-      //this.uniforms.diffuseMap.value.image.data = this.noSeamsBaseColor;//.slice();
-      //this.uniforms.diffuseMap.needsUpdate = true;
-      this.seamsShowing = false;
+    if (this.state.showSeams != this.seamsShowing) {
+      // Only update the texture if there's a change to the seams status
+      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams);
     }
+    this.seamsShowing = this.state.showSeams;
+  }
+
+  drawDashedLine(ctx, x0, y0, x1, y1, length) {
+    var xLen = (x1 - x0);
+    var yLen = (y1 - y0);
+    var lineLength = Math.sqrt(xLen * xLen + yLen * yLen);
+    var step = length / lineLength;
+
+    var i = 0;
+    var strokeOn = false;
+    ctx.moveTo(x0, y0);
+    for (var i = 0; i < 1; i += step) {
+      var x = x0 + (x1 - x0) * i;
+      var y = y0 + (y1 - y0) * i;
+      if (strokeOn) {
+        ctx.lineTo(x, y);
+      } else {
+        ctx.moveTo(x, y);
+      }
+      strokeOn = !strokeOn;
+    }
+  }
+
+  createOverlayTexture(showSeams) {
+    // Define dimensions of overlay texture
+    w = 1024;
+    h = 1024;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    this.state.texDims = [1024, 1024]
+    if (showSeams && this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
+      var texDims = this.state.texDims;
+      var texSize = 2 * Math.max(texDims[0], texDims[1]); // Texture is a square fitting 2 x texDims
+
+      // Seams are 1/4 and 3/4 of the way across preview textures
+      var tc = texSize / 2
+      var dx = texDims[0] / 2;
+      var dy = texDims[1] / 2;
+      var x1 = Math.floor((tc - dx) * w / texSize);
+      var x2 = Math.floor((tc + dx - 1) * w / texSize);
+      var y1 = Math.floor((tc - dy) * h / texSize);
+      var y2 = Math.floor((tc + dy - 1) * h / texSize);
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#000F';
+      ctx.moveTo(0,  y1); ctx.lineTo(w-1, y1);
+      ctx.moveTo(0,  y2); ctx.lineTo(w-1, y2);
+      ctx.moveTo(x1, 0);  ctx.lineTo(x1,  h-1);
+      ctx.moveTo(x2, 0);  ctx.lineTo(x2,  h-1);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#FFFF';
+      this.drawDashedLine(ctx, 0,  y1, w-1, y1,  8);
+      this.drawDashedLine(ctx, 0,  y2, w-1, y2,  8);
+      this.drawDashedLine(ctx, x1, 0,  x1,  h-1, 8);
+      this.drawDashedLine(ctx, x2, 0,  x2,  h-1, 8);
+      ctx.stroke();
+    }
+
+    const canvasTexture = new THREE.Texture(canvas);
+    canvasTexture.needsUpdate = true;
+    canvasTexture.flipX = false;
+    canvasTexture.flipY = true;
+
+    return canvasTexture;
   }
 
   updateUniforms() {
