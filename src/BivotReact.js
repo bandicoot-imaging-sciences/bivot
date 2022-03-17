@@ -862,33 +862,33 @@ function BivotReact(props) {
                 <Grid item>
                   <Grid container spacing={2}>
                     {tabValue === 0 && (<React.Fragment>
-                      <Grid item xs={1}>{decorators['exposure'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['exposure'] || ''}</Grid>
                       <Grid item xs={11}>
                         <IntensityControl value={exposure} onChange={updateExposure} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['lightWidth'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['lightWidth'] || ''}</Grid>
                       <Grid item xs={11}>
                         <LightTypeControl type={lightType} size={areaLightWidth / referenceAreaLightWidth} onChange={updateLightType} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['lightColor'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['lightColor'] || ''}</Grid>
                       <Grid item xs={11}>
                         <LightColorControl value={lightColorControls} onChange={updateLightColor} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['aoStrength'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['aoStrength'] || ''}</Grid>
                       <Grid item xs={11}>
                         <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
                       </Grid>
                     </ React.Fragment>)}
                     {tabValue === 1 && (<React.Fragment>
-                      <Grid item xs={1}>{decorators['colorTemperature'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['colorTemperature'] || ''}</Grid>
                       <Grid item xs={11}>
                         <ColorTemperatureControl value={colorTemperature} onChange={updateColorTemperature} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['hue'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['hue'] || ''}</Grid>
                       <Grid item xs={11}>
                         <HueControl value={hue} onChange={updateHue} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['saturation'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['saturation'] || ''}</Grid>
                       <Grid item xs={11}>
                         <SaturationControl value={saturation} onChange={updateSaturation} />
                       </Grid>
@@ -896,35 +896,35 @@ function BivotReact(props) {
                       <Grid item xs={11}>
                         <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['brightness'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['brightness'] || ''}</Grid>
                       <Grid item xs={11}>
                         <BrightnessControl value={brightness} onChange={updateBrightness} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['contrast'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['contrast'] || ''}</Grid>
                       <Grid item xs={11}>
                         <ContrastControl value={contrast} onChange={updateContrast} />
                       </Grid>
                     </React.Fragment>)}
                     {tabValue === 2 && (<React.Fragment>
-                      <Grid item xs={1}>{decorators['aspectRatio'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['aspectRatio'] || ''}</Grid>
                       <Grid item xs={11}>
                         <AspectControl value={size} onChange={updateAspect} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['zoom'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['zoom'] || ''}</Grid>
                       <Grid item xs={11}>
                         <ZoomControl value={zoom} max={diag * 4} onChange={updateZoom} onChangeCommitted={updateZoomFinished} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['rotation'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['rotation'] || ''}</Grid>
                       <Grid item xs={11}>
                         <MaterialRotationControl value={rotation} onChange={addRotation} />
                       </Grid>
-                      <Grid item xs={1}>{decorators['autoRotate'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['autoRotate'] || ''}</Grid>
                       <Grid item xs={11}>
                         <AutoRotateControl value={autoRotatePeriodMs} onChange={updateAutoRotate} />
                       </Grid>
                       {meshChoices && (
                         <React.Fragment>
-                          <Grid item xs={1}>{decorators['objectMesh'] || ''}</Grid>
+                          <Grid item xs={1}>{decorators && decorators['objectMesh'] || ''}</Grid>
                           <Grid item xs={11}>
                             <MeshOverrideControl
                               overrides={meshChoices}
@@ -934,7 +934,7 @@ function BivotReact(props) {
                           </Grid>
                         </ React.Fragment>
                       )}
-                      <Grid item xs={1}>{decorators['dragControl'] || ''}</Grid>
+                      <Grid item xs={1}>{decorators && decorators['dragControl'] || ''}</Grid>
                       <Grid item xs={11}>
                         <DragControl
                           value={{
