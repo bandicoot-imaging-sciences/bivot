@@ -2283,7 +2283,6 @@ class bivotJs {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    this.state.texDims = [1024, 1024]
     if (showSeams && this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
       var texDims = this.state.texDims;
       var texSize = 2 * Math.max(texDims[0], texDims[1]); // Texture is a square fitting 2 x texDims
