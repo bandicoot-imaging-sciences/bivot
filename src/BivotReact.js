@@ -142,6 +142,10 @@ function BivotReact(props) {
     // framerate.
     adaptFps,
 
+    // If provided, a callback function which Bivot will call according to the
+    // status of Bivot.  1: Loading; 2: Loaded; 0: Other
+    statusCallback,
+
     // If set, the URL for an object mesh to render the Shimmer on.
     // Set to false to revert the the default mesh for the Shimmer.
     // NOTE: This should only be used for Flat mode scans.
@@ -160,6 +164,15 @@ function BivotReact(props) {
     // authorised.
     // (Currently only supported for internal use)
     fetchFiles,
+
+    // If set, indicators are drawn along tiling seams.
+    // (Currently only supported for internal use)
+    tilingSeams,
+
+    // Hover controls are disabled while this is true, including light
+    // position and material tilt.  While hover controls are disabled,
+    // corresponding drag controls will be enabled.
+    hoverDisabled,
 
     // ========== Editor props ==========
 
@@ -275,12 +288,34 @@ function BivotReact(props) {
   });
   const [checkpointState, _setCheckpointState] = useState({});
 
-  // If autoRotate is set in props, then override state
-  if (autoRotate === true) {
-    state.autoRotatePeriodMs = 8000;
-  } else if (autoRotate === false) {
-    state.autoRotatePeriodMs = 0;
+  function updateAutoRotateOverride(val) {
+    if (val === true) {
+      state.autoRotatePeriodMs = 8000;
+    } else if (val === false) {
+      state.autoRotatePeriodMs = 0;
+    }
   }
+
+  function updateHoverDisabledOverride(val) {
+    if (val === true) {
+      setCamTiltWithMousePos(0);
+      setCamTiltWithDeviceOrient(0);
+      setLightTiltWithMousePos(0);
+      setLightTiltWithDeviceOrient(0);
+      setDragControlsRotation(true);
+      setDragControlsPanning(true);
+    } else if (val === false) {
+      setCamTiltWithMousePos(defaultState.camTiltWithMousePos);
+      setCamTiltWithDeviceOrient(defaultState.camTiltWithDeviceOrient);
+      setLightTiltWithMousePos(defaultState.lightTiltWithMousePos);
+      setLightTiltWithDeviceOrient(defaultState.lightTiltWithDeviceOrient);
+      setDragControlsRotation(defaultState.dragControlsRotation);
+      setDragControlsPanning(defaultState.dragControlsPanning);
+    }
+  }
+
+  // // If autoRotate is set in props, then override state
+  // updateAutoRotateOverride(autoRotate);
 
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSetInternal, setMaterialSetInternal] = useState({});
@@ -318,6 +353,10 @@ function BivotReact(props) {
   const [hue, setHue] = useState(state.hue);
   const [saturation, setSaturation] = useState(state.saturation);
   const [showSeams, setShowSeams] = useState(state.showSeams);
+  const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
+  const [camTiltWithDeviceOrient, setCamTiltWithDeviceOrient] = useState(state.camTiltWithDeviceOrient);
+  const [lightTiltWithMousePos, setLightTiltWithMousePos] = useState(state.lightTiltWithMousePos);
+  const [lightTiltWithDeviceOrient, setLightTiltWithDeviceOrient] = useState(state.lightTiltWithDeviceOrient);
 
   state.exposure = exposure;
   state.brightness = brightness;
@@ -342,6 +381,11 @@ function BivotReact(props) {
   state.hue = hue;
   state.saturation = saturation;
   state.showSeams = showSeams;
+  state.camTiltWithMousePos = camTiltWithMousePos;
+  state.camTiltWithDeviceOrient = camTiltWithDeviceOrient;
+  state.lightTiltWithMousePos = lightTiltWithMousePos;
+  state.lightTiltWithDeviceOrient = lightTiltWithDeviceOrient;
+
 
   async function onLoad() {
     loadBivot();
@@ -393,6 +437,18 @@ function BivotReact(props) {
     }
   }, [objectMesh]);
 
+  useEffect(() => {
+    updateShowSeams(Boolean(tilingSeams));
+  }, [tilingSeams]);
+
+  useEffect(() => {
+    updateHoverDisabledOverride(hoverDisabled);
+  }, [hoverDisabled]);
+
+  useEffect(() => {
+    updateAutoRotateOverride(autoRotate);
+  }, [autoRotate]);
+
   // Shut down bivot when the component closes
   useEffect(() => {
     return () => {
@@ -442,6 +498,9 @@ function BivotReact(props) {
   }
 
   async function loadBivot() {
+    if (statusCallback !== undefined) {
+      statusCallback(1); // Loading
+    }
     var renderPath;
     var texturePath;
     var galleryMat;
@@ -530,6 +589,12 @@ function BivotReact(props) {
 
     copyStateFields(state, checkpointState);
     setLoading(false);
+    if (statusCallback !== undefined) {
+      statusCallback(2); // Loaded
+    }
+
+    updateAutoRotateOverride(autoRotate);
+    updateHoverDisabledOverride(hoverDisabled);
   }
 
   async function updateStateFields(stateFields) {
@@ -774,7 +839,7 @@ function BivotReact(props) {
   }
 
   function updateAutoRotate(val) {
-    setAutoRotatePeriodMs(val);
+    setAutoRotatePeriodMs(autoRotate === false ? 0 : val);
     renderFrame(true);
   }
 
@@ -809,8 +874,12 @@ function BivotReact(props) {
   }
 
   function updateShowSeams(val) {
-    console.log('updateShowSeams:', val)
     setShowSeams(val);
+    renderFrame(true);
+  }
+
+  function updateHoverDisabled(val) {
+    setHoverDisabled(val);
     renderFrame(true);
   }
 
@@ -889,10 +958,10 @@ function BivotReact(props) {
                       <Grid item xs={11}>
                         <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
                       </Grid>
-                      <Grid item xs={1}>{decorators && decorators['showSeams'] || ''}</Grid>
+                      {/* <Grid item xs={1}>{decorators && decorators['showSeams'] || ''}</Grid>
                       <Grid item xs={11}>
                         <ShowSeamsControl value={showSeams} onChange={updateShowSeams} />
-                      </Grid>
+                      </Grid> */}
                     </ React.Fragment>)}
                     {tabValue === 1 && (<React.Fragment>
                       <Grid item xs={1}>{decorators && decorators['colorTemperature'] || ''}</Grid>
