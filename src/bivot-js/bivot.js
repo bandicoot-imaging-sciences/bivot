@@ -1422,8 +1422,6 @@ class bivotJs {
     }
 
     function loadScan() {
-      _self.deactivateMesh();
-
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoad;
       loadManager.onProgress = onProgress;
@@ -1866,22 +1864,21 @@ class bivotJs {
     _self.meshPathUsed = meshPath;
     if (_self.meshCache.hasOwnProperty(meshPath)) {
       // Mesh cache hit.  Switch to the requested mesh which is already loaded.
-      _self.deactivateMesh();
-      _self.mesh = _self.meshCache[meshPath];
+      _self.changeMesh(_self.meshCache[meshPath]);
       loadManager.onLoad();
     } else {
       // Mesh cache miss.  Load the mesh from the given path.
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
-          _self.deactivateMesh();
-          _self.mesh = null;
+          var meshElem = null;
           object.traverse(function(child) {
             if (child instanceof THREE.Mesh) {
-              _self.mesh = child;
+              meshElem = child;
             }
           });
-          _self.meshCache[meshPath] = _self.mesh;  // Add to mesh cache
+          _self.changeMesh(meshElem);
+          _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
 
           // Workaround for three.js LoadingManager bug (see onLoad())
           if (_self.loadCompleteButMeshMissing) {
@@ -1897,9 +1894,14 @@ class bivotJs {
     }
   }
 
-  deactivateMesh() {
+  changeMesh(newMesh) {
     if (this.mesh != null) {
-      this.scene.remove(this.mesh); // Remove old mesh from scene and clean up memory
+      // Reset rotation to 0, for correct rotation handling in case mesh is cached and reused
+      this.mesh.rotateZ((-this.state._meshRotateZDegreesPrevious)*Math.PI/180);
+      this.state._meshRotateZDegreesPrevious = 0;
+
+      // Remove old mesh from scene and clean up memory
+      this.scene.remove(this.mesh);
       this.mesh.traverse(
         function(child) {
           if (child instanceof THREE.Mesh) {
@@ -1909,19 +1911,16 @@ class bivotJs {
         }
       );
     }
+    this.mesh = newMesh;
   }
 
   activateLoadedMesh(_self) {
-    // Deactivate existing mesh
-    _self.deactivateMesh();
-
     if (_self.mesh === null) {
       console.warn('Mesh unavailable; using planar geometry');
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
     }
 
-    // Reset mesh rotation
-    _self.state._meshRotateZDegreesPrevious = 0;
+    // Set initial Z rotation for loaded  mesh
     _self.updateMeshRotation();
 
     var geom = _self.mesh.geometry;
@@ -1981,7 +1980,7 @@ class bivotJs {
 
   updateMeshRotation() {
     if (this.mesh) {
-      this.mesh.rotateZ((this.state.meshRotateZDegrees - this.state._meshRotateZDegreesPrevious)*Math.PI/180);
+      this.mesh.rotateZ((this.state.meshRotateZDegrees - this.state._meshRotateZDegreesPrevious) * Math.PI/180);
       this.state._meshRotateZDegreesPrevious = this.state.meshRotateZDegrees;
     }
   }
@@ -2357,8 +2356,8 @@ class bivotJs {
         this.state.dirty = false;
         this.updateBackground();
         this.updateLightingGrid();
+        this.updateMeshRotation(); // Before updateMesh(), to avoid flicker when changing meshes for rotated Shimmer
         this.updateMesh();
-        this.updateMeshRotation();
         this.updateCanvas();
         this.updateZoom();
         this.updateColor();
