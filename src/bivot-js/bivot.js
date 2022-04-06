@@ -2283,8 +2283,8 @@ class bivotJs {
     const ctx = canvas.getContext('2d');
 
     if (showSeams && this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
-      var texDims = this.state.texDims;
-      var texSize = 2 * Math.max(texDims[0], texDims[1]); // Texture is a square fitting 2 x texDims
+      var texDims = this.state.texDims; // Useful texture region
+      var texSize = Math.max(texDims[0], texDims[1]); // Texture image is a square fitting texDims
 
       // Seams are 1/4 and 3/4 of the way across preview textures
       var tc = texSize / 2
