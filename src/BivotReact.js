@@ -304,15 +304,19 @@ function BivotReact(props) {
     if (val === true) {
       setCamTiltWithMousePos(0);
       setCamTiltWithDeviceOrient(0);
+      setCamTiltLimitDegrees(0);
       setLightTiltWithMousePos(0);
       setLightTiltWithDeviceOrient(0);
+      setLightTiltLimitDegrees(0);
       setDragControlsRotation(true);
       setDragControlsPanning(true);
     } else if (val === false) {
       setCamTiltWithMousePos(defaultState.camTiltWithMousePos);
       setCamTiltWithDeviceOrient(defaultState.camTiltWithDeviceOrient);
+      setCamTiltLimitDegrees(defaultState.camTiltLimitDegrees);
       setLightTiltWithMousePos(defaultState.lightTiltWithMousePos);
       setLightTiltWithDeviceOrient(defaultState.lightTiltWithDeviceOrient);
+      setLightTiltLimitDegrees(defaultState.lightTiltLimitDegrees);
       setDragControlsRotation(defaultState.dragControlsRotation);
       setDragControlsPanning(defaultState.dragControlsPanning);
     }
