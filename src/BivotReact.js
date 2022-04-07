@@ -249,6 +249,8 @@ function BivotReact(props) {
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
     bloom: 0.0,
+    texDims: undefined,
+    metresPerPixelTextures: undefined,
   };
   const [state, _setState] = useState({
     exposure: 1.0,
@@ -285,6 +287,8 @@ function BivotReact(props) {
     autoRotateCamFactor: 0.5,
     autoRotateLightFactor: 0.9,
     bloom: 0.0,
+    texDims: undefined,
+    metresPerPixelTextures: undefined,
   });
   const [checkpointState, _setCheckpointState] = useState({});
 
@@ -321,9 +325,10 @@ function BivotReact(props) {
   const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
   const [diag, setDiag] = useState(0.25);
-  const savedSize = useRef(null);
-
+  const [meshScaling, setMeshScaling] = useState(1.0);
   const [tabValue, setTabValue] = useState(0);
+
+  const savedSize = useRef(null);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -424,6 +429,27 @@ function BivotReact(props) {
       updateSize([w, h]);
     }
   }, [width, height]);
+
+  useEffect(() => {
+    if (state && diag) {
+      var mPerPix = state['metresPerPixelTextures'];
+      var texDims = state['texDims'];
+      if (mPerPix !== undefined && texDims !== undefined) {
+        var diagTexPix = Math.sqrt(texDims[0] * texDims[0] + texDims[1] * texDims[1]);
+        var diagTexM = diagTexPix * mPerPix;
+        var scaling = diagTexM / diag;  // diag: the mesh diagonal
+      } else {
+        var scaling = 1.0;
+      }
+      var ratio = meshScaling / scaling;
+
+      setMeshScaling(scaling);
+      setZoom([zoom[0] * ratio, zoom[1] * ratio, zoom[2] * ratio]);
+      setCurrentZoom(currentZoom * ratio);
+      renderFrame(true);
+    }
+  }, [state, diag]);
+
 
   useEffect(() => {
     if (isFullScreenAvailable() && fullScreen) {
@@ -666,10 +692,12 @@ function BivotReact(props) {
   }
 
   // Called when bivot finishes loading the material.
-  async function loadingCompleteCallback() {
+  async function loadingCompleteCallback(shimmerLoaded, meshLoaded) {
     if (bivot.current) {
-      console.log('Bivot loading complete');
-      setDiag(bivot.current.getDiag());
+      console.log('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
+      if (meshLoaded) {
+        setDiag(bivot.current.getDiag());
+      }
     }
   }
 

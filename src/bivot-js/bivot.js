@@ -366,7 +366,7 @@ class bivotJs {
     this.intersectionObserver = null;
     this.isVisible = false;
     this.seamsShowing = false;
-    this.noSeamsBaseColor = null;
+    this.diag = null;
 
     this.needsResize = false;
     this.inFullScreen = false;
@@ -689,7 +689,7 @@ class bivotJs {
 
       // Call loading complete callback, if provided
       if (_self.opts.loadingCompleteCallback) {
-        _self.opts.loadingCompleteCallback();
+        _self.opts.loadingCompleteCallback(true, true);
       }
 
       // The deviceorientation event has been restricted for privacy reasons.
@@ -1850,6 +1850,10 @@ class bivotJs {
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
         _self.activateLoadedMesh(_self);
+        // Call loading complete callback, if provided
+        if (_self.opts.loadingCompleteCallback) {
+          _self.opts.loadingCompleteCallback(false, true);
+        }
       };
       // Reset and show progress bar, then load the mesh
       _self.loadingElem.style.display = 'flex';
@@ -1920,11 +1924,12 @@ class bivotJs {
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
     }
 
-    // Set initial Z rotation for loaded  mesh
+    // Set initial Z rotation for loaded mesh
     _self.updateMeshRotation();
 
     var geom = _self.mesh.geometry;
     geom.computeBoundingBox();
+
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
     if (!geom.attributes.hasOwnProperty('normal')) {
@@ -1940,6 +1945,7 @@ class bivotJs {
     //   BufferGeometryUtils.computeTangents(geom);
     // }
     _self.geometry = geom;
+    _self.setDiag(); // Calculate diag after setting geometry
 
     // Set up the material and attach it to the mesh
     let material = new THREE.ShaderMaterial(
@@ -2352,6 +2358,7 @@ class bivotJs {
       const frameStartTimeMs = Date.now();
 
       // FIXME: Remove forced true after adding canvas client size event handler.
+      // FIXME: Break up into specific dirty flags rather than one flag for all updates.
       if (this.state.dirty) {
         this.state.dirty = false;
         this.updateBackground();
@@ -2421,16 +2428,21 @@ class bivotJs {
     }
   }
 
-  getDiag() {
+  setDiag() {
+    var diag = 0;
     if (this.geometry) {
       const box = this.geometry.boundingBox;
       if (box) {
         const x = box.max.x - box.min.x;
         const y = box.max.y - box.min.y;
-        return Math.sqrt(x * x + y * y);
+        diag = Math.sqrt(x * x + y * y);
       }
     }
-    return 0;
+    this.diag = diag;
+  }
+
+  getDiag() {
+    return this.diag;
   }
 
   registerEventListener(object, type, listener, ...args) {
