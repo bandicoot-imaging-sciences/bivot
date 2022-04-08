@@ -174,6 +174,10 @@ function BivotReact(props) {
     // corresponding drag controls will be enabled.
     hoverDisabled,
 
+    // Defer loading as long as this is true.  Can be useful to control
+    // loading sequences.
+    deferLoading,
+
     // ========== Editor props ==========
 
     // Set to true to show the Bivot editor.
@@ -400,10 +404,12 @@ function BivotReact(props) {
     loadBivot();
   }
 
-  // Load bivot
+  // Load bivot (if not deferred)
   useEffect(() => {
-    onLoad();
-  }, []);
+    if (deferLoading !== true) {
+      onLoad();
+    }
+  }, [deferLoading]);
 
   // Update bivot when the whole material changes
   useEffect(() => {
