@@ -1072,7 +1072,7 @@ function BivotReact(props) {
                   </Grid>
                 </Grid>
                 <Grid item>
-                  <Grid container direction='row' wrap='nowrap' justify='space-between'>
+                  <Grid container direction='row' wrap='nowrap' justifyContent='space-between'>
                     <Grid item>
                     <Grid container spacing={0}>
                     <Grid item>
