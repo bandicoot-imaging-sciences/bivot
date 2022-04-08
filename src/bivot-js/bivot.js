@@ -2294,12 +2294,12 @@ class bivotJs {
 
       // Seams are 1/4 and 3/4 of the way across preview textures
       var tc = texSize / 2
-      var dx = texDims[0] / 2;
-      var dy = texDims[1] / 2;
+      var dx = texDims[0] / 4;
+      var dy = texDims[1] / 4;
       var x1 = Math.floor((tc - dx) * w / texSize);
-      var x2 = Math.floor((tc + dx - 1) * w / texSize);
+      var x2 = Math.ceil((tc + dx - 1) * w / texSize);
       var y1 = Math.floor((tc - dy) * h / texSize);
-      var y2 = Math.floor((tc + dy - 1) * h / texSize);
+      var y2 = Math.ceil((tc + dy - 1) * h / texSize);
 
       ctx.beginPath();
       ctx.strokeStyle = '#000F';
