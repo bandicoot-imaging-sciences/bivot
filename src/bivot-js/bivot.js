@@ -1054,7 +1054,7 @@ class bivotJs {
       var controls = new OrbitControls(camera, elem);
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
-      controls.panSpeed = 0.3;
+      controls.panSpeed = 1.0;
       controls.rotateSpeed = 1.0;
       controls.zoomSpeed = 1.0;
       controls.target = _self.state.cameraPan;
