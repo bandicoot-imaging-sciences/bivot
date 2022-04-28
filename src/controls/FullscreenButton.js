@@ -11,7 +11,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function FullscreenButton({ getFullscreenElement, onEnterFullScreen, onExitFullScreen }) {
+function FullscreenButton({ getFullscreenElement }) {
   const classes = useStyles();
 
   return (
@@ -19,7 +19,7 @@ function FullscreenButton({ getFullscreenElement, onEnterFullScreen, onExitFullS
       <Button
         id='fullscreenButton'
         color='primary'
-        onClick={() => openFullScreen(getFullscreenElement(), onEnterFullScreen, onExitFullScreen)}
+        onClick={() => openFullScreen(getFullscreenElement())}
       >
         <AspectRatio className={classes.icon} />
         Fullscreen

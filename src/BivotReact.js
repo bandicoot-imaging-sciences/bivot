@@ -33,7 +33,7 @@ import ShowSeamsControl from './controls/ShowSeamsControl';
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
 import { rgbArrayToColorObj, rgbArrayToHexString } from './utils/colorLib';
-import { isFullScreenAvailable, openFullScreen } from './utils/displayLib';
+import { isFullScreenAvailable, getDocumentFullScreenElement, openFullScreen, closeFullScreen } from './utils/displayLib';
 
 const tabHeight = '48px';
 
@@ -116,12 +116,12 @@ function BivotReact(props) {
     responsive,
 
     // ========== Advanced props ==========
-    // When fullScreen is set to true, Bivot will enter full screen mode.  Bivot
-    // calls back into onExitFullScreen when full screen is exited.  This callback
-    // should reset fullScreen to false, and may additionally perform any other
-    // user action desired.
-    // NOTE: fullScreen is not yet supported for iOS devices.
+    // When fullScreen becomes true or false, Bivot will correspondingly enter or
+    // exit full screen mode.  NOTE: fullScreen is not yet supported for iOS devices.
     fullScreen,
+
+    // DEPRECATION WARNING: onExitFullScreen is deprecated.  Recommended approach is
+    // to add a 'fullscreenchange' event listener to detect when full screen changes.
     onExitFullScreen,
 
     // If set to true, the Shimmer View is embedded as the featured element of
@@ -462,9 +462,20 @@ function BivotReact(props) {
 
 
   useEffect(() => {
-    if (isFullScreenAvailable() && fullScreen) {
-      openFullScreen(getFullScreenElement(), handleEnterFullScreen, handleExitFullScreen);
+    async function onChangeFullScreen() {
+      if (isFullScreenAvailable()) {
+        if (fullScreen === true) {
+          if (!getDocumentFullScreenElement()) {
+            openFullScreen(getFullScreenElement());
+          }
+        } else if (fullScreen === false) {
+          if (getDocumentFullScreenElement()) {
+            closeFullScreen();
+          }
+        }
+      }
     }
+    onChangeFullScreen();
   }, [fullScreen]);
 
   useEffect(() => {
@@ -493,6 +504,14 @@ function BivotReact(props) {
         bivot.current = null;
       }
     };
+  }, []);
+
+  // Watch for full screen change
+  useEffect(() => {
+    document.addEventListener('fullscreenchange', fullScreenChanged);
+    return () => {
+      document.removeEventListener('fullscreenchange', fullScreenChanged);
+    }
   }, []);
 
   function getMatFromMatSet(materialSet, materialIndex=0) {
@@ -921,17 +940,21 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
-  function handleEnterFullScreen() {
-    savedSize.current = size;
-    setSize([window.screen.width, window.screen.height]);
-    renderFrame(true);
-  }
-
-  function handleExitFullScreen() {
-    setSize(savedSize.current);
-    renderFrame(true);
-    if (onExitFullScreen) {
-      onExitFullScreen();
+  function fullScreenChanged() {
+    const fsElt = getDocumentFullScreenElement();
+    if (fsElt && fsElt === getFullScreenElement()) {
+      // My full screen opened
+      savedSize.current = size;
+      setSize([window.screen.width, window.screen.height]);
+      renderFrame(true);
+    } else if (!fsElt && savedSize.current) {
+      // My full screen closed
+      setSize(savedSize.current);
+      renderFrame(true);
+      savedSize.current = undefined;
+      if (onExitFullScreen) {
+        onExitFullScreen();
+      }
     }
   }
 
@@ -1088,8 +1111,6 @@ function BivotReact(props) {
                     <Grid item>
                       <FullscreenButton
                         getFullscreenElement={getFullScreenElement}
-                        onEnterFullScreen={handleEnterFullScreen}
-                        onExitFullScreen={handleExitFullScreen}
                         fullScreen={fullScreen}
                       />
                     </Grid>

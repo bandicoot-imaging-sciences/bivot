@@ -53,6 +53,7 @@ import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
 import { getBasePath } from '../utils/pathLib.js';
+import { getDocumentFullScreenElement } from '../utils/displayLib';
 import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
 import { getWhiteBalanceMatrix } from './colour.js';
 
@@ -2004,12 +2005,7 @@ class bivotJs {
   }
 
   isFullScreen() {
-    return (
-      document.fullscreenElement ||
-      document.webkitFullscreenElement ||
-      document.msFullscreenElement ||
-      document.mozFullScreenElement
-    );
+    return getDocumentFullScreenElement();
   }
 
   setFxaaResolution() {
