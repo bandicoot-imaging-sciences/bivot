@@ -155,6 +155,8 @@ function injectStyle(elem, style) {
   }
 }
 
+export const defaultSize = [792, 528];
+
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
@@ -247,7 +249,7 @@ class bivotJs {
       hue: 0.0,
       saturation: 0.0,
       yFlip: true,
-      size: [792, 528], // Initial size and aspect ratio (canvas logical size) in display pixels
+      size: defaultSize, // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
