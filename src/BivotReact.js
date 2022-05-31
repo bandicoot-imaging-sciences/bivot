@@ -6,7 +6,7 @@ import LightingIcon from '@material-ui/icons/WbSunny';
 import ColourIcon from '@material-ui/icons/Palette';
 import LayoutIcon from '@material-ui/icons/SquareFoot';
 
-import Bivot from './bivot-js/bivot';
+import Bivot, { defaultSize } from './bivot-js/bivot';
 import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
@@ -226,7 +226,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [792, 528],
+    size: defaultSize,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
@@ -264,7 +264,7 @@ function BivotReact(props) {
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
-    size: [792, 528],
+    size: defaultSize,
     dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
