@@ -6,14 +6,24 @@ const styles = {
   button: {
     width: '46px',
   },
+  rotationDegrees: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  rotationLabel: {
+    marginBottom: 0,
+  },
 };
 
 function MaterialRotationControl({ value, onChange }) {
   return (
     <Grid container spacing={2}>
-      <Grid item><Tooltip title="The rotation of the material">
-        <Typography id="material-rotation-buttons" gutterBottom>Rotation</Typography>
-      </Tooltip></Grid>
+      <Grid item>
+        <Tooltip title="The rotation of the material">
+          <Typography style={styles.rotationLabel} id="material-rotation-buttons" gutterBottom>Rotation</Typography>
+        </Tooltip>
+        <Typography style={styles.rotationDegrees} variant='caption'>{value}°</Typography>
+      </Grid>
       <Grid item xs>
         <ButtonGroup variant="contained" color="primary" aria-label="contained primary button group">
           <Tooltip title="90 anti-clockwise">
