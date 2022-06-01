@@ -169,6 +169,12 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     tilingSeams,
 
+    // If set, indicates a single texture to render as the basecolor, with
+    // other texture channels unused, for debugging purposes.  Values are
+    // 1 (basecolor), 2 (roughness), 3 (metallic), 4 (normals), 5 (displacement),
+    // or any other value for regular rendering.
+    textureDebug,
+
     // Hover controls are disabled while this is true, including light
     // position and material tilt.  While hover controls are disabled,
     // corresponding drag controls will be enabled.
@@ -227,7 +233,6 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: defaultSize,
-    dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
@@ -240,6 +245,10 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+
+    // For bivot internal use only, no controls and not saved
+    dirty: false,
+    textureLayer: 0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -256,6 +265,7 @@ function BivotReact(props) {
     texDims: undefined,
     metresPerPixelTextures: undefined,
   };
+
   const [state, _setState] = useState({
     exposure: 1.0,
     brightness: 0.5,
@@ -265,7 +275,6 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: defaultSize,
-    dirty: false, // For bivot internal only, to know when to update render
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
@@ -278,6 +287,10 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+
+    // For bivot internal use only, no controls and not saved
+    dirty: false,
+    textureLayer: 0,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -399,7 +412,6 @@ function BivotReact(props) {
   state.lightTiltWithMousePos = lightTiltWithMousePos;
   state.lightTiltWithDeviceOrient = lightTiltWithDeviceOrient;
 
-
   async function onLoad() {
     loadBivot();
   }
@@ -495,6 +507,10 @@ function BivotReact(props) {
   useEffect(() => {
     updateAutoRotateOverride(autoRotate);
   }, [autoRotate]);
+
+  useEffect(() => {
+    updateTextureLayer(textureDebug);
+  }, [textureDebug]);
 
   // Shut down bivot when the component closes
   useEffect(() => {
@@ -932,6 +948,15 @@ function BivotReact(props) {
 
   function updateShowSeams(val) {
     setShowSeams(val);
+    renderFrame(true);
+  }
+
+  function updateTextureLayer(val) {
+    if ([1, 2, 3, 4, 5].includes(val)) {
+      state.textureLayer = val;
+    } else {
+      state.textureLayer = 0;
+    }
     renderFrame(true);
   }
 

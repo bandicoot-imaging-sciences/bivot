@@ -14,6 +14,7 @@ export default function getShaders() {
         'normalMap': {value: null}, // Three.js shader chunks assume normal map is called normalMap.
         'specularMap': {value: null},
         'overlayMap': {value: null},
+        'textureLayer': {value: 0},
         'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
         'uExposure': {value: 1.0},
         'uDiffuse': {value: 1.0},
@@ -57,7 +58,7 @@ export default function getShaders() {
     #include <displacementmap_pars_vertex>
 
     void main() {
-      vec4 worldPosition = modelMatrix*vec4(position, 1.0);
+      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
 
       vUv = uv;
       // Alternatively this might be needed if we are scaling the texture:
@@ -85,12 +86,13 @@ export default function getShaders() {
     // Defined in <normalmap_pars_fragment>
     // uniform sampler2D normalMap;
     uniform sampler2D specularMap;
-
+    uniform sampler2D displacementMap;
     uniform sampler2D diffuseMapLow;
     uniform sampler2D normalMapLow;
     uniform sampler2D specularMapLow;
 
     uniform sampler2D overlayMap;
+    uniform int textureLayer;
 
     uniform float uExposure;
     uniform float uBrightness;
@@ -258,6 +260,10 @@ export default function getShaders() {
       vec3 normalSurface = texture2D(normalMap, vUv).xyz;
       vec4 specularTexel = texture2D(specularMap, vUv);
 
+      #ifdef USE_DISPLACEMENTMAP
+        vec3 displacementSurface = texture2D(displacementMap, vUv).xyz;
+      #endif
+
       if (uDual8Bit) {
         vec4 diffuseSurfaceLow = texture2D(diffuseMapLow, vUv) / 256.0;
         vec3 normalSurfaceLow = texture2D(normalMapLow, vUv).xyz / 256.0;
@@ -267,10 +273,6 @@ export default function getShaders() {
         normalSurface = normalSurface + normalSurfaceLow;
         specularTexel = specularTexel + specularTexelLow;
       }
-
-      // Composite the overlay onto the basecolor
-      vec4 overlaySurface = texture2D(overlayMap, vUv);
-      diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
 
       float s = 1.0;
       float white_L = 1.0;
@@ -321,6 +323,39 @@ export default function getShaders() {
         // Apply hue and saturation transform
         diffuseSurface = vec4(hueSatShift(diffuseSurface.rgb, uHue, uSaturation), diffuseSurface.a);
       #endif
+
+      if (textureLayer == 1) {
+        diffuseSurface = vec4(diffuseSurface.rgb / 2.0, 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+      } else if (textureLayer == 2) {
+        diffuseSurface = vec4(vec3(roughnessSurface / 2.0), 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+      } else if (textureLayer == 3) {
+        diffuseSurface = vec4(vec3(metallicSurface / 2.0), 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+      } else if (textureLayer == 4) {
+        diffuseSurface = vec4(normalSurface.xyz / 2.0, 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+      #ifdef USE_DISPLACEMENTMAP
+        } else if (textureLayer == 5) {
+          diffuseSurface = vec4(displacementSurface.xyz / 2.0, 1.0);
+          roughnessSurface = 1.0;
+          metallicSurface = 0.0;
+          normalSurface = vec3(0.0, 0.0, 1.0);
+      #endif
+      }
+
+      // Composite the overlay onto the basecolor
+      vec4 overlaySurface = texture2D(overlayMap, vUv);
+      diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
 
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );

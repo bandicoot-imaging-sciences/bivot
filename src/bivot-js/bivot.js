@@ -271,6 +271,7 @@ class bivotJs {
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
       showSeams: false,
+      textureLayer: 0,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
       _camPositionOffset: new THREE.Vector2(0, 0),
@@ -2255,6 +2256,10 @@ class bivotJs {
     this.seamsShowing = this.state.showSeams;
   }
 
+  updateTextureLayer() {
+    this.uniforms.textureLayer.value = this.state.textureLayer;
+  }
+
   drawDashedLine(ctx, x0, y0, x1, y1, length) {
     var xLen = (x1 - x0);
     var yLen = (y1 - y0);
@@ -2367,6 +2372,7 @@ class bivotJs {
         this.updateZoom();
         this.updateColor();
         this.updateShowSeams();
+        this.updateTextureLayer();
         this.updateControls(this.controls);
       }
 

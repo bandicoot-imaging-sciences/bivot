@@ -113,7 +113,7 @@ function App(props) {
           </button>
         </Grid>
         <Grid item xs={12} md={10} xl={8} style={{margin: '0.5em'}}>
-          <Bivot
+          {/* <Bivot
             materialSet={ms1}
             id={1}
             width={size[0]}
@@ -127,7 +127,7 @@ function App(props) {
             onClick={onBivotClick}
             fullScreen={fullScreen1}
             onExitFullScreen={() => setFullScreen1(false)}
-          />
+          /> */}
         </Grid>
         <Grid item xs={3}><Typography>Responsive = true</Typography></Grid>
         <Grid item xs={9}>
@@ -149,6 +149,7 @@ function App(props) {
             fullScreen={fullScreen2}
             decorators={decorators}
             onExitFullScreen={() => setFullScreen2(false)}
+            textureDebug={2}
           />
         </Grid>
         x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>x<br/>
