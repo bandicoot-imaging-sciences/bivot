@@ -325,14 +325,7 @@ class bivotJs {
     copyStatesCloneVectors(this.state, this.config.initialState, this.vectorKeys);
 
     this.canvas = document.getElementById(this.opts.canvasID);
-    console.assert(this.canvas !== null, 'canvas element ID not found:', this.opts.canvasID);
-    const canvasParent = this.canvas.parentElement;
-    this.container = document.createElement('div');
-    this.overlay = document.createElement('div');
-    this.container.appendChild(this.canvas);
-    this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
-    canvasParent.appendChild(this.container);
-
+    this.insertContainerAndOverlay();
     injectStyle(this.canvas, styles['bivot-canvas']);
     injectStyle(this.container, styles['bivot-container']);
     injectStyle(this.overlay, styles['bivot-overlay']);
@@ -1056,6 +1049,7 @@ class bivotJs {
 
     function initialiseControls(camera, elem, config) {
       var controls = new OrbitControls(camera, elem);
+
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
       controls.panSpeed = 1.0;
@@ -2449,6 +2443,22 @@ class bivotJs {
     return this.diag;
   }
 
+  insertContainerAndOverlay() {
+    console.assert(this.canvas !== null, 'canvas element ID not found:', this.opts.canvasID);
+    this.canvasParent = this.canvas.parentElement;
+    this.container = document.createElement('div');
+    this.overlay = document.createElement('div');
+    this.container.appendChild(this.canvas);
+    this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
+    this.canvasParent.appendChild(this.container);
+  }
+
+  removeContainerAndOverlay() {
+    this.container.removeChild(this.overlay);
+    this.canvasParent.removeChild(this.container);
+    this.canvasParent.appendChild(this.canvas);
+  }
+
   registerEventListener(object, type, listener, ...args) {
     object.addEventListener(type, listener, ...args);
     this.listeners.push({ object, type, listener });
@@ -2465,6 +2475,8 @@ class bivotJs {
   }
 
   doShutdown() {
+    this.controls.dispose();
+
     for (var i = 0; i < this.timeouts.length; i++) {
       clearTimeout(this.timeouts[i]);
     }
@@ -2482,6 +2494,7 @@ class bivotJs {
     }
     this.elements = [];
 
+    this.removeContainerAndOverlay();
     this.canvas = null;
     this.overlay = null;
     this.container = null;

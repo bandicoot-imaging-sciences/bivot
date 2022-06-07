@@ -428,7 +428,8 @@ function BivotReact(props) {
     async function onChangeMaterial() {
       if (bivot.current) {
         bivot.current.shutdown();
-        updateStateFields(defaultState);
+        setDiag(undefined);
+        setMeshScaling(1.0);
         onLoad();
       }
     }
