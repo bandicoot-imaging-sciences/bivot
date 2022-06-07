@@ -660,9 +660,6 @@ function BivotReact(props) {
 
     copyStateFields(state, checkpointState);
     setLoading(false);
-    if (statusCallback !== undefined) {
-      statusCallback(2); // Loaded
-    }
 
     updateAutoRotateOverride(autoRotate);
     updateHoverDisabledOverride(hoverDisabled);
@@ -740,6 +737,9 @@ function BivotReact(props) {
   async function loadingCompleteCallback(shimmerLoaded, meshLoaded) {
     if (bivot.current) {
       console.log('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
+      if (statusCallback !== undefined) {
+        statusCallback(2); // Loaded
+      }
       if (meshLoaded) {
         setDiag(bivot.current.getDiag());
       }
