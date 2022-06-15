@@ -169,6 +169,10 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     tilingSeams,
 
+    // If set, a multiplier to the scale of the tiling.
+    // (Currently only supported for internal use)
+    tilingScale,
+
     // If set, indicates a single texture to render as the basecolor, with
     // other texture channels unused, for debugging purposes.  Values are
     // 1 (basecolor), 2 (roughness), 3 (metallic), 4 (normals), 5 (displacement),
@@ -245,6 +249,8 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    stretch: null,
+    userScale: 1,
 
     // For bivot internal use only, no controls and not saved
     dirty: false,
@@ -287,6 +293,8 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    stretch: null,
+    userScale: 1,
 
     // For bivot internal use only, no controls and not saved
     dirty: false,
@@ -379,6 +387,8 @@ function BivotReact(props) {
   const [hue, setHue] = useState(state.hue);
   const [saturation, setSaturation] = useState(state.saturation);
   const [showSeams, setShowSeams] = useState(state.showSeams);
+  const [stretch, setStretch] = useState(state.stretch);
+  const [userScale, setUserScale] = useState(1);
   const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
   const [camTiltWithDeviceOrient, setCamTiltWithDeviceOrient] = useState(state.camTiltWithDeviceOrient);
   const [lightTiltWithMousePos, setLightTiltWithMousePos] = useState(state.lightTiltWithMousePos);
@@ -407,6 +417,8 @@ function BivotReact(props) {
   state.hue = hue;
   state.saturation = saturation;
   state.showSeams = showSeams;
+  state.stretch = stretch;
+  state.userScale = userScale;
   state.camTiltWithMousePos = camTiltWithMousePos;
   state.camTiltWithDeviceOrient = camTiltWithDeviceOrient;
   state.lightTiltWithMousePos = lightTiltWithMousePos;
@@ -465,6 +477,9 @@ function BivotReact(props) {
         var scaling = 1.0;
       }
       var ratio = meshScaling / scaling;
+      if (state['stretch']) {
+        ratio *= (state['stretch'][0] + state['stretch'][1]) / 2;
+      }
 
       setMeshScaling(scaling);
       setZoom([zoom[0] * ratio, zoom[1] * ratio, zoom[2] * ratio]);
@@ -500,6 +515,10 @@ function BivotReact(props) {
   useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
   }, [tilingSeams]);
+
+  useEffect(() => {
+    updateUserScale(tilingScale);
+  }, [tilingScale]);
 
   useEffect(() => {
     updateHoverDisabledOverride(hoverDisabled);
@@ -692,6 +711,7 @@ function BivotReact(props) {
       colorTemperature,
       hue,
       saturation,
+      stretch,
     } = stateFields;
 
     updateExposure(exposure);
@@ -716,6 +736,7 @@ function BivotReact(props) {
     updateColorTemperature(colorTemperature);
     updateHue(hue);
     updateSaturation(saturation);
+    updateStretch(stretch);
 
     // Update initial zoom value after loading state
     zoomInitialVal = zoom;
@@ -910,6 +931,16 @@ function BivotReact(props) {
   function updateSaturation(val) {
     setSaturation(val);
     renderFrame(false);
+  }
+
+  function updateStretch(val) {
+    setStretch(val ? val : null);
+    renderFrame(true);
+  }
+
+  function updateUserScale(val) {
+    setUserScale(val);
+    renderFrame(true);
   }
 
   function updateAutoRotate(val) {

@@ -271,6 +271,8 @@ class bivotJs {
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
       showSeams: false,
+      stretch: null,
+      userScale: null,
       textureLayer: 0,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
@@ -1401,6 +1403,9 @@ class bivotJs {
             // Textures need to be square powers of 2 for WebGL1
             // texture.repeat.set(matxs/padxs, matxs/padys);
             //console.debug('Loaded:', key, value.path);
+
+            _self.setTexRepeat(texture);
+
             brdfTextures.set(key, texture);
           },
           function (xhr) {},
@@ -2250,6 +2255,13 @@ class bivotJs {
     this.seamsShowing = this.state.showSeams;
   }
 
+  updateStretch() {
+    const texture = this.uniforms.diffuseMap.value;
+    if (texture) {
+      this.setTexRepeat(texture);
+    }
+  }
+
   updateTextureLayer() {
     this.uniforms.textureLayer.value = this.state.textureLayer;
   }
@@ -2289,14 +2301,22 @@ class bivotJs {
       var texDims = this.state.texDims; // Useful texture region
       var texSize = Math.max(texDims[0], texDims[1]); // Texture image is a square fitting texDims
 
-      // Seams are 1/4 and 3/4 of the way across preview textures
-      var tc = texSize / 2
-      var dx = texDims[0] / 4;
-      var dy = texDims[1] / 4;
-      var x1 = Math.floor((tc - dx) * w / texSize);
-      var x2 = Math.ceil((tc + dx - 1) * w / texSize);
-      var y1 = Math.floor((tc - dy) * h / texSize);
-      var y2 = Math.ceil((tc + dy - 1) * h / texSize);
+      var x1, x2, y1, y2;
+      if (this.state.stretch) {
+        x1 = 0;
+        x2 = w - 1;
+        y1 = 0;
+        y2 = h - 1;
+      } else {
+        // Seams are 1/4 and 3/4 of the way across preview textures
+        var tc = texSize / 2
+        var dx = texDims[0] / 4;
+        var dy = texDims[1] / 4;
+        x1 = Math.floor((tc - dx) * w / texSize);
+        x2 = Math.ceil((tc + dx - 1) * w / texSize);
+        y1 = Math.floor((tc - dy) * h / texSize);
+        y2 = Math.ceil((tc + dy - 1) * h / texSize);
+      }
 
       ctx.beginPath();
       ctx.strokeStyle = '#000F';
@@ -2319,8 +2339,26 @@ class bivotJs {
     canvasTexture.needsUpdate = true;
     canvasTexture.flipX = false;
     canvasTexture.flipY = true;
+    this.setTexRepeat(canvasTexture);
 
     return canvasTexture;
+  }
+
+  setTexRepeat(texture) {
+    // Set texture repeat
+    if (this.state.stretch) {
+      xs = 1.0 / this.state.stretch[0];
+      ys = 1.0 / this.state.stretch[1];
+      if (this.state.userScale) {
+        xs *= this.state.userScale;
+        ys *= this.state.userScale;
+      }
+      texture.repeat.set(xs, ys);
+      texture.offset.set((1 - xs) / 2, (1 - ys) / 2);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.updateMatrix();
+    }
   }
 
   updateUniforms() {
@@ -2343,6 +2381,10 @@ class bivotJs {
     this.uniforms.uDual8Bit.value = this.config.dual8Bit;
     this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
     this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
+    const uvScaleMap = this.uniforms.diffuseMap.value;
+    if (uvScaleMap) {
+      this.uniforms.uvTransform.value.copy(uvScaleMap.matrix);
+    }
   }
 
   render(timeMs) {
@@ -2366,6 +2408,7 @@ class bivotJs {
         this.updateZoom();
         this.updateColor();
         this.updateShowSeams();
+        this.updateStretch();
         this.updateTextureLayer();
         this.updateControls(this.controls);
       }

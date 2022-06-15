@@ -41,6 +41,7 @@ export default function getShaders() {
         'displacementMap': {value: null},
         'displacementScale': {value: 0.05},
         'displacementBias': {value: 0.0},
+        'uvTransform': {value: new THREE.Matrix3()},
       }
     ]);
 
@@ -55,14 +56,14 @@ export default function getShaders() {
       varying vec3 vBitangent;
     #endif
 
+    uniform mat3 uvTransform;
+
     #include <displacementmap_pars_vertex>
 
     void main() {
       vec4 worldPosition = modelMatrix * vec4(position, 1.0);
 
-      vUv = uv;
-      // Alternatively this might be needed if we are scaling the texture:
-      // vUv = ( uvTransform * vec3( uv, 1 ) ).xy;
+      vUv = (uvTransform * vec3(uv, 1)).xy;
 
       #include <beginnormal_vertex>
       #include <defaultnormal_vertex>
