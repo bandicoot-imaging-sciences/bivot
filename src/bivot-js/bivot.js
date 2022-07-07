@@ -2249,8 +2249,8 @@ class bivotJs {
   }
 
   updateShowSeams() {
-    if (this.state.showSeams != this.seamsShowing) {
-      // Only update the texture if there's a change to the seams status
+    if (this.state.showSeams || this.seamsShowing) {
+      // Only update the texture if seams are already showing or need to be shown
       this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams);
     }
     this.seamsShowing = this.state.showSeams;
@@ -2290,8 +2290,17 @@ class bivotJs {
 
   createOverlayTexture(showSeams) {
     // Define dimensions of overlay texture
-    w = 1024;
-    h = 1024;
+    const w = 1024;
+    const h = 1024;
+    const relDashWidth = 1;
+    const relDashLength = 8;
+
+    const [xs, ys] = this.getTexRepeat();
+    const absDashWidthX = relDashWidth * ys;
+    const absDashWidthY = relDashWidth * xs;
+    // Adjust dash lengths so they repeat nicely across tiles
+    const absDashLengthX = w / (2 * Math.round(w / (relDashLength * xs * 2)));
+    const absDashLengthY = h / (2 * Math.round(h / (relDashLength * ys * 2)));
 
     const canvas = document.createElement('canvas');
     canvas.width = w;
@@ -2321,18 +2330,24 @@ class bivotJs {
 
       ctx.beginPath();
       ctx.strokeStyle = '#000F';
+      ctx.lineWidth = absDashWidthX;
       ctx.moveTo(0,  y1); ctx.lineTo(w-1, y1);
       ctx.moveTo(0,  y2); ctx.lineTo(w-1, y2);
+      ctx.stroke();
+      ctx.lineWidth = absDashWidthY;
       ctx.moveTo(x1, 0);  ctx.lineTo(x1,  h-1);
       ctx.moveTo(x2, 0);  ctx.lineTo(x2,  h-1);
       ctx.stroke();
 
       ctx.beginPath();
       ctx.strokeStyle = '#FFFF';
-      this.drawDashedLine(ctx, 0,  y1, w-1, y1,  8);
-      this.drawDashedLine(ctx, 0,  y2, w-1, y2,  8);
-      this.drawDashedLine(ctx, x1, 0,  x1,  h-1, 8);
-      this.drawDashedLine(ctx, x2, 0,  x2,  h-1, 8);
+      ctx.lineWidth = absDashWidthX;
+      this.drawDashedLine(ctx, 0,  y1, w-1, y1,  absDashLengthX);
+      this.drawDashedLine(ctx, 0,  y2, w-1, y2,  absDashLengthX);
+      ctx.stroke();
+      ctx.lineWidth = absDashWidthY;
+      this.drawDashedLine(ctx, x1, 0,  x1,  h-1, absDashLengthY);
+      this.drawDashedLine(ctx, x2, 0,  x2,  h-1, absDashLengthY);
       ctx.stroke();
     }
 
@@ -2345,8 +2360,7 @@ class bivotJs {
     return canvasTexture;
   }
 
-  setTexRepeat(texture) {
-    // Set texture repeat
+  getTexRepeat() {
     if (this.state.stretch) {
       var xs = initialRepeatFactorX;
       var ys = initialRepeatFactorX * this.state.stretch[0] / this.state.stretch[1];
@@ -2354,6 +2368,15 @@ class bivotJs {
         xs *= this.state.userScale;
         ys *= this.state.userScale;
       }
+      return [xs, ys];
+    }
+    return [1, 1];
+  }
+
+  setTexRepeat(texture) {
+    // Set texture repeat
+    if (this.state.stretch) {
+      const [xs, ys] = this.getTexRepeat();
       texture.repeat.set(xs, ys);
       texture.offset.set((1 - xs) / 2, (1 - ys) / 2);
       texture.wrapS = THREE.RepeatWrapping;
