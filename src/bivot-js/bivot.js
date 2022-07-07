@@ -156,6 +156,7 @@ function injectStyle(elem, style) {
 }
 
 export const defaultSize = [792, 528];
+export const initialRepeatFactorX = 1.5;
 
 /*
   The options object is optional and can include the following:
@@ -2347,8 +2348,8 @@ class bivotJs {
   setTexRepeat(texture) {
     // Set texture repeat
     if (this.state.stretch) {
-      xs = 1.0 / this.state.stretch[0];
-      ys = 1.0 / this.state.stretch[1];
+      var xs = initialRepeatFactorX;
+      var ys = initialRepeatFactorX * this.state.stretch[0] / this.state.stretch[1];
       if (this.state.userScale) {
         xs *= this.state.userScale;
         ys *= this.state.userScale;

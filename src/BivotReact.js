@@ -6,7 +6,7 @@ import LightingIcon from '@material-ui/icons/WbSunny';
 import ColourIcon from '@material-ui/icons/Palette';
 import LayoutIcon from '@material-ui/icons/SquareFoot';
 
-import Bivot, { defaultSize } from './bivot-js/bivot';
+import Bivot, { defaultSize, initialRepeatFactorX } from './bivot-js/bivot';
 import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
@@ -467,19 +467,21 @@ function BivotReact(props) {
 
   useEffect(() => {
     if (state && diag) {
-      var mPerPix = state['metresPerPixelTextures'];
-      var texDims = state['texDims'];
+      const mPerPix = state['metresPerPixelTextures'];
+      const texDims = state['texDims'];
+      var scaling = 1.0;
       if (mPerPix !== undefined && texDims !== undefined) {
-        var diagTexPix = Math.sqrt(texDims[0] * texDims[0] + texDims[1] * texDims[1]);
-        var diagTexM = diagTexPix * mPerPix;
-        var scaling = diagTexM / diag;  // diag: the mesh diagonal
-      } else {
-        var scaling = 1.0;
+        var dx = texDims[0];
+        var dy = texDims[1];
+        if (state['stretch']) {
+          dx *= initialRepeatFactorX;
+          dy *= initialRepeatFactorX * state['stretch'][0] / state['stretch'][1];
+        }
+        const diagTexPix = Math.sqrt(dx * dx + dy * dy);
+        const diagTexM = diagTexPix * mPerPix;
+        scaling = diagTexM / diag;  // diag: the mesh diagonal
       }
-      var ratio = meshScaling / scaling;
-      if (state['stretch']) {
-        ratio *= (state['stretch'][0] + state['stretch'][1]) / 2;
-      }
+      const ratio = meshScaling / scaling;
 
       setMeshScaling(scaling);
       setZoom([zoom[0] * ratio, zoom[1] * ratio, zoom[2] * ratio]);
