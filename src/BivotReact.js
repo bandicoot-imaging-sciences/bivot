@@ -165,6 +165,18 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     fetchFiles,
 
+    // If set, the X,Y spacing of a base grid
+    // (Currently only supported for internal use)
+    userGrid,
+
+    // If set, the X,Y spacing of a highlighted selection grid
+    // (Currently only supported for internal use)
+    userGridSelection,
+
+    // True to display any given userGrid and userGridSelection
+    // (Currently only supported for internal use)
+    showUserGrid,
+
     // If set, indicators are drawn along tiling seams.
     // (Currently only supported for internal use)
     tilingSeams,
@@ -249,6 +261,9 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    showGrid: false,
+    grid: null,
+    gridSelection: null,
     stretch: null,
     userScale: 1,
 
@@ -293,6 +308,9 @@ function BivotReact(props) {
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    showGrid: false,
+    grid: null,
+    gridSelection: null,
     stretch: null,
     userScale: 1,
 
@@ -387,6 +405,9 @@ function BivotReact(props) {
   const [hue, setHue] = useState(state.hue);
   const [saturation, setSaturation] = useState(state.saturation);
   const [showSeams, setShowSeams] = useState(state.showSeams);
+  const [grid, setGrid] = useState(state.grid);
+  const [gridSelection, setGridSelection] = useState(state.gridSelection);
+  const [showGrid, setShowGrid] = useState(state.showGrid);
   const [stretch, setStretch] = useState(state.stretch);
   const [userScale, setUserScale] = useState(1);
   const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
@@ -417,6 +438,9 @@ function BivotReact(props) {
   state.hue = hue;
   state.saturation = saturation;
   state.showSeams = showSeams;
+  state.showGrid = showGrid;
+  state.grid = grid;
+  state.gridSelection = gridSelection;
   state.stretch = stretch;
   state.userScale = userScale;
   state.camTiltWithMousePos = camTiltWithMousePos;
@@ -517,6 +541,10 @@ function BivotReact(props) {
   useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
   }, [tilingSeams]);
+
+  useEffect(() => {
+    updateGrid(userGrid, userGridSelection, Boolean(showUserGrid));
+  }, [userGrid, userGridSelection, showUserGrid]);
 
   useEffect(() => {
     updateUserScale(tilingScale);
@@ -982,6 +1010,13 @@ function BivotReact(props) {
 
   function updateShowSeams(val) {
     setShowSeams(val);
+    renderFrame(true);
+  }
+
+  function updateGrid(grid, selection, visible) {
+    setGrid(grid);
+    setGridSelection(selection);
+    setShowGrid(visible);
     renderFrame(true);
   }
 

@@ -158,6 +158,10 @@ function injectStyle(elem, style) {
 export const defaultSize = [792, 528];
 export const initialRepeatFactorX = 1.5;
 
+// Define dimensions of overlay texture
+const overlayTexW = 2048;
+const overlayTexH = 2048;
+
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
@@ -366,6 +370,7 @@ class bivotJs {
     this.intersectionObserver = null;
     this.isVisible = false;
     this.seamsShowing = false;
+    this.gridShowing = false;
     this.diag = null;
 
     this.needsResize = false;
@@ -2248,12 +2253,17 @@ class bivotJs {
     return false;
   }
 
-  updateShowSeams() {
-    if (this.state.showSeams || this.seamsShowing) {
-      // Only update the texture if seams are already showing or need to be shown
-      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams);
+  updateOverlay() {
+    // Only update the texture if seams are already showing or need to be shown
+    const update = (
+      (this.state.showSeams || this.seamsShowing) ||
+      (this.state.showGrid || this.gridShowing)
+    );
+    if (update) {
+      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams, this.state.showGrid);
     }
     this.seamsShowing = this.state.showSeams;
+    this.gridShowing = this.state.showGrid;
   }
 
   updateStretch() {
@@ -2288,13 +2298,13 @@ class bivotJs {
     }
   }
 
-  createOverlayTexture(showSeams) {
-    // Define dimensions of overlay texture
-    const w = 1024;
-    const h = 1024;
+  drawSeams(ctx, texDims, stretch) {
     const relDashWidth = 1;
     const relDashLength = 8;
 
+    const w = overlayTexW;
+    const h = overlayTexH;
+    const texSize = Math.max(texDims[0], texDims[1]); // Texture image is a square fitting texDims
     const [xs, ys] = this.getTexRepeat();
     const absDashWidthX = relDashWidth * ys;
     const absDashWidthY = relDashWidth * xs;
@@ -2302,53 +2312,90 @@ class bivotJs {
     const absDashLengthX = w / (2 * Math.round(w / (relDashLength * xs * 2)));
     const absDashLengthY = h / (2 * Math.round(h / (relDashLength * ys * 2)));
 
+    var x1, x2, y1, y2;
+    if (stretch) {
+      x1 = 0;
+      x2 = w - 1;
+      y1 = 0;
+      y2 = h - 1;
+    } else {
+      // Seams are 1/4 and 3/4 of the way across preview textures
+      var tc = texSize / 2
+      var dx = texDims[0] / 4;
+      var dy = texDims[1] / 4;
+      x1 = Math.floor((tc - dx) * w / texSize);
+      x2 = Math.ceil((tc + dx - 1) * w / texSize);
+      y1 = Math.floor((tc - dy) * h / texSize);
+      y2 = Math.ceil((tc + dy - 1) * h / texSize);
+    }
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#000F';
+    ctx.lineWidth = absDashWidthX;
+    ctx.moveTo(0,  y1); ctx.lineTo(w-1, y1);
+    ctx.moveTo(0,  y2); ctx.lineTo(w-1, y2);
+    ctx.stroke();
+    ctx.lineWidth = absDashWidthY;
+    ctx.moveTo(x1, 0);  ctx.lineTo(x1,  h-1);
+    ctx.moveTo(x2, 0);  ctx.lineTo(x2,  h-1);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#FFFF';
+    ctx.lineWidth = absDashWidthX;
+    this.drawDashedLine(ctx, 0,  y1, w-1, y1,  absDashLengthX);
+    this.drawDashedLine(ctx, 0,  y2, w-1, y2,  absDashLengthX);
+    ctx.stroke();
+    ctx.lineWidth = absDashWidthY;
+    this.drawDashedLine(ctx, x1, 0,  x1,  h-1, absDashLengthY);
+    this.drawDashedLine(ctx, x2, 0,  x2,  h-1, absDashLengthY);
+    ctx.stroke();
+  }
+
+  drawGrid(ctx, texDims, cellDims, stretch, color='#777F', thickness=1) {
+    const gridDimsStretch = [
+      overlayTexW / texDims[0] * cellDims[0] / stretch[0],
+      overlayTexH / texDims[1] * cellDims[1] / stretch[1]
+    ];
+
+    const [xs, ys] = this.getTexRepeat();
+    const absLineWidthX = ys * thickness;
+    const absLineWidthY = xs * thickness;
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = absLineWidthX;
+    for (y = 0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+      ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y);
+    }
+    ctx.stroke();
+    ctx.lineWidth = absLineWidthY;
+    for (x = 0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+      ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1);
+    }
+    ctx.stroke();
+  }
+
+  createOverlayTexture(showSeams, showGrid) {
+    const texDims = this.state.texDims; // Useful texture region
+
     const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = overlayTexW;
+    canvas.height = overlayTexH;
     const ctx = canvas.getContext('2d');
 
-    if (showSeams && this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
-      var texDims = this.state.texDims; // Useful texture region
-      var texSize = Math.max(texDims[0], texDims[1]); // Texture image is a square fitting texDims
-
-      var x1, x2, y1, y2;
-      if (this.state.stretch) {
-        x1 = 0;
-        x2 = w - 1;
-        y1 = 0;
-        y2 = h - 1;
-      } else {
-        // Seams are 1/4 and 3/4 of the way across preview textures
-        var tc = texSize / 2
-        var dx = texDims[0] / 4;
-        var dy = texDims[1] / 4;
-        x1 = Math.floor((tc - dx) * w / texSize);
-        x2 = Math.ceil((tc + dx - 1) * w / texSize);
-        y1 = Math.floor((tc - dy) * h / texSize);
-        y2 = Math.ceil((tc + dy - 1) * h / texSize);
+    if (this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
+      if (showSeams) {
+        this.drawSeams(ctx, texDims, this.state.stretch);
       }
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#000F';
-      ctx.lineWidth = absDashWidthX;
-      ctx.moveTo(0,  y1); ctx.lineTo(w-1, y1);
-      ctx.moveTo(0,  y2); ctx.lineTo(w-1, y2);
-      ctx.stroke();
-      ctx.lineWidth = absDashWidthY;
-      ctx.moveTo(x1, 0);  ctx.lineTo(x1,  h-1);
-      ctx.moveTo(x2, 0);  ctx.lineTo(x2,  h-1);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#FFFF';
-      ctx.lineWidth = absDashWidthX;
-      this.drawDashedLine(ctx, 0,  y1, w-1, y1,  absDashLengthX);
-      this.drawDashedLine(ctx, 0,  y2, w-1, y2,  absDashLengthX);
-      ctx.stroke();
-      ctx.lineWidth = absDashWidthY;
-      this.drawDashedLine(ctx, x1, 0,  x1,  h-1, absDashLengthY);
-      this.drawDashedLine(ctx, x2, 0,  x2,  h-1, absDashLengthY);
-      ctx.stroke();
+      if (showGrid && this.state.stretch) {
+        if (this.state.grid) {
+          this.drawGrid(ctx, texDims, this.state.grid, this.state.stretch, '#FF0F', 1);
+        }
+        if (this.state.gridSelection) {
+          this.drawGrid(ctx, texDims, this.state.gridSelection, this.state.stretch, '#00FF', 2);
+        }
+      }
     }
 
     const canvasTexture = new THREE.Texture(canvas);
@@ -2431,7 +2478,7 @@ class bivotJs {
         this.updateCanvas();
         this.updateZoom();
         this.updateColor();
-        this.updateShowSeams();
+        this.updateOverlay();
         this.updateStretch();
         this.updateTextureLayer();
         this.updateControls(this.controls);
