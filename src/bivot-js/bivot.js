@@ -351,6 +351,7 @@ class bivotJs {
     this.camera = null;
     this.lights = null;
     this.lights45 = null;
+    this.brdfTextures = null;
     this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
     this.meshOrig = null;       // Original mesh provided in mesh textures
@@ -416,7 +417,6 @@ class bivotJs {
     let baselineTiltSet = false;
     let loader = null;
     let firstRenderLoaded = false;
-    let brdfTextures = null;
     let gui = null;
 
     let subtitleElem = null;
@@ -666,12 +666,12 @@ class bivotJs {
 
       // Run post-texture-load operations
       _self.loadingElem.style.display = 'none';
-      _self.uniforms.diffuseMap.value = brdfTextures.get('diffuse');
-      _self.uniforms.normalMap.value = brdfTextures.get('normals');
-      _self.uniforms.specularMap.value = brdfTextures.get('specular');
-      if (brdfTextures.get('displacement') !== undefined) {
+      _self.uniforms.diffuseMap.value = _self.brdfTextures.get('diffuse');
+      _self.uniforms.normalMap.value = _self.brdfTextures.get('normals');
+      _self.uniforms.specularMap.value = _self.brdfTextures.get('specular');
+      if (_self.brdfTextures.get('displacement') !== undefined) {
         _self.useDispMap = true;
-        _self.uniforms.displacementMap.value = brdfTextures.get('displacement');
+        _self.uniforms.displacementMap.value = _self.brdfTextures.get('displacement');
         if (_self.state.displacementUnits) {
           _self.uniforms.displacementScale.value = _self.state.displacementUnits;
           _self.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
@@ -681,11 +681,11 @@ class bivotJs {
       }
 
       if (_self.config.dual8Bit) {
-        _self.uniforms.diffuseMapLow.value = brdfTextures.get('diffuse_low');
-        _self.uniforms.normalMapLow.value = brdfTextures.get('normals_low');
-        _self.uniforms.specularMapLow.value = brdfTextures.get('specular_low');
+        _self.uniforms.diffuseMapLow.value = _self.brdfTextures.get('diffuse_low');
+        _self.uniforms.normalMapLow.value = _self.brdfTextures.get('normals_low');
+        _self.uniforms.specularMapLow.value = _self.brdfTextures.get('specular_low');
         if (_self.useDispMap) {
-          _self.uniforms.displacementMapLow.value = brdfTextures.get('displacement_low');
+          _self.uniforms.displacementMapLow.value = _self.brdfTextures.get('displacement_low');
         }
       }
 
@@ -1335,7 +1335,8 @@ class bivotJs {
     function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
       updateControlPanel(gui);
 
-      brdfTextures = new Map();
+      _self.disposeTextures();
+      _self.brdfTextures = new Map();
 
       // If a materialSet was provided, set the texture format directly from the texture file extensions
       if (_self.opts.material || _self.opts.materialSet) {
@@ -1412,7 +1413,7 @@ class bivotJs {
 
             _self.setTexRepeat(texture);
 
-            brdfTextures.set(key, texture);
+            _self.brdfTextures.set(key, texture);
           },
           function (xhr) {},
           function (error) {
@@ -1915,14 +1916,7 @@ class bivotJs {
 
       // Remove old mesh from scene and clean up memory
       this.scene.remove(this.mesh);
-      this.mesh.traverse(
-        function(child) {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose();
-            child.material.dispose();
-          }
-        }
-      );
+      this.disposeMesh();
     }
     this.mesh = newMesh;
   }
@@ -2260,7 +2254,11 @@ class bivotJs {
       (this.state.showGrid || this.gridShowing)
     );
     if (update) {
+      const prevTexture = this.uniforms.overlayMap.value;
       this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams, this.state.showGrid);
+      if (prevTexture) {
+        prevTexture.dispose();
+      }
     }
     this.seamsShowing = this.state.showSeams;
     this.gridShowing = this.state.showGrid;
@@ -2584,6 +2582,29 @@ class bivotJs {
     return element;
   }
 
+  disposeTextures() {
+    if (this.brdfTextures) {
+      for (const tex of this.brdfTextures.values()) {
+        if (tex) {
+          tex.dispose();
+        }
+      }
+    }
+  }
+
+  disposeMesh() {
+    if (this.mesh) {
+      this.mesh.traverse(
+        function(child) {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            child.material.dispose();
+          }
+        }
+      );
+    }
+  }
+
   shutdown() {
     this.shuttingDown = true;
   }
@@ -2608,6 +2629,8 @@ class bivotJs {
     }
     this.elements = [];
 
+    this.disposeTextures();
+    this.disposeMesh();
     this.removeContainerAndOverlay();
     this.canvas = null;
     this.overlay = null;
