@@ -820,8 +820,9 @@ function BivotReact(props) {
 
     const savedState = {
       exposure, brightness, contrast, size,
-      zoom: [zoom[0], currentZoom, zoom[2]], // Backwards compatibility for deprecated middle zoom value
-      currentZoom, backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
+      zoom: [zoom[0] * meshScaling, currentZoom * meshScaling, zoom[2] * meshScaling],
+      currentZoom: currentZoom * meshScaling,
+      backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
