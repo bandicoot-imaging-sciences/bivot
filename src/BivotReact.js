@@ -165,17 +165,25 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     fetchFiles,
 
-    // If set, the X,Y spacing of a base grid
+    // If set, the X,Y spacing of a base grid (in units of pixels).
     // (Currently only supported for internal use)
     userGrid,
 
-    // If set, the X,Y spacing of a highlighted selection grid
+    // If set, the X,Y size and offset of a highlighted selection grid (in units of userGrid).
     // (Currently only supported for internal use)
     userGridSelection,
 
-    // True to display any given userGrid and userGridSelection
+    // True to display any given userGrid and userGridSelection.
     // (Currently only supported for internal use)
     showUserGrid,
+
+    // True to enable mouse-driven selection of a grid region.
+    // (Currently only supported for internal use)
+    userGridSelectionEnabled,
+
+    // If set, a callback function to be called whenever the grid selection changes.
+    // (Currently only supported for internal use)
+    userGridOnSelect,
 
     // If set, indicators are drawn along tiling seams.
     // (Currently only supported for internal use)
@@ -264,6 +272,8 @@ function BivotReact(props) {
     showGrid: false,
     grid: null,
     gridSelection: null,
+    enableGridSelect: false,
+    onSelectGrid: null,
     stretch: null,
     userScale: 1,
 
@@ -311,6 +321,8 @@ function BivotReact(props) {
     showGrid: false,
     grid: null,
     gridSelection: null,
+    enableGridSelect: false,
+    onSelectGrid: null,
     stretch: null,
     userScale: 1,
 
@@ -408,6 +420,8 @@ function BivotReact(props) {
   const [grid, setGrid] = useState(state.grid);
   const [gridSelection, setGridSelection] = useState(state.gridSelection);
   const [showGrid, setShowGrid] = useState(state.showGrid);
+  const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
+  const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
   const [stretch, setStretch] = useState(state.stretch);
   const [userScale, setUserScale] = useState(1);
   const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
@@ -441,6 +455,8 @@ function BivotReact(props) {
   state.showGrid = showGrid;
   state.grid = grid;
   state.gridSelection = gridSelection;
+  state.enableGridSelect = enableGridSelect;
+  state.onSelectGrid = onSelectGrid;
   state.stretch = stretch;
   state.userScale = userScale;
   state.camTiltWithMousePos = camTiltWithMousePos;
@@ -543,8 +559,8 @@ function BivotReact(props) {
   }, [tilingSeams]);
 
   useEffect(() => {
-    updateGrid(userGrid, userGridSelection, Boolean(showUserGrid));
-  }, [userGrid, userGridSelection, showUserGrid]);
+    updateGrid(userGrid, userGridSelection, Boolean(showUserGrid), Boolean(userGridSelectionEnabled));
+  }, [userGrid, userGridSelection, showUserGrid, userGridSelectionEnabled]);
 
   useEffect(() => {
     updateUserScale(tilingScale);
@@ -702,6 +718,7 @@ function BivotReact(props) {
       setZoomCallback: setCurrentZoom,
       canvasID,
       onClick,
+      onGridSelect: userGridOnSelect,
     };
     //console.log(options);
     bivot.current = new Bivot(options);
@@ -1014,10 +1031,11 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
-  function updateGrid(grid, selection, visible) {
+  function updateGrid(grid, selection, visible, selectEnabled) {
     setGrid(grid);
     setGridSelection(selection);
     setShowGrid(visible);
+    setEnableGridSelect(selectEnabled);
     renderFrame(true);
   }
 

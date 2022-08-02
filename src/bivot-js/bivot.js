@@ -78,6 +78,12 @@ const styles = {
     'width': '100%',
     'height': '100%',
     'top': '0',
+    'user-drag': 'none',
+    'user-select': 'none',
+    '-moz-user-select': 'none',
+    '-webkit-user-drag': 'none',
+    '-webkit-user-select': 'none',
+    '-ms-user-select': 'none',
   },
   'bivot-button': {
     'color': '#fff !important',
@@ -204,6 +210,7 @@ class bivotJs {
       loadingCompleteCallback: null,
       setZoomCallback: null,
       onClick: null,
+      onGridSelect: null,
     };
     this.opts = {...defaultOptions, ...options};
 
@@ -304,6 +311,12 @@ class bivotJs {
       maxCamZ: 2.0, // Initial value, state is changed via controls object.
       linearFilter: true, // Applied during texture loading.
       initialState: {},
+    };
+
+    this.gridSelectionState = {
+      state: 'none',
+      p0: null,
+      p1: null
     };
 
     // Record default size before anything changes it
@@ -421,6 +434,8 @@ class bivotJs {
 
     let subtitleElem = null;
     let subtitleTextElem = null;
+
+    let raycaster = new THREE.Raycaster();
 
     // Device orientation events require user permission for iOS > 13.
     // We use a feature detector for tilt permission in case Android picks up the same API.
@@ -986,6 +1001,14 @@ class bivotJs {
 
     function initialiseOverlays(overlay) {
       if (overlay) {
+        _self.registerEventListener(overlay, 'mousedown', onMouseDown, false);
+        _self.registerEventListener(overlay, 'pointerdown', onMouseDown, false);
+        _self.registerEventListener(overlay, 'mouseup', onMouseUp, false);
+        _self.registerEventListener(overlay, 'pointerup', onMouseUp, false);
+        _self.registerEventListener(overlay, 'mousemove', onMouseDrag, false);
+        _self.registerEventListener(overlay, 'pointermove', onMouseDrag, false);
+        // FIXME: On some browsers (Firefox), some of the time (button not held down),
+        // this may fire two events for each mouse move
         if (_self.opts.onClick) {
           _self.registerEventListener(overlay, 'click', _self.opts.onClick, false);
         }
@@ -1199,9 +1222,122 @@ class bivotJs {
       }
     }
 
-    function onDocumentMouseMove(event) {
-      // Update cams and lights using relative mouse co-ords between -1 and 1 within the canvas
+    function mouseToTexCoords(x, y, texDimsUnstretched) {
+      const ndc = { // Normalised device co-ordinates
+        x: (x / _self.renderer.domElement.clientWidth) * 2 - 1,
+        y: -(y / _self.renderer.domElement.clientHeight) * 2 + 1
+      };
+      raycaster.setFromCamera(ndc, _self.camera);
+      const intersects = raycaster.intersectObjects(_self.scene.children);
+      if (intersects.length > 0) {
+        const stretchedUv = _self.stretchUv(intersects[0].uv);
+        const texCoords = [
+          stretchedUv.x * texDimsUnstretched[0],
+          (1 - stretchedUv.y) * texDimsUnstretched[1]  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
+        ];
+        return texCoords;
+      }
+      return null;
+    }
+
+    function texToGridCoords(uv, texDimsUnstretched, phaseIn=null) {
+      const grid = _self.state.grid;
+      if (grid) {
+        const x = Math.floor(uv[0] / grid[0]);
+        const y = Math.floor(uv[1] / grid[1]);
+        const numGridRepeats = [
+          Math.round(texDimsUnstretched[0] / grid[0]),
+          Math.round(texDimsUnstretched[1] / grid[1])
+        ];
+        var xMod = ((x % numGridRepeats[0]) + numGridRepeats[0]) % numGridRepeats[0];
+        var yMod = ((y % numGridRepeats[1]) + numGridRepeats[1]) % numGridRepeats[1];
+        const phase = [
+          Math.round((x - xMod) / numGridRepeats[0]),
+          Math.round((y - yMod) / numGridRepeats[1])
+        ];
+
+        if (phaseIn) {
+          // Clamp to the given input phase
+          if (phase[0] > phaseIn[0]) {
+            xMod = Math.round(texDimsUnstretched[0] / grid[0]) - 1;
+          } else if (phase[0] < phaseIn[0]) {
+            xMod = 0;
+          }
+          if (phase[1] > phaseIn[1]) {
+            yMod = Math.round(texDimsUnstretched[1] / grid[1]) - 1;
+          } else if (phase[1] < phaseIn[1]) {
+            yMod = 0;
+          }
+        }
+
+        return { coords: [xMod, yMod], phase };
+      } else {
+        return { coords: uv, phase: [0, 0] };
+      }
+    }
+
+    function unstretchedTexDims() {
+      const texDims = _self.state.texDims ?? [1, 1];
+      const stretch = _self.state.stretch ?? [1, 1];
+      return [
+        texDims[0] * stretch[0],
+        texDims[1] * stretch[1]
+      ];
+    }
+
+    function onMouseDown(event) {
       event.preventDefault();
+      if (event.button === 0) {  // Primary button
+        if (_self.state.enableGridSelect) {
+          _self.overlay.setPointerCapture(event.pointerId);
+          _self.controls.enabled = false;
+          _self.gridSelectionState.state = 'selecting';
+          const texDimsUnstretched = unstretchedTexDims();
+          const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+          if (uv) {
+            const { coords, phase } = texToGridCoords(uv, texDimsUnstretched);
+            _self.gridSelectionState.p0 = coords;
+            _self.gridSelectionState.p1 = coords;
+            _self.gridSelectionState.tilingPhase = phase;
+            if (_self.opts.onGridSelect) {
+              _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+            }
+          }
+        }
+      }
+    }
+
+    function onMouseUp(event) {
+      event.preventDefault();
+      if (event.button === 0) {  // Primary button
+        if (_self.state.enableGridSelect) {
+          _self.overlay.releasePointerCapture(event.pointerId);
+          _self.controls.enabled = true;
+          _self.gridSelectionState.state = 'selected';
+        }
+      }
+    }
+
+    function onMouseDrag(event) {
+      event.preventDefault();
+      if (_self.state.enableGridSelect && _self.gridSelectionState.state === 'selecting') {
+        const texDimsUnstretched = unstretchedTexDims();
+        const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+        if (uv) {
+          const { coords, _phase } = texToGridCoords(uv, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
+          if (_self.gridSelectionState.p1 === null || coords[0] !== _self.gridSelectionState.p1[0] || coords[1] !== _self.gridSelectionState.p1[1]) {
+            _self.gridSelectionState.p1 = coords;
+            if (_self.opts.onGridSelect) {
+              _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+            }
+          }
+        }
+      }
+    }
+
+    function onDocumentMouseMove(event) {
+      event.preventDefault();
+      // Update cams and lights using relative mouse co-ords between -1 and 1 within the canvas
       const viewPortX = event.clientX;
       const viewPortY = event.clientY;
       if (_self.isViewPortCoordInCanvas(viewPortX, viewPortY)) {
@@ -1221,7 +1357,7 @@ class bivotJs {
         _self.state.lightPosition.copy(
           _self.xyTo3dDirection(new THREE.Vector2(0, 0), _self.state.lightPositionOffset, _self.state.lightTiltWithMousePos,
           _self.state.lightTiltLimitDegrees)
-          );
+        );
 
         _self.updateLightingGrid();
       }
@@ -2271,6 +2407,19 @@ class bivotJs {
     }
   }
 
+  stretchUv(uv) {
+    var stretchedUv;
+    const texture = this.uniforms.diffuseMap.value;
+    if (texture) {
+      factors = texture.repeat;
+      stretchedUv = {
+        x: uv.x * texture.repeat.x + texture.offset.x,
+        y: uv.y * texture.repeat.y + texture.offset.y
+      };
+    }
+    return stretchedUv ?? uv;
+  }
+
   updateTextureLayer() {
     this.uniforms.textureLayer.value = this.state.textureLayer;
   }
@@ -2350,10 +2499,14 @@ class bivotJs {
     ctx.stroke();
   }
 
-  drawGrid(ctx, texDims, cellDims, stretch, color='#777F', thickness=1) {
+  drawGrid(ctx, texDims, cellDims, cellOffset, stretch, color='#777F', thickness=1) {
+    const stretchFactors = [
+      (overlayTexW / texDims[0]) / stretch[0],
+      (overlayTexH / texDims[1]) / stretch[1]
+    ];
     const gridDimsStretch = [
-      overlayTexW / texDims[0] * cellDims[0] / stretch[0],
-      overlayTexH / texDims[1] * cellDims[1] / stretch[1]
+      cellDims[0] * stretchFactors[0],
+      cellDims[1] * stretchFactors[1]
     ];
 
     const [xs, ys] = this.getTexRepeat();
@@ -2363,14 +2516,47 @@ class bivotJs {
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth = absLineWidthX;
-    for (y = 0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+    var x0 = cellOffset ? cellOffset[0] * stretchFactors[0] : 0;
+    var y0 = cellOffset ? cellOffset[1] * stretchFactors[1] : 0;
+    x0 -= Math.floor(x0 / gridDimsStretch[0]) * gridDimsStretch[0];
+    y0 -= Math.floor(y0 / gridDimsStretch[1]) * gridDimsStretch[1];
+    for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
       ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y);
     }
     ctx.stroke();
     ctx.lineWidth = absLineWidthY;
-    for (x = 0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+    for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
       ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1);
     }
+    ctx.stroke();
+  }
+
+  drawRect(ctx, texDims, cellDims, p0, p1, stretch, color='#FFFF', thickness=1) {
+    const p0Stretch = [
+      cellDims[0] * overlayTexW / texDims[0] * Math.min(p0[0], p1[0]) / stretch[0],
+      cellDims[1] * overlayTexH / texDims[1] * Math.min(p0[1], p1[1]) / stretch[1]
+    ];
+    const p1Stretch = [
+      cellDims[0] * overlayTexW / texDims[0] * (Math.max(p0[0], p1[0]) + 1) / stretch[0] - 1,
+      cellDims[1] * overlayTexH / texDims[1] * (Math.max(p0[1], p1[1]) + 1) / stretch[1] - 1
+    ];
+
+    const [xs, ys] = this.getTexRepeat();
+    const absLineWidthX = ys * thickness;
+    const absLineWidthY = xs * thickness;
+
+    ctx.fillStyle = '#EFE2';
+    ctx.fillRect(p0Stretch[0], p0Stretch[1], p1Stretch[0] - p0Stretch[0], p1Stretch[1] - p0Stretch[1]);
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = absLineWidthX;
+    ctx.moveTo(p0Stretch[0], p0Stretch[1]); ctx.lineTo(p1Stretch[0], p0Stretch[1]);
+    ctx.moveTo(p0Stretch[0], p1Stretch[1]); ctx.lineTo(p1Stretch[0], p1Stretch[1]);
+    ctx.stroke();
+    ctx.lineWidth = absLineWidthY;
+    ctx.moveTo(p0Stretch[0], p0Stretch[1]); ctx.lineTo(p0Stretch[0], p1Stretch[1]);
+    ctx.moveTo(p1Stretch[0], p0Stretch[1]); ctx.lineTo(p1Stretch[0], p1Stretch[1]);
     ctx.stroke();
   }
 
@@ -2387,11 +2573,28 @@ class bivotJs {
         this.drawSeams(ctx, texDims, this.state.stretch);
       }
       if (showGrid && this.state.stretch) {
-        if (this.state.grid) {
-          this.drawGrid(ctx, texDims, this.state.grid, this.state.stretch, '#FF0F', 1);
-        }
+        // Fine grid display disabled for now
+        // if (this.state.grid) {
+        //   this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#FF0F', 1);
+        // }
         if (this.state.gridSelection) {
-          this.drawGrid(ctx, texDims, this.state.gridSelection, this.state.stretch, '#00FF', 2);
+          var selectPoints = this.state.gridSelection;
+          const gridPixels = [
+            selectPoints[0] * this.state.grid[0],
+            selectPoints[1] * this.state.grid[1]
+          ]
+          var gridOffset = null;
+          if (this.state.gridSelection.length >= 4) {
+            gridOffset = [
+              selectPoints[2] * this.state.grid[0],
+              selectPoints[3] * this.state.grid[1]
+            ];
+          }
+          this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#00FF', 2);
+        }
+        if (this.gridSelectionState.state !== 'none') {
+          const { p0, p1 } = this.gridSelectionState;
+          this.drawRect(ctx, texDims, this.state.grid, p0, p1, this.state.stretch, '#0F0F', 3);
         }
       }
     }
