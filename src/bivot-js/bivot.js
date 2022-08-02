@@ -2572,7 +2572,7 @@ class bivotJs {
       if (showSeams) {
         this.drawSeams(ctx, texDims, this.state.stretch);
       }
-      if (showGrid && this.state.stretch) {
+      if (showGrid && this.state.stretch && this.state.grid) {
         // Fine grid display disabled for now
         // if (this.state.grid) {
         //   this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#FF0F', 1);
