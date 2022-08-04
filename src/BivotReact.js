@@ -146,8 +146,8 @@ function BivotReact(props) {
     // status of Bivot.  1: Loading; 2: Loaded; 0: Other
     statusCallback,
 
-    // If set, the URL for an object mesh to render the Shimmer on.
-    // Set to false to revert the the default mesh for the Shimmer.
+    // If set, the URL for an object mesh to render the Shimmer on.  Can also
+    // set to null for the shimmer's mesh, or false for a default (flat) mesh.
     // NOTE: This should only be used for Flat mode scans.
     objectMesh,
 
@@ -349,9 +349,9 @@ function BivotReact(props) {
 
   function updateAutoRotateOverride(val) {
     if (val === true) {
-      state.autoRotatePeriodMs = 8000;
+      setAutoRotatePeriodMs(8000);
     } else if (val === false) {
-      state.autoRotatePeriodMs = 0;
+      setAutoRotatePeriodMs(0);
     }
   }
 

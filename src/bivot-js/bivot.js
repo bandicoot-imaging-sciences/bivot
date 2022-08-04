@@ -367,7 +367,8 @@ class bivotJs {
     this.brdfTextures = null;
     this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
-    this.meshOrig = null;       // Original mesh provided in mesh textures
+    this.meshOrig = null;       // Default mesh associated with viewer
+    this.meshMaterial = null;   // Original mesh associated with material
     this.meshCache = {};        // Cache of loaded mesh objects
     this.useDispMap = null;     // True if displacement map is in use
     this.renderer = null;
@@ -1559,9 +1560,11 @@ class bivotJs {
       }
 
       _self.meshOrig = meshPath;
+      _self.meshMaterial = meshPath;
       // Load the override mesh if set, otherwise use given textures mesh
       if (_self.state.meshOverride) {
         console.debug('Using meshOverride:', _self.state.meshOverride);
+        _self.meshMaterial = _self.state.meshOverride;
         meshPath = _self.state.meshOverride;
       }
       _self.loadMesh(_self, meshPath, loadManager);
@@ -1982,11 +1985,15 @@ class bivotJs {
 
   updateMesh() {
     var meshPath;
-    if (this.state.meshOverride !== false) {
-      meshPath = this.state.meshOverride;
-    } else {
+    if (this.state.meshOverride === null) {
+      // Material mesh requested; use mesh associated with loaded material set
+      meshPath = this.meshMaterial;
+    } else if (this.state.meshOverride === false) {
       // Default mesh requested; use original mesh in textures list
       meshPath = this.meshOrig;
+    } else {
+      // New custom mesh
+      meshPath = this.state.meshOverride;
     }
 
     // Only update the mesh if the new path is different to the current path in use
