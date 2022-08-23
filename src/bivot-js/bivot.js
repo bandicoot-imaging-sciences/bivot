@@ -260,8 +260,8 @@ class bivotJs {
       colorTransform: new THREE.Matrix3(),
       hue: 0.0,
       saturation: 0.0,
-      yFlip: true,    // Legacy field
-      yFlipped: true, // New field
+      yFlip: true,          // Legacy field
+      yFlipped: undefined,  // New field
       size: defaultSize, // Initial size and aspect ratio (canvas logical size) in display pixels
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
