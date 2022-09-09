@@ -35,7 +35,7 @@ import ResizeObserver from 'resize-observer-polyfill';
 import * as THREE from '@bandicoot-imaging-sciences/three';
 
 import Stats from '@bandicoot-imaging-sciences/three/examples/jsm/libs/stats.module.js';
-import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
+//import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/EXRLoader.js';
 import { OBJLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/OBJLoader.js';
 import { WEBGL } from '@bandicoot-imaging-sciences/three/examples/jsm/WebGL.js';
@@ -48,6 +48,9 @@ import { FXAAShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shade
 import { GammaCorrectionShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { RectAreaLightUniformsLib } from '@bandicoot-imaging-sciences/three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 //import { BufferGeometryUtils } from '@bandicoot-imaging-sciences/three/examples/jsm/utils/BufferGeometryUtils.js';
+
+import CameraControls from 'camera-controls';
+CameraControls.install({ THREE: THREE });
 
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
@@ -161,6 +164,8 @@ function injectStyle(elem, style) {
   }
 }
 
+const crosshairsCursor = 'https://bandicoot-hosted.s3.ap-southeast-2.amazonaws.com/assets/cursor/Crossdot.cur';
+
 export const defaultSize = [792, 528];
 export const initialRepeatFactorX = 1.5;
 
@@ -211,6 +216,7 @@ class bivotJs {
       setZoomCallback: null,
       onClick: null,
       onGridSelect: null,
+      onDrawing: null,
     };
     this.opts = {...defaultOptions, ...options};
 
@@ -250,11 +256,13 @@ class bivotJs {
       light45: false,
       scan: 'kimono 2k',
       meshOverride: false,
+      meshesToCache: undefined,
       brdfModel: 1,
       brdfVersion: 2,
       displacementOffset: 0.0,
       displacementUnits: 0.0,
       texDims: undefined,
+      tileBoundary: undefined,
       aoStrength: 1.0,
       colorTemperature: 6500,
       colorTransform: new THREE.Matrix3(),
@@ -266,7 +274,7 @@ class bivotJs {
       background: 0x05, // Legacy grayscale background
       backgroundColor: '#050505', // RGB background colour string
       meshRotateZDegrees: 0,
-      dragControlsRotation: undefined,
+      dragControlsRotation: undefined,  // 0/null: disabled; 1: enabled; 2: enabled only via ctrl modified
       dragControlsPanning: undefined,
       camTiltWithMousePos: 0.0,  // Factor to tilt camera based on mouse position (-0.1 is good)
       camTiltWithDeviceOrient: 0.0,  // Factor to tilt camera based on device orientation (0.6 is good)
@@ -283,7 +291,9 @@ class bivotJs {
       autoRotateCamFactor: 0.5,
       autoRotateLightFactor: 0.9,
       currentZoom: 0.9,
+      pixellated: false,
       showSeams: false,
+      boundary: false,
       stretch: null,
       userScale: null,
       textureLayer: 0,
@@ -318,6 +328,13 @@ class bivotJs {
       state: 'none',
       p0: null,
       p1: null
+    };
+
+    this.dragState = {
+      state: 'none',
+      addingNew: null,
+      group: null,
+      point: null
     };
 
     // Record default size before anything changes it
@@ -362,6 +379,7 @@ class bivotJs {
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
     this.renderRequested = false;
     this.scene = new THREE.Scene();
+    this.clock = new THREE.Clock();
     this.camera = null;
     this.lights = null;
     this.lights45 = null;
@@ -383,6 +401,7 @@ class bivotJs {
     // Start false so that auto-rotate is always active until the mouse moves, even if the mouse starts over
     // the canvas.
     this.mouseInCanvas = false;
+    this.wheelInProgress = false;
     this.intersectionObserver = null;
     this.isVisible = false;
     this.seamsShowing = false;
@@ -419,6 +438,16 @@ class bivotJs {
     this.timeouts = [];
     this.listeners = [];
     this.elements = [];
+
+    const imagesToPreload = [crosshairsCursor, ];
+    // Preload images
+    imagesToPreload.forEach(im => {
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = im;
+      document.head.appendChild(link);
+    });
   }
 
   startRender() {
@@ -509,8 +538,8 @@ class bivotJs {
 
       initialiseOverlays(this.overlay);
       initialiseLighting(this.getBgColorFromState(this.state), this.scene);
-      this.camera = initialiseCamera(this.state.focalLength, this.config.initCamZ);
-      this.controls = initialiseControls(this.camera, this.overlay, this.config);
+      this.camera = initialiseCamera(this.state.focalLength);
+      this.controls = initialiseControls(this.camera, this.overlay, this.config, this.config.initCamZ);
       if (this.config.showInterface) {
         addControlPanel();
       }
@@ -536,12 +565,38 @@ class bivotJs {
       this.registerEventListener(document, 'keydown', onKeyDown, false);
       this.registerEventListener(document, 'keyup', onKeyUp, false);
       this.registerEventListener(document, 'wheel', onWheel, false);
+      this.registerEventListener(this.overlay, 'wheel', onOverlayWheel, false);
 
       if (this.opts.useTouch === true || this.opts.useTouch === false) {
         this.config.useTouch = this.opts.useTouch;
       }
+
+      this.registerEventListener(window, 'keydown', handleKeyDown, false);
     });
     // ========== End mainline; functions follow ==========
+
+    function handleKeyDown(event) {
+      // FIXME: Only delete points when enableKeypress is set
+      if (_self.state.enableKeypress || true) {
+        if (event.keyCode === 46) {          // Delete
+          if (_self.dragState.state === 'selected') {
+            const group = _self.dragState.group;
+            const point = _self.dragState.point;
+            const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
+            if (newSelection !== null) {
+              _self.dragState.point = newSelection;
+            } else {
+              _self.dragState.state = 'none';
+            }
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(group, point, null, null);
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+        }
+      }
+    }
 
     function showStats(show) {
       if (show) {
@@ -574,7 +629,7 @@ class bivotJs {
             loc += '/';
           }
           const parts = loc.split('/');
-          const filename = parts[parts.length - 2];  
+          const filename = parts[parts.length - 2];
           img.src = getBasePath(_self.opts.materialSet) + `/images/${filename}.jpg`;
         }
 
@@ -870,8 +925,9 @@ class bivotJs {
           console.debug('Error: Failed to load ' + renderFilename);
         }
       } else if (material) {
-        console.debug('Using provided material object');
         scans = material.config.renders;
+        console.debug('Using provided material object:', scans);
+
         // TODO: Apply showcase flag to this branch
       }
       return scans;
@@ -1061,7 +1117,7 @@ class bivotJs {
       scene.add(ambientLight);
     }
 
-    function initialiseCamera(focalLength, initZ) {
+    function initialiseCamera(focalLength) {
       // Physical distance units are in metres.
       const sensorHeight = 0.024;
       fov = fieldOfView(focalLength, sensorHeight);
@@ -1069,7 +1125,6 @@ class bivotJs {
       const near = 0.01;
       const far = 10;
       var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-      camera.position.set(0, 0, initZ);
       return camera;
     }
 
@@ -1080,30 +1135,35 @@ class bivotJs {
       _self.requestRender();
     }
 
-    function initialiseControls(camera, elem, config) {
-      var controls = new OrbitControls(camera, elem);
+    function initialiseControls(camera, elem, config, initZ) {
+      var controls = new CameraControls(camera, elem);
 
       controls.enableDamping = true;
       controls.dampingFactor = 0.15;
       controls.panSpeed = 1.0;
+      controls.truckSpeed = 2.0;
       controls.rotateSpeed = 1.0;
-      controls.zoomSpeed = 1.0;
-      controls.target = _self.state.cameraPan;
-      controls.update();
-      controls.enableZoom = (_self.opts.featured === true) ? true : false;
-      controls.enableRotate = config.mouseCamControlsRotate;
-      controls.enablePan = config.mouseCamControlsPan;
+      controls.dollySpeed = 1.0;
+      controls.zoomSpeed = (touchDetected ? 0.25 : 1.0);
+      controls.setTarget(_self.state.cameraPan.x, _self.state.cameraPan.y, _self.state.cameraPan.z);
+      controls.mouseButtons.wheel = (_self.opts.featured === true) ? CameraControls.ACTION.DOLLY : CameraControls.ACTION.NONE;
+      controls.mouseButtons.left = (config.mouseCamControlsRotate) ? CameraControls.ACTION.ROTATE : CameraControls.ACTION.NONE;
+      controls.mouseButtons.right = (config.mouseCamControlsPan) ? CameraControls.ACTION.TRUCK : CameraControls.ACTION.NONE;
       controls.minDistance = config.minCamZ;
       controls.maxDistance = config.maxCamZ;
-      controls.screenSpacePanning = true;
-      if (touchDetected) {
-        controls.zoomSpeed *= 0.25;
-        if (!config.useTouch) {
-          controls.dispose();
-        }
+      controls.setPosition(0, 0, initZ);
+      controls.verticalDragToForward = false;
+      // Dolly to cursor if the mouse position isn't controlling tilt
+      controls.dollyToCursor = (_self.state.camTiltWithMousePos === 0.0);
+      controls.update();
+
+      if (touchDetected && !config.useTouch) {
+        controls.dispose();
       }
+
       _self.updateControls(controls);
-      _self.registerEventListener(controls, 'change', controlsChange);
+      _self.registerEventListener(controls, 'update', controlsChange);
+
       return controls;
     }
 
@@ -1224,20 +1284,34 @@ class bivotJs {
       }
     }
 
-    function mouseToTexCoords(x, y, texDimsUnstretched) {
-      const ndc = { // Normalised device co-ordinates
+    function getNdc(x, y) {
+      // Get normalised device co-ordinates
+      return {
         x: (x / _self.renderer.domElement.clientWidth) * 2 - 1,
         y: -(y / _self.renderer.domElement.clientHeight) * 2 + 1
       };
+    }
+
+    function mouseToTexCoords(x, y, texDimsUnstretched) {
+      const ndc = getNdc(x, y);
       raycaster.setFromCamera(ndc, _self.camera);
       const intersects = raycaster.intersectObjects(_self.scene.children);
-      if (intersects.length > 0) {
+      if (intersects.length > 0 && texDimsUnstretched !== undefined) {
         const stretchedUv = _self.stretchUv(intersects[0].uv);
-        const texCoords = [
-          stretchedUv.x * texDimsUnstretched[0],
-          (1 - stretchedUv.y) * texDimsUnstretched[1]  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
-        ];
-        return texCoords;
+        if (_self.state.stretch) {
+          // Stretched texture
+          return [
+            stretchedUv.x * texDimsUnstretched[0],
+            (1 - stretchedUv.y) * texDimsUnstretched[1]  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
+          ];
+        } else {
+          // Centred texture in square image
+          const maxDim = Math.max(texDimsUnstretched[0], texDimsUnstretched[1]);
+          return [
+            stretchedUv.x * maxDim - (maxDim - texDimsUnstretched[0]) / 2,
+            (1 - stretchedUv.y) * maxDim - (maxDim - texDimsUnstretched[1]) / 2  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
+          ];
+        }
       }
       return null;
     }
@@ -1287,23 +1361,148 @@ class bivotJs {
       ];
     }
 
+    function pointsDist(x0, y0, x1, y1, sx=null, sy=null) {
+      var sxi = sx;
+      var syi = sy;
+      if (sx === null || sy === null) {
+        const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
+        const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
+        const td = _self.state.texDims ?? [1, 1];
+        const maxDim = Math.max(td[0], td[1]);
+        sxi = (overlayTexW / maxDim) / ex;
+        syi = (overlayTexH / maxDim) / ey;
+      }
+      const dx = (x0 - x1) * sxi;
+      const dy = (y0 - y1) * syi;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function findNearestDraggablePoint(u, v) {
+      const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
+      const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
+      const td = _self.state.texDims;
+      const maxDim = Math.max(td[0], td[1]);
+      const sx = overlayTexW / maxDim;
+      const sy = overlayTexH / maxDim;
+      var minDist = null;
+      var minHitGroup = null;
+      var minHitPoint = null;
+      _self.state.pointsControl.forEach((pc, gi) => {
+        if (pc.draggable) {
+          pc.points.forEach((p, pi) => {
+            const dist = pointsDist(u, v, p.x, p.y, sx / ex, sy / ey);
+            if (minDist === null || dist < minDist) {
+              minDist = dist;
+              minHitGroup = gi;
+              minHitPoint = pi;
+            }
+          });
+        }
+      });
+      return {
+        dist: minDist,
+        group: minHitGroup,
+        point: minHitPoint
+      };
+    }
+
+    function deletePoint(points, group, point) {
+      const length = points.length;
+      points.splice(point, 1);
+
+      if (length === 1) {
+        // No more points to select
+        return null;
+      }
+      if (group === 0 && length === 4 && (point === 1 || point === 2)) {
+        // Delete non-final point of 4; cycle points beyond this one to front
+        for (var i = 0; i < (3 - point); i++) {
+          points.unshift(points[2]);
+          points.splice(3, 1);
+        }
+      }
+      if (group === 1 && Math.floor((length - 1) / 2) !== Math.floor(point / 2)) {
+        // Delete a point not in the final group; move its partner to the end of the array and select it
+        const movedIndex = 2 * Math.floor(point / 2);
+        points.push(points[movedIndex]);
+        points.splice(movedIndex, 1);
+        return length - 2;
+      }
+      // Next point becomes selected if there is one, otherwise previous point
+      return (point >= length - 1) ? point - 1 : point;
+    }
+
     function onMouseDown(event) {
       event.preventDefault();
       if (event.button === 0) {  // Primary button
-        if (_self.state.enableGridSelect) {
+        var captured = false;
+        if (_self.state.enableGridSelect || _self.state.pointsControl) {
+          if (_self.state.enableGridSelect) {
+            captured = true;
+            _self.gridSelectionState.state = 'selecting';
+            const texDimsUnstretched = unstretchedTexDims();
+            const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+            if (uv) {
+              const { coords, phase } = texToGridCoords(uv, texDimsUnstretched);
+              _self.gridSelectionState.p0 = coords;
+              _self.gridSelectionState.p1 = coords;
+              _self.gridSelectionState.tilingPhase = phase;
+              if (_self.opts.onGridSelect) {
+                _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+              }
+            }
+          } else if (_self.state.pointsControl) {
+            const anyInteractable = _self.state.pointsControl.some((pc) => (pc.draggable || pc.addNew));
+            if (anyInteractable) {
+              captured = true;
+              const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
+              if (uv) {
+                const { dist, group, point } = findNearestDraggablePoint(uv[0], uv[1]);
+                if (dist !== null && dist < 1) {
+                  document.body.style.cursor = `url('${crosshairsCursor}'), auto`;
+                  _self.dragState.state = 'draggingPoint';
+                  _self.dragState.group = group;
+                  _self.dragState.point = point;
+                  _self.updateOverlay();
+                  _self.requestRender();
+                }
+                if (_self.dragState.state !== 'draggingPoint') {
+                  var addable = null;
+                  for (var i = 0; i < _self.state.pointsControl.length; i++) {
+                    if (_self.state.pointsControl[i].addNew) {
+                      addable = i;
+                      break;
+                    }
+                  }
+                  if (addable !== null) {
+                    document.body.style.cursor = `url('${crosshairsCursor}'), auto`;
+                    const pointNum = _self.state.pointsControl[addable].points.length ?? 0;
+                    _self.controls.enabled = false;
+                    _self.dragState.state = 'draggingPoint';
+                    _self.dragState.group = addable;
+                    _self.dragState.point = pointNum;
+                    _self.dragState.addingNew = pointNum;
+                    _self.dragState.clickPos = uv;
+                    onMouseDrag(event);
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (captured) {
           _self.overlay.setPointerCapture(event.pointerId);
           _self.controls.enabled = false;
-          _self.gridSelectionState.state = 'selecting';
-          const texDimsUnstretched = unstretchedTexDims();
-          const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
-          if (uv) {
-            const { coords, phase } = texToGridCoords(uv, texDimsUnstretched);
-            _self.gridSelectionState.p0 = coords;
-            _self.gridSelectionState.p1 = coords;
-            _self.gridSelectionState.tilingPhase = phase;
-            if (_self.opts.onGridSelect) {
-              _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
-            }
+        } else if (_self.state.dragControlsRotation === 2 && !event.ctrlKey) {
+          // Disable drag-rotate without ctrl key
+          _self.controls.enabled = false;
+        } else {
+          // Allow regular controls.
+          // Must phase azimuth into -PI -> PI range to avoid rotation control
+          // flipping the rotation suddenly from the PI -> 2.PI range due to
+          // azimuth limit
+          if (_self.controls.azimuthAngle > Math.PI) {
+            _self.controls.rotateAzimuthTo(_self.controls.azimuthAngle - 2 * Math.PI);
           }
         }
       }
@@ -1311,11 +1510,28 @@ class bivotJs {
 
     function onMouseUp(event) {
       event.preventDefault();
+      _self.controls.enabled = true;
       if (event.button === 0) {  // Primary button
         if (_self.state.enableGridSelect) {
           _self.overlay.releasePointerCapture(event.pointerId);
-          _self.controls.enabled = true;
           _self.gridSelectionState.state = 'selected';
+        } else if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
+          document.body.style.cursor = 'auto';
+          _self.overlay.releasePointerCapture(event.pointerId);
+          const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
+          const pcg = _self.state.pointsControl[_self.dragState.group];
+          if (_self.dragState.state === 'draggingRect' && pcg.lines === 'closed4') {
+            const pos0 = pcg.points[0];
+            pcg.points.push({ 'x': uv[0], 'y': uv[1] });
+            pcg.points.push({ 'x': pos0.x, 'y': uv[1] });
+            pcg.points[1] = { 'x': uv[0], 'y': pos0.y };
+            _self.dragState.point = 2;
+          }
+          if (uv && _self.opts.onDrawing) {
+            _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, uv[0], uv[1]);
+          }
+          _self.dragState.state = 'selected';
+          _self.dragState.addingNew = null;
         }
       }
     }
@@ -1334,6 +1550,29 @@ class bivotJs {
             }
           }
         }
+      } else if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
+        const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
+        if (uv) {
+          _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = { 'x': uv[0], 'y': uv[1] };
+
+          const pos0 = _self.dragState.clickPos;
+          if (_self.dragState.addingNew === 0 && _self.dragState.point === 0 && pos0) {
+            const dist = pointsDist(uv[0], uv[1], pos0[0], pos0[1]);
+            if (dist > 1) {
+              if (['rect', 'closed4'].includes(_self.state.pointsControl[_self.dragState.group].lines)) {
+                _self.state.pointsControl[_self.dragState.group].points[0] = { 'x': pos0[0], 'y': pos0[1] };
+                _self.state.pointsControl[_self.dragState.group].points.push({ 'x': uv[0], 'y': uv[1] });
+                _self.dragState.point = 1;
+                _self.dragState.state = 'draggingRect';
+              }
+            }
+          }
+          _self.updateOverlay();
+          _self.requestRender();
+        }
+      } else {
+        // Drag is part of regular mouse controls
+        _self.requestRender();
       }
     }
 
@@ -1364,11 +1603,11 @@ class bivotJs {
         _self.updateLightingGrid();
       }
 
-      if (_self.camera && _self.state.tiltZeroOnMouseOut && _self.state.camTiltWithMousePos != 0.0) {
-        _self.camera.position.set(0, 0, _self.camera.position.length());
+      if (_self.camera && _self.controls && _self.state.tiltZeroOnMouseOut && _self.state.camTiltWithMousePos != 0.0) {
+        _self.controls.setPosition(0, 0, _self.camera.position.length());
       }
 
-      if (_self.state.autoRotatePeriodMs 
+      if (_self.state.autoRotatePeriodMs
         && (_self.state.lightMotion == 'mouse' || _self.state.lightMotion == 'animate')) {
         _self.requestRender();
       }
@@ -1413,14 +1652,23 @@ class bivotJs {
       }
     }
 
+    function onOverlayWheel(event) {
+      _self.updateOverlay();  // Update overlay to preserve apparent line thicknesses
+    }
+
     function onWheel(event) {
       if (_self.mouseInCanvas && _self.config.mouseCamControlsZoom) {
-        if (event.ctrlKey || _self.opts.featured === true || _self.isFullScreen()) {
+        // Wheel is part of regular mouse controls
+        _self.wheelInProgress = true;
+        _self.requestRender();
+
+        if (!(event.ctrlKey || _self.opts.featured === true || _self.isFullScreen())) {
+          setZoomHelp();
+          return;
+        } else {
           // TODO: Clear help immediately when ctrl + scroll is used (currently,
           //       onWheel() doesn't fire in these circumstances)
           clearZoomHelp();
-        } else {
-          setZoomHelp();
         }
       }
     }
@@ -1691,15 +1939,18 @@ class bivotJs {
 
       // Read valid bivot-renders.json parameters, if present
       const curScan = _self.scans[_self.scan];
+      var curPosition = _self.camera.position.clone();
       if (curScan.hasOwnProperty('cameraPositionX')) {
-        _self.camera.position.x = curScan.cameraPositionX;
+        curPosition.x = curScan.cameraPositionX;
       }
       if (curScan.hasOwnProperty('cameraPositionY')) {
-        _self.camera.position.y = curScan.cameraPositionY;
+        curPosition.y = curScan.cameraPositionY;
       }
       if (curScan.hasOwnProperty('cameraPositionZ')) {
-        _self.camera.position.z = curScan.cameraPositionZ;
+        curPosition.z = curScan.cameraPositionZ;
       }
+      _self.controls.setPosition(curPosition.x, curPosition.y, curPosition.z);
+
       if (curScan.hasOwnProperty('controlsMinDistance')) {
         _self.controls.minDistance = curScan.controlsMinDistance;
       }
@@ -1955,17 +2206,20 @@ class bivotJs {
   }
 
   updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
-    if (this.lights && light_sensitivity != 0.0) {
+    if (this.lights && light_sensitivity !== 0.0) {
       this.state.lightPosition.copy(
         this.xyTo3dDirection(xy, this.state.lightPositionOffset, light_sensitivity, this.state.lightTiltLimitDegrees)
       );
       this.updateLightingGrid();
     }
-    if (this.camera && cam_sensitivity != 0.0) {
+
+    // Avoid tilt on mouseover if mouse wheel is occurring, otherwise the zoom gets clobbered
+    if (this.camera && cam_sensitivity !== 0.0 && !this.wheelInProgress) {
       // Retain existing camera distance
       let camVec = this.xyTo3dDirection(xy, this.state._camPositionOffset, cam_sensitivity,
         this.state.camTiltLimitDegrees);
-      this.camera.position.copy(camVec.multiplyScalar(this.camera.position.length()));
+      camVec.multiplyScalar(this.camera.position.length());
+      this.controls.setPosition(camVec.x, camVec.y, camVec.z);
       this.requestRender();
     }
   }
@@ -1985,22 +2239,27 @@ class bivotJs {
     return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
   }
 
-  updateMesh() {
-    var meshPath;
-    if (this.state.meshOverride === null) {
+  meshValToPath(val) {
+    if (val === null || val === '') {
       // Material mesh requested; use mesh associated with loaded material set
       meshPath = this.meshMaterial;
-    } else if (this.state.meshOverride === false) {
+    } else if (val === false) {
       // Default mesh requested; use original mesh in textures list
       meshPath = this.meshOrig;
     } else {
       // New custom mesh
-      meshPath = this.state.meshOverride;
+      meshPath = val;
     }
+    return meshPath;
+  }
+
+  updateMesh() {
+    const meshPath = this.meshValToPath(this.state.meshOverride);
 
     // Only update the mesh if the new path is different to the current path in use
     if (this.meshPathUsed !== meshPath) {
       const _self = this;
+
       function onLoadUpdateMesh() {
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
@@ -2010,6 +2269,7 @@ class bivotJs {
           _self.opts.loadingCompleteCallback(false, true);
         }
       };
+
       // Reset and show progress bar, then load the mesh
       _self.loadingElem.style.display = 'flex';
       _self.progressBarElem.style.transform = 'scaleX(0)';
@@ -2017,16 +2277,22 @@ class bivotJs {
       loadManager.onLoad = onLoadUpdateMesh;
       this.loadMesh(this, meshPath, loadManager);
     }
+
+    if (this.state.meshesToCache) {
+      const loadManager = new THREE.LoadingManager();
+      this.state.meshesToCache.forEach(val => {
+        const meshPath = this.meshValToPath(val);
+        this.loadMesh(this, meshPath, loadManager, true);
+      });
+    }
   }
 
-  loadMesh(_self, meshPath, loadManager) {
-    _self.meshPathUsed = meshPath;
-    if (_self.meshCache.hasOwnProperty(meshPath)) {
-      // Mesh cache hit.  Switch to the requested mesh which is already loaded.
-      _self.changeMesh(_self.meshCache[meshPath]);
-      loadManager.onLoad();
-    } else {
-      // Mesh cache miss.  Load the mesh from the given path.
+  loadMesh(_self, meshPath, loadManager, cacheOnly=false) {
+    if (cacheOnly) {
+      if (_self.meshCache.hasOwnProperty(meshPath)) {
+        // Mesh has already been cached
+        return;
+      }
       var objLoader = new OBJLoader(loadManager);
       objLoader.load(meshPath,
         function(object) {
@@ -2036,20 +2302,46 @@ class bivotJs {
               meshElem = child;
             }
           });
-          _self.changeMesh(meshElem);
           _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
-
-          // Workaround for three.js LoadingManager bug (see onLoad())
-          if (_self.loadCompleteButMeshMissing) {
-            loadManager.onLoad();
-          }
         },
         function (xhr) {},
         function (error) {
-          _self.meshLoadingFailed = true;
           console.debug('Error loading mesh ', meshPath);
         }
       );
+    } else {
+      _self.meshPathUsed = meshPath;
+      if (_self.meshCache.hasOwnProperty(meshPath)) {
+        // Mesh cache hit.  Switch to the requested mesh which is already loaded.
+        _self.meshPathUsed = meshPath;
+        _self.changeMesh(_self.meshCache[meshPath]);
+        loadManager.onLoad();
+      } else {
+        // Mesh cache miss.  Load the mesh from the given path.
+        var objLoader = new OBJLoader(loadManager);
+        objLoader.load(meshPath,
+          function(object) {
+            var meshElem = null;
+            object.traverse(function(child) {
+              if (child instanceof THREE.Mesh) {
+                meshElem = child;
+              }
+            });
+            _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
+            _self.changeMesh(meshElem);
+
+            // Workaround for three.js LoadingManager bug (see onLoad())
+            if (_self.loadCompleteButMeshMissing) {
+              loadManager.onLoad();
+            }
+          },
+          function (xhr) {},
+          function (error) {
+            _self.meshLoadingFailed = true;
+            console.debug('Error loading mesh ', meshPath);
+          }
+        );
+      }
     }
   }
 
@@ -2226,6 +2518,9 @@ class bivotJs {
       const renderWidth = Math.floor(pixelWidth * ratio);
       const renderHeight = Math.floor(pixelHeight * ratio);
       this.updateRenderSize(renderWidth, renderHeight);
+
+      this.updateOverlay();
+      this.requestRender();
     }
   }
 
@@ -2247,14 +2542,15 @@ class bivotJs {
   updateControls(controls) {
     if (controls) {
       if (this.state.dragControlsRotation !== null) {
-        controls.enableRotate = this.state.dragControlsRotation;
+        controls.mouseButtons.left = (this.state.dragControlsRotation) ? CameraControls.ACTION.ROTATE : CameraControls.ACTION.NONE;
       }
       if (this.state.dragControlsPanning !== null) {
-        controls.enablePan = this.state.dragControlsPanning;
+        controls.mouseButtons.right = (this.state.dragControlsPanning) ? CameraControls.ACTION.TRUCK : CameraControls.ACTION.NONE;
       }
       if (this.state.camTiltLimitDegrees !== null) {
-        this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
+        this.updateCamTiltLimit(controls, this.state.camTiltLimitDegrees);
       }
+      controls.dollyToCursor = (this.state.camTiltWithMousePos === 0.0);
     }
   }
 
@@ -2262,14 +2558,14 @@ class bivotJs {
     if (this.controls) {
       this.controls.minDistance = this.state.zoom[0];
       this.controls.maxDistance = this.state.zoom[2];
-    }
 
-    if (this.camera) {
       // Retain existing camera angle, changing the distance
-      const ratio = this.state.currentZoom / this.camera.position.length();
-      this.camera.position.copy(this.camera.position.multiplyScalar(ratio));
+      const position = this.controls.getPosition();
+      position.multiplyScalar(this.state.currentZoom / position.length());
+      this.controls.setPosition(position.x, position.y, position.z);
+
+      this.requestRender();
     }
-    this.requestRender();
   }
 
   updateColor() {
@@ -2371,19 +2667,23 @@ class bivotJs {
   }
 
   updateAutoRotate(timeMs, waitTime) {
-    if (this.isVisible && (!this.mouseInCanvas || this.state.lightMotion == 'animate')) {
-      const loopValue = (timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs;
-      const angle = 2 * Math.PI * loopValue;
-      const xy = new THREE.Vector2(
-        -Math.sin(angle),
-        Math.cos(angle)
-      );
-      const camSensitivity = -0.3 * this.state.autoRotateCamFactor;
-      const lightSensitivity = 1.0 * this.state.autoRotateLightFactor;
-
+    if (this.isVisible && (!this.mouseInCanvas || this.state.lightMotion == 'animate') && this.state.autoRotatePeriodMs) {
       this.timeouts.push(
         setTimeout(
-          () => this.updateCamsAndLightsFromXY(xy, lightSensitivity, camSensitivity),
+          () => {
+            var xy = new THREE.Vector2(0, 0);
+            if (this.state.autoRotatePeriodMs) {
+              const loopValue = (timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs;
+              const angle = 2 * Math.PI * loopValue;
+              xy.set(
+                -Math.sin(angle),
+                Math.cos(angle)
+              );
+            }
+            const camSensitivity = -0.3 * this.state.autoRotateCamFactor;
+            const lightSensitivity = 1.0 * this.state.autoRotateLightFactor;
+            this.updateCamsAndLightsFromXY(xy, lightSensitivity, camSensitivity);
+          },
           waitTime
         )
       );
@@ -2396,7 +2696,8 @@ class bivotJs {
     // Only update the texture if seams are already showing or need to be shown
     const update = (
       (this.state.showSeams || this.seamsShowing) ||
-      (this.state.showGrid || this.gridShowing)
+      (this.state.showGrid || this.gridShowing) ||
+      (this.state.pointsControl)
     );
     if (update) {
       const prevTexture = this.uniforms.overlayMap.value;
@@ -2420,7 +2721,6 @@ class bivotJs {
     var stretchedUv;
     const texture = this.uniforms.diffuseMap.value;
     if (texture) {
-      factors = texture.repeat;
       stretchedUv = {
         x: uv.x * texture.repeat.x + texture.offset.x,
         y: uv.y * texture.repeat.y + texture.offset.y
@@ -2429,20 +2729,55 @@ class bivotJs {
     return stretchedUv ?? uv;
   }
 
+  unstretchUv(uv) {
+    var unstretchedUv;
+    const texture = this.uniforms.diffuseMap.value;
+    if (texture) {
+      unstretchedUv = {
+        x: (uv.x - texture.offset.x) / texture.repeat.x,
+        y: (uv.y - texture.offset.y) / texture.repeat.y
+      };
+    }
+    return unstretchedUv ?? uv;
+  }
+
   updateTextureLayer() {
     this.uniforms.textureLayer.value = this.state.textureLayer;
   }
 
-  drawDashedLine(ctx, x0, y0, x1, y1, length) {
-    var xLen = (x1 - x0);
-    var yLen = (y1 - y0);
-    var lineLength = Math.sqrt(xLen * xLen + yLen * yLen);
-    var step = length / lineLength;
+  updateTextures() {
+    const magFilter = this.state.pixellated ? THREE.NearestFilter : THREE.LinearFilter;
+    if (this.brdfTextures) {
+      for (const tex of this.brdfTextures.values()) {
+        tex.magFilter = magFilter;
+        tex.needsUpdate = true;
+      }
+    }
+  }
 
-    var i = 0;
-    var strokeOn = false;
-    ctx.moveTo(x0, y0);
-    for (var i = 0; i < 1; i += step) {
+  drawDashedSegment(ctx, x0, y0, x1, y1, length, phase=1) {
+    // phase: Determine starting point of dash sequence
+    //   phase = 0:     Start at the start of a full dash
+    //   phase [0..1):  Start with part of a dash
+    //   phase = 1:     Start at the start of a full gap
+    //   phase [1..2):  Start with part of a gap
+    const xLen = (x1 - x0);
+    const yLen = (y1 - y0);
+    const lineLength = Math.sqrt(xLen * xLen + yLen * yLen);
+    const step = length / lineLength;
+    const dx = step * (x1 - x0);
+    const dy = step * (y1 - y0);
+
+    var strokeOn = true;
+    var phase1 = phase;
+    if (phase < 1) {
+      ctx.moveTo(x0, y0);
+    } else {
+      phase1 -= 1;
+      ctx.moveTo(x0 + phase1 * dx, y0 + phase1 * dy);
+      strokeOn = false;
+    }
+    for (i = phase1 * step; i <= 1; i += step) {
       var x = x0 + (x1 - x0) * i;
       var y = y0 + (y1 - y0) * i;
       if (strokeOn) {
@@ -2452,21 +2787,17 @@ class bivotJs {
       }
       strokeOn = !strokeOn;
     }
+    if (strokeOn && i > 1) {
+      ctx.lineTo(x1, y1);
+    }
+    const phaseOut = (i - 1) * lineLength / length + (strokeOn ? 0 : 1);
+    return phaseOut;
   }
 
   drawSeams(ctx, texDims, stretch) {
-    const relDashWidth = 1;
-    const relDashLength = 8;
-
     const w = overlayTexW;
     const h = overlayTexH;
     const texSize = Math.max(texDims[0], texDims[1]); // Texture image is a square fitting texDims
-    const [xs, ys] = this.getTexRepeat();
-    const absDashWidthX = relDashWidth * ys;
-    const absDashWidthY = relDashWidth * xs;
-    // Adjust dash lengths so they repeat nicely across tiles
-    const absDashLengthX = w / (2 * Math.round(w / (relDashLength * xs * 2)));
-    const absDashLengthY = h / (2 * Math.round(h / (relDashLength * ys * 2)));
 
     var x1, x2, y1, y2;
     if (stretch) {
@@ -2476,36 +2807,62 @@ class bivotJs {
       y2 = h - 1;
     } else {
       // Seams are 1/4 and 3/4 of the way across preview textures
-      var tc = texSize / 2
-      var dx = texDims[0] / 4;
-      var dy = texDims[1] / 4;
+      const tc = texSize / 2
+      const dx = texDims[0] / 4;
+      const dy = texDims[1] / 4;
       x1 = Math.floor((tc - dx) * w / texSize);
       x2 = Math.ceil((tc + dx - 1) * w / texSize);
       y1 = Math.floor((tc - dy) * h / texSize);
       y2 = Math.ceil((tc + dy - 1) * h / texSize);
     }
 
-    ctx.beginPath();
-    ctx.strokeStyle = '#000F';
-    ctx.lineWidth = absDashWidthX;
-    ctx.moveTo(0,  y1); ctx.lineTo(w-1, y1);
-    ctx.moveTo(0,  y2); ctx.lineTo(w-1, y2);
-    ctx.stroke();
-    ctx.lineWidth = absDashWidthY;
-    ctx.moveTo(x1, 0);  ctx.lineTo(x1,  h-1);
-    ctx.moveTo(x2, 0);  ctx.lineTo(x2,  h-1);
-    ctx.stroke();
+    this.drawDashedLine(ctx, [{x: 0, y: y1}, {x: w-1, y: y1}], true);
+    this.drawDashedLine(ctx, [{x: 0, y: y2}, {x: w-1, y: y2}], true);
+    this.drawDashedLine(ctx, [{x: x1, y: 0}, {x: x1, y: h-1}], true);
+    this.drawDashedLine(ctx, [{x: x2, y: 0}, {x: x2, y: h-1}], true);
+  }
 
-    ctx.beginPath();
-    ctx.strokeStyle = '#FFFF';
-    ctx.lineWidth = absDashWidthX;
-    this.drawDashedLine(ctx, 0,  y1, w-1, y1,  absDashLengthX);
-    this.drawDashedLine(ctx, 0,  y2, w-1, y2,  absDashLengthX);
-    ctx.stroke();
-    ctx.lineWidth = absDashWidthY;
-    this.drawDashedLine(ctx, x1, 0,  x1,  h-1, absDashLengthY);
-    this.drawDashedLine(ctx, x2, 0,  x2,  h-1, absDashLengthY);
-    ctx.stroke();
+
+  drawDashedLine(ctx, points, wholeDashes=false) {
+    const relDashLength = 8;
+    const [absLineWidthX, absLineWidthY] = this.getLineWidths();
+    const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
+    const absDashLengthX = absLineWidthX * relDashLength;
+    const absDashLengthY = absLineWidthY * relDashLength;
+    const pMap = this.coordsToOverlay(points);
+    if (pMap === null) {
+      return;
+    }
+
+    var dashPhase = 0;
+    for (var i = 1; i < points.length; i++) {
+      const x0 = pMap[i - 1].x;
+      const y0 = pMap[i - 1].y;
+      const x1 = pMap[i].x;
+      const y1 = pMap[i].y;
+      const angle = Math.atan2((y1 - y0) / ey, (x1 - x0) / ex);
+      const c = Math.cos(angle);
+      const s = Math.sin(angle);
+      const dashWidth = Math.sqrt(Math.pow(absLineWidthX * c, 2) + Math.pow(absLineWidthY * s, 2));
+      var length = Math.sqrt(Math.pow(absDashLengthX * s, 2) + Math.pow(absDashLengthY * c, 2));
+      if (wholeDashes) {
+        const segLength = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+        length = segLength / (2 * Math.round(segLength / (length * 2)));
+      }
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#000F';
+      ctx.lineWidth = dashWidth;
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#FFFF';
+      ctx.lineWidth = dashWidth;
+      dashPhase = this.drawDashedSegment(ctx, x0, y0, x1, y1, length, dashPhase);
+      ctx.stroke();
+    }
   }
 
   drawGrid(ctx, texDims, cellDims, cellOffset, stretch, color='#777F', thickness=1) {
@@ -2569,6 +2926,109 @@ class bivotJs {
     ctx.stroke();
   }
 
+  getLineWidths() {
+    const diag = this.getDiag();
+    if (this.camera && diag) {
+      const windowFactor = 2048 / window.innerWidth;
+      const distFactor = 1.5 * Math.sqrt(this.camera.position.length()) / diag;
+      const [xs, ys] = this.getTexRepeat();
+      const absLineWidthX = windowFactor * ys * distFactor;
+      const absLineWidthY = windowFactor * xs * distFactor;
+      return [absLineWidthX, absLineWidthY];
+    } else {
+      return [0, 0];
+    }
+  }
+
+  getPointRadii(absLineWidthX, absLineWidthY) {
+    const thicknessFactor = 2.5;
+    return [thicknessFactor * absLineWidthY, thicknessFactor * absLineWidthX];
+  }
+
+  coordsToOverlay(points) {
+    if (this.state.texDims && points) {
+      const td = this.state.texDims;
+      const maxDim = Math.max(td[0], td[1]);
+      const sx = overlayTexW / maxDim;
+      const sy = overlayTexH / maxDim;
+      const tx = (maxDim - td[0]) / 2;
+      const ty = (maxDim - td[1]) / 2;
+      var pMap = [];
+      for (var i = 0; i < points.length; i++) {
+        pMap.push({ 'x': sx * (points[i].x + tx), 'y': sy * (points[i].y + ty) });
+      }
+      return pMap;
+    } else {
+      return null;
+    }
+  }
+
+  drawPoints(ctx, p, groupSelected) {
+    if (!p || !p.points) {
+      return;
+    }
+    const numPoints = p.points.length;
+    if (p.visible && numPoints > 0 && this.state.texDims) {
+      const pMap = this.coordsToOverlay(p.points);
+      if (pMap === null) {
+        return;
+      }
+      const [absLineWidthX, absLineWidthY] = this.getLineWidths();
+      const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
+
+      function drawPoint(ctx, arr, i, selectedPoint=-1) {
+        ctx.beginPath();
+        const pointSelected = (groupSelected && i === selectedPoint);
+        ctx.strokeStyle = (pointSelected ? p.selectedColor : p.color) ?? '#ffffffff';
+        ctx.lineWidth = (absLineWidthX + absLineWidthY) / 2;
+        ctx.ellipse(arr[i].x, arr[i].y, ex, ey, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+
+      function drawLineSegment(ctx, x0, y0, x1, y1, endPoints=[1, 1]) {
+        const angle = Math.atan2((y1 - y0) / ey, (x1 - x0) / ex);
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        ctx.beginPath();
+        ctx.lineWidth = Math.sqrt(Math.pow(absLineWidthX * c, 2) + Math.pow(absLineWidthY * s, 2));
+        ctx.moveTo(x0 + c * ex * endPoints[0], y0 + s * ey * endPoints[0]);
+        ctx.lineTo(x1 - c * ex * endPoints[1], y1 - s * ey * endPoints[1]);
+        ctx.stroke();
+      }
+
+      if (p.lines === 'rect' || (p.lines === 'closed4' && this.dragState.state === 'draggingRect')) {
+        drawPoint(ctx, pMap, 0, this.dragState.point)
+        if (numPoints > 1) {
+          drawPoint(ctx, pMap, 1, this.dragState.point)
+          ctx.strokeStyle = p.color ?? '#ffffffff';
+          drawLineSegment(ctx, pMap[0].x, pMap[0].y, pMap[1].x, pMap[0].y, [1, 0]);
+          drawLineSegment(ctx, pMap[1].x, pMap[0].y, pMap[1].x, pMap[1].y, [0, 1]);
+          drawLineSegment(ctx, pMap[1].x, pMap[1].y, pMap[0].x, pMap[1].y, [1, 0]);
+          drawLineSegment(ctx, pMap[0].x, pMap[1].y, pMap[0].x, pMap[0].y, [0, 1]);
+        }
+      } else if (p.lines === 'closed4') {
+        for (var i = 0; i < numPoints; i++) {
+          drawPoint(ctx, pMap, i, this.dragState.point)
+        }
+        ctx.strokeStyle = p.color ?? '#ffffffff';
+        for (var i = 1; i < numPoints; i++) {
+          drawLineSegment(ctx, pMap[i-1].x, pMap[i-1].y, pMap[i].x, pMap[i].y);
+        }
+        if (numPoints >= 4) {
+          drawLineSegment(ctx, pMap[3].x, pMap[3].y, pMap[0].x, pMap[0].y);
+        }
+      } else if (p.lines === 'pairs') {
+        for (var i = 0; i < numPoints; i++) {
+          drawPoint(ctx, pMap, i, this.dragState.point)
+        }
+        ctx.strokeStyle = p.color ?? '#ffffffff';
+        for (var i = 0; i < Math.floor(numPoints / 2); i++) {
+          drawLineSegment(ctx, pMap[i * 2].x, pMap[i * 2].y, pMap[i * 2 + 1].x, pMap[i * 2 + 1].y);
+        }
+      }
+    }
+  }
+
   createOverlayTexture(showSeams, showGrid) {
     const texDims = this.state.texDims; // Useful texture region
 
@@ -2577,11 +3037,11 @@ class bivotJs {
     canvas.height = overlayTexH;
     const ctx = canvas.getContext('2d');
 
-    if (this.state.hasOwnProperty('texDims') && this.state.texDims !== undefined) {
+    if (this.state.texDims && this.state.stretch) {
       if (showSeams) {
         this.drawSeams(ctx, texDims, this.state.stretch);
       }
-      if (showGrid && this.state.stretch && this.state.grid) {
+      if (showGrid && this.state.grid) {
         // Fine grid display disabled for now
         // if (this.state.grid) {
         //   this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#FF0F', 1);
@@ -2607,12 +3067,21 @@ class bivotJs {
         }
       }
     }
+    if (this.state.boundary) {
+      this.drawDashedLine(ctx, this.state.boundary);
+    }
+    if (this.state.pointsControl) {
+      this.state.pointsControl.forEach((p, i) => {
+        this.drawPoints(ctx, p, ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state) && this.dragState.group === i);
+      });
+    }
 
     const canvasTexture = new THREE.Texture(canvas);
-    canvasTexture.needsUpdate = true;
     canvasTexture.flipX = false;
     canvasTexture.flipY = true;
-    this.setTexRepeat(canvasTexture);
+    canvasTexture.wrapS = THREE.RepeatWrapping;
+    canvasTexture.wrapT = THREE.RepeatWrapping;
+    canvasTexture.needsUpdate = true;
 
     return canvasTexture;
   }
@@ -2626,8 +3095,9 @@ class bivotJs {
         ys *= this.state.userScale;
       }
       return [xs, ys];
+    } else {
+      return [1, 1];
     }
-    return [1, 1];
   }
 
   setTexRepeat(texture) {
@@ -2691,16 +3161,19 @@ class bivotJs {
         this.updateOverlay();
         this.updateStretch();
         this.updateTextureLayer();
+        this.updateTextures();
         this.updateControls(this.controls);
       }
 
       this.renderLoopUpdateCanvas();
 
-      this.controls.target.z = 0.0; // Keep camera pointing somewhere on the Z=0 plane
-      this.controls.update();
+      this.controls._targetEnd.z = 0 // Avoid centre of rotation floating above or below the shimmer
+      const delta = this.clock.getDelta();
+      const controlsUpdate = this.controls.update(delta);
+      this.wheelInProgress = false;
 
       const frameElapsedMs = Date.now() - frameStartTimeMs;
-      this.updateAnimation(timeMs, frameElapsedMs);
+      this.updateAnimation(timeMs, frameElapsedMs); // TODO: Try using delta
 
       this.updateUniforms();
       this.composer.render();
@@ -2710,6 +3183,13 @@ class bivotJs {
       }
 
       this.renderRequested = false;
+
+      if (
+        controlsUpdate && this.isVisible &&
+        !((!this.mouseInCanvas || this.state.lightMotion == 'animate') && this.state.autoRotatePeriodMs)
+      ) {
+        this.requestRender();
+      }
     }
   }
 
@@ -2739,7 +3219,9 @@ class bivotJs {
       } else if (!this.isFullScreen() && this.inFullScreen) {
         // Exiting full screen
         this.inFullScreen = false;
-        this.controls.enableZoom = false;
+        if (this.opts.featured !== true) {
+          this.controls.enableZoom = false;
+        }
       }
     }
   }
@@ -2765,6 +3247,24 @@ class bivotJs {
 
   getDiag() {
     return this.diag;
+  }
+
+  resetCamera() {
+    if (this.camera && this.state && this.controls) {
+
+      // Retain existing camera distance
+      const xy = new THREE.Vector2(0, 0);
+      const camVec = this.xyTo3dDirection(xy, this.state._camPositionOffset, 0, 0);
+      camVec.multiplyScalar(this.camera.position.length());
+      this.controls.setPosition(camVec.x, camVec.y, camVec.z);
+
+      // FIXME: fitToBox() produces NaNs in the position
+      // if (this.geometry) {
+      //   this.controls.fitToBox(this.geometry.boundingBox);
+      // }
+
+      this.requestRender();
+    }
   }
 
   insertContainerAndOverlay() {

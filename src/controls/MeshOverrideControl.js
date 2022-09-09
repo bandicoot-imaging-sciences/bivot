@@ -16,6 +16,7 @@ function MeshOverrideControl({ overrides, value, onChange }) {
             {Object.keys(overrides).map((name, i) => (
               <MenuItem value={overrides[name]} key={i}>{name}</MenuItem>
             ))}
+            <MenuItem value={null} key={4}>{name}</MenuItem>
           </Select>
         </Grid>
       </Grid>

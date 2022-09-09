@@ -147,9 +147,13 @@ function BivotReact(props) {
     statusCallback,
 
     // If set, the URL for an object mesh to render the Shimmer on.  Can also
-    // set to null for the shimmer's mesh, or false for a default (flat) mesh.
+    // set to null or an empty string for the shimmer's mesh, or false for a
+    // default (flat) mesh.
     // NOTE: This should only be used for Flat mode scans.
     objectMesh,
+
+    // If true, textures will be pixellated when zoomed in rather than smoothed.
+    pixellated,
 
     // An object containing a material object defining a Shimmer View to
     // display in the Bivot viewer, as an alternative to the materialSet
@@ -185,9 +189,21 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     userGridOnSelect,
 
-    // If set, indicators are drawn along tiling seams.
+    // An optional points control structure for drawing on the textures.
+    // (Currently only supported for internal use)
+    userPointsControl,
+
+    // An optional callback function called when drawing on the textures is performed.
+    // (Currently only supported for internal use)
+    userPointsOnSet,
+
+    // If set, repeated indicators are drawn along tiling seams in a tiled view.
     // (Currently only supported for internal use)
     tilingSeams,
+
+    // If set, a list of points to draw as a boundary path.
+    // (Currently only supported for internal use)
+    tilingBoundary,
 
     // If set, a multiplier to the scale of the tiling.
     // (Currently only supported for internal use)
@@ -201,7 +217,7 @@ function BivotReact(props) {
 
     // Hover controls are disabled while this is true, including light
     // position and material tilt.  While hover controls are disabled,
-    // corresponding drag controls will be enabled.
+    // drag rotation is only enabled via a keyboard modifier (e.g. ctrl).
     hoverDisabled,
 
     // Defer loading as long as this is true.  Can be useful to control
@@ -236,6 +252,11 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     meshChoices,
 
+    // A list of meshes which may be a subset of meshChoices, which Bivot will
+    // pre-cache upon loading.
+    // (Currently only supported for internal use)
+    cachedMeshes,
+
   } = props;
 
   const canvasRef = useRef();
@@ -264,18 +285,22 @@ function BivotReact(props) {
     dragControlsRotation: false,
     dragControlsPanning: false,
     meshOverride: false,
+    meshesToCache: null,
     aoStrength: 1.0,
     colorTemperature: 6500,
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    boundary: false,
     showGrid: false,
     grid: null,
     gridSelection: null,
     enableGridSelect: false,
     onSelectGrid: null,
+    pointsControl: null,
     stretch: null,
     userScale: 1,
+    pixellated: false,
 
     // For bivot internal use only, no controls and not saved
     dirty: false,
@@ -313,18 +338,22 @@ function BivotReact(props) {
     dragControlsRotation: false,
     dragControlsPanning: false,
     meshOverride: false,
+    meshesToCache: null,
     aoStrength: 1.0,
     colorTemperature: 6500,
     hue: 0.0,
     saturation: 0.0,
     showSeams: false,
+    boundary: false,
     showGrid: false,
     grid: null,
     gridSelection: null,
     enableGridSelect: false,
     onSelectGrid: null,
+    pointsControl: null,
     stretch: null,
     userScale: 1,
+    pixellated: false,
 
     // For bivot internal use only, no controls and not saved
     dirty: false,
@@ -363,8 +392,11 @@ function BivotReact(props) {
       setLightTiltWithMousePos(0);
       setLightTiltWithDeviceOrient(0);
       setLightTiltLimitDegrees(0);
-      setDragControlsRotation(true);
+      setDragControlsRotation(2);
       setDragControlsPanning(true);
+      if (bivot.current) {
+        bivot.current.resetCamera();
+      }
     } else if (val === false) {
       setCamTiltWithMousePos(defaultState.camTiltWithMousePos);
       setCamTiltWithDeviceOrient(defaultState.camTiltWithDeviceOrient);
@@ -412,18 +444,22 @@ function BivotReact(props) {
   const [camTiltLimitDegrees, setCamTiltLimitDegrees] = useState(state.camTiltLimitDegrees);
   const [lightTiltLimitDegrees, setLightTiltLimitDegrees] = useState(state.lightTiltLimitDegrees);
   const [meshOverride, setMeshOverride] = useState(state.meshOverride);
+  const [meshesToCache, setMeshesToCache] = useState(state.meshesToCache);
   const [aoStrength, setAoStrength] = useState(state.aoStrength);
   const [colorTemperature, setColorTemperature] = useState(state.colorTemperature);
   const [hue, setHue] = useState(state.hue);
   const [saturation, setSaturation] = useState(state.saturation);
   const [showSeams, setShowSeams] = useState(state.showSeams);
+  const [boundary, setBoundary] = useState(state.boundary);
   const [grid, setGrid] = useState(state.grid);
   const [gridSelection, setGridSelection] = useState(state.gridSelection);
   const [showGrid, setShowGrid] = useState(state.showGrid);
   const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
   const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
+  const [pointsControl, setPointsControl] = useState(state.pointsControl);
   const [stretch, setStretch] = useState(state.stretch);
   const [userScale, setUserScale] = useState(1);
+  const [userPixellated, setUserPixellated] = useState(state.pixellated);
   const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
   const [camTiltWithDeviceOrient, setCamTiltWithDeviceOrient] = useState(state.camTiltWithDeviceOrient);
   const [lightTiltWithMousePos, setLightTiltWithMousePos] = useState(state.lightTiltWithMousePos);
@@ -447,18 +483,22 @@ function BivotReact(props) {
   state.camTiltLimitDegrees = camTiltLimitDegrees;
   state.lightTiltLimitDegrees = lightTiltLimitDegrees;
   state.meshOverride = meshOverride;
+  state.meshesToCache = meshesToCache;
   state.aoStrength = aoStrength;
   state.colorTemperature = colorTemperature;
   state.hue = hue;
   state.saturation = saturation;
   state.showSeams = showSeams;
+  state.boundary = boundary;
   state.showGrid = showGrid;
   state.grid = grid;
   state.gridSelection = gridSelection;
   state.enableGridSelect = enableGridSelect;
   state.onSelectGrid = onSelectGrid;
+  state.pointsControl = pointsControl;
   state.stretch = stretch;
   state.userScale = userScale;
+  state.pixellated = userPixellated;
   state.camTiltWithMousePos = camTiltWithMousePos;
   state.camTiltWithDeviceOrient = camTiltWithDeviceOrient;
   state.lightTiltWithMousePos = lightTiltWithMousePos;
@@ -555,12 +595,26 @@ function BivotReact(props) {
   }, [objectMesh]);
 
   useEffect(() => {
+    if (cachedMeshes) {
+      updateMeshesToCache(cachedMeshes);
+    }
+  }, [cachedMeshes]);
+
+  useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
   }, [tilingSeams]);
 
   useEffect(() => {
+    updateBoundary(tilingBoundary);
+  }, [tilingBoundary]);
+
+  useEffect(() => {
     updateGrid(userGrid, userGridSelection, Boolean(showUserGrid), Boolean(userGridSelectionEnabled));
   }, [userGrid, userGridSelection, showUserGrid, userGridSelectionEnabled]);
+
+  useEffect(() => {
+    updatePointsControl(userPointsControl);
+  }, [userPointsControl]);
 
   useEffect(() => {
     updateUserScale(tilingScale);
@@ -577,6 +631,11 @@ function BivotReact(props) {
   useEffect(() => {
     updateTextureLayer(textureDebug);
   }, [textureDebug]);
+
+  useEffect(() => {
+    setUserPixellated(pixellated);
+    renderFrame(true);
+  }, [pixellated]);
 
   // Shut down bivot when the component closes
   useEffect(() => {
@@ -719,8 +778,9 @@ function BivotReact(props) {
       canvasID,
       onClick,
       onGridSelect: userGridOnSelect,
+      onDrawing: userPointsOnSet,
     };
-    //console.log(options);
+    console.log('Options:', options);
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
     bivot.current.startRender();
@@ -810,7 +870,11 @@ function BivotReact(props) {
         statusCallback(2); // Loaded
       }
       if (meshLoaded) {
-        setDiag(bivot.current.getDiag());
+        try {
+          setDiag(bivot.current.getDiag());
+        } catch(e) {
+          console.log('bivot.current.getDiag() unavailable');
+        }
       }
     }
   }
@@ -1021,6 +1085,11 @@ function BivotReact(props) {
     }
   }
 
+  function updateMeshesToCache(meshes) {
+    setMeshesToCache(meshes);
+    renderFrame(true);
+  }
+
   function updateAoStrength(val) {
     setAoStrength(val);
     renderFrame(false);
@@ -1031,11 +1100,21 @@ function BivotReact(props) {
     renderFrame(true);
   }
 
+  function updateBoundary(val) {
+    setBoundary(val);
+    renderFrame(true);
+  }
+
   function updateGrid(grid, selection, visible, selectEnabled) {
     setGrid(grid);
     setGridSelection(selection);
     setShowGrid(visible);
     setEnableGridSelect(selectEnabled);
+    renderFrame(true);
+  }
+
+  function updatePointsControl(userPointsControl) {
+    setPointsControl(userPointsControl);
     renderFrame(true);
   }
 

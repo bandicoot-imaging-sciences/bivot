@@ -356,6 +356,12 @@ export default function getShaders() {
 
       // Composite the overlay onto the basecolor
       vec4 overlaySurface = texture2D(overlayMap, vUv);
+      // if (overlaySurface.a > 0.0) {
+      //   diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
+      //   gl_FragColor = diffuseSurface;
+      //   gl_FragColor.a = 1.0;
+      //   return;
+      // }
       diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
 
       if (uThreeJsShader && uBrdfModel == 1) {
