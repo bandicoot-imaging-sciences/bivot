@@ -10,13 +10,12 @@ function MeshOverrideControl({ overrides, value, onChange }) {
         </Tooltip></Grid>
         <Grid item xs>
           <Select
-            value={value}
+            value={value ?? ''}
             onChange={(event) => onChange(event.target.value)}
           >
             {Object.keys(overrides).map((name, i) => (
               <MenuItem value={overrides[name]} key={i}>{name}</MenuItem>
             ))}
-            <MenuItem value={null} key={4}>{name}</MenuItem>
           </Select>
         </Grid>
       </Grid>

@@ -32,7 +32,7 @@ function DragControl({ value, onChange, advancedMode }) {
           <Tooltip title="Allow users to rotate the Shimmer View using click + drag (mobile: touch + drag)">
             <Checkbox
               className={classes.checkbox}
-              checked={value.rotate}
+              checked={Boolean(value.rotate)}
               onChange={(event) => onChange('rotate', event.target.checked)}
             />
           </Tooltip>

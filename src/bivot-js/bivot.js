@@ -3246,6 +3246,10 @@ class bivotJs {
     return this.diag;
   }
 
+  getMeshPathUsed() {
+    return this.meshPathUsed;
+  }
+
   resetCamera() {
     if (this.camera && this.state && this.controls) {
 
