@@ -363,6 +363,8 @@ export default function getShaders() {
       //   return;
       // }
       diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
+      roughnessSurface = mix(roughnessSurface, 1.0, overlaySurface.a);
+      metallicSurface = mix(metallicSurface, 0.0, overlaySurface.a);
 
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );

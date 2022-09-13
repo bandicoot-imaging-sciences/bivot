@@ -173,6 +173,10 @@ export const initialRepeatFactorX = 1.5;
 const overlayTexW = 2048;
 const overlayTexH = 2048;
 
+// Size factors for drawing lines and points on overlay
+const lineThicknessFactor = 1.0;
+const pointSizeFactor = 3.5;
+
 /*
   The options object is optional and can include the following:
     canvasID: ID for the HTML canvas element that Bivot should use for rendering
@@ -2924,10 +2928,10 @@ class bivotJs {
     const diag = this.getDiag();
     if (this.camera && diag) {
       const windowFactor = 2048 / window.innerWidth;
-      const distFactor = 1.5 * Math.sqrt(this.camera.position.length()) / diag;
+      const distFactor = Math.sqrt(this.camera.position.length()) / diag;
       const [xs, ys] = this.getTexRepeat();
-      const absLineWidthX = windowFactor * ys * distFactor;
-      const absLineWidthY = windowFactor * xs * distFactor;
+      const absLineWidthX = windowFactor * ys * distFactor * lineThicknessFactor;
+      const absLineWidthY = windowFactor * xs * distFactor * lineThicknessFactor;
       return [absLineWidthX, absLineWidthY];
     } else {
       return [0, 0];
@@ -2935,8 +2939,7 @@ class bivotJs {
   }
 
   getPointRadii(absLineWidthX, absLineWidthY) {
-    const thicknessFactor = 2.5;
-    return [thicknessFactor * absLineWidthY, thicknessFactor * absLineWidthX];
+    return [pointSizeFactor * absLineWidthY, pointSizeFactor * absLineWidthX];
   }
 
   coordsToOverlay(points) {
