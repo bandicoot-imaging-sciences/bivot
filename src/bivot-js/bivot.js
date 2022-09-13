@@ -296,6 +296,7 @@ class bivotJs {
       boundary: false,
       stretch: null,
       userScale: null,
+      enableKeypress: false,
       textureLayer: 0,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
@@ -570,33 +571,8 @@ class bivotJs {
       if (this.opts.useTouch === true || this.opts.useTouch === false) {
         this.config.useTouch = this.opts.useTouch;
       }
-
-      this.registerEventListener(window, 'keydown', handleKeyDown, false);
     });
     // ========== End mainline; functions follow ==========
-
-    function handleKeyDown(event) {
-      // FIXME: Only delete points when enableKeypress is set
-      if (_self.state.enableKeypress || true) {
-        if (event.keyCode === 46) {          // Delete
-          if (_self.dragState.state === 'selected') {
-            const group = _self.dragState.group;
-            const point = _self.dragState.point;
-            const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
-            if (newSelection !== null) {
-              _self.dragState.point = newSelection;
-            } else {
-              _self.dragState.state = 'none';
-            }
-            if (_self.opts.onDrawing) {
-              _self.opts.onDrawing(group, point, null, null);
-            }
-            _self.updateOverlay();
-            _self.requestRender();
-          }
-        }
-      }
-    }
 
     function showStats(show) {
       if (show) {
@@ -1623,7 +1599,7 @@ class bivotJs {
 
     function onKeyDown(event) {
       if (_self.mouseInCanvas) {
-        switch(event.keyCode) {
+        switch (event.keyCode) {
           case 17: // Ctrl
             if (_self.controls && _self.config.mouseCamControlsZoom) {
               _self.controls.enableZoom = true;
@@ -1634,6 +1610,24 @@ class bivotJs {
               toggleStats();
             }
             break;
+          case 46: // Delete
+            if (_self.state.enableKeypress || true) {
+              if (_self.dragState.state === 'selected') {
+                const group = _self.dragState.group;
+                const point = _self.dragState.point;
+                const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
+                if (newSelection !== null) {
+                  _self.dragState.point = newSelection;
+                } else {
+                  _self.dragState.state = 'none';
+                }
+                if (_self.opts.onDrawing) {
+                  _self.opts.onDrawing(group, point, null, null);
+                }
+                _self.updateOverlay();
+                _self.requestRender();
+              }
+            }
         }
       }
     }

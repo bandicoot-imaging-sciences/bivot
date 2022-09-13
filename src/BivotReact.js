@@ -257,6 +257,9 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     cachedMeshes,
 
+    // True to enable key presses which affect the Bivot editor.
+    enableKeypress,
+
   } = props;
 
   const canvasRef = useRef();
@@ -305,6 +308,7 @@ function BivotReact(props) {
     // For bivot internal use only, no controls and not saved
     dirty: false,
     textureLayer: 0,
+    enableKeypress: false,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -358,6 +362,7 @@ function BivotReact(props) {
     // For bivot internal use only, no controls and not saved
     dirty: false,
     textureLayer: 0,
+    enableKeypress: false,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -457,6 +462,7 @@ function BivotReact(props) {
   const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
   const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
   const [pointsControl, setPointsControl] = useState(state.pointsControl);
+  const [userEnableKeypress, setUserEnableKeypress] = useState(state.enableKeypress);
   const [stretch, setStretch] = useState(state.stretch);
   const [userScale, setUserScale] = useState(1);
   const [userPixellated, setUserPixellated] = useState(state.pixellated);
@@ -496,6 +502,7 @@ function BivotReact(props) {
   state.enableGridSelect = enableGridSelect;
   state.onSelectGrid = onSelectGrid;
   state.pointsControl = pointsControl;
+  state.enableKeypress = userEnableKeypress;
   state.stretch = stretch;
   state.userScale = userScale;
   state.pixellated = userPixellated;
@@ -599,6 +606,10 @@ function BivotReact(props) {
       updateMeshesToCache(cachedMeshes);
     }
   }, [cachedMeshes]);
+
+  useEffect(() => {
+    setUserEnableKeypress(enableKeypress);
+  }, [enableKeypress]);
 
   useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
