@@ -194,6 +194,27 @@ A complete example page with responsive layout is provided at `src/bivot-js/exam
 ### Tilt control
 Bivot asks the user to grant tilt control on mobile environments which block it by default (iOS).  Tilt control permissions can only be granted over https, not http.
 
+## Developer environment
+
+1. Install NPM
+2. [Create a Github personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+3. [Add your Github personal access token to your `~/.npmrc`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)
+4. Check out bivot
+5. In the top level bivot folder, run `npm install`
+6. In `src/bivot-js`, run `npm install`
+
+The last step relies on both `~/.npmrc` (for your login, **not checked in**) and `src/bivot-js/.npmrc` (to know where to read the Github Three.js package, is checked in).
+
+TODO: Figure out a recipe that doesn't require a Github personal access token for read-only access to the Bandicoot packge fork of Three.js.
+
+To publish new versions of the Bivot NPM package:
+
+1. Create an [NPM personal access token](https://docs.npmjs.com/creating-and-viewing-access-tokens) and add it to your `~/.npmrc`
+2. The Bandicoot team will need to grant write access on the Bivot package to your NPM account
+3. The release recipe is currently documented in our internal developer notes
+
+Access keys may expire depending on the expiry settings when created or if they haven't been used for a while (e.g. 1 year).
+
 ## License
 
 Bivot is released under the MIT license (see the `LICENSE` file). Licenses for additional code adapted into
