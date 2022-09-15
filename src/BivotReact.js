@@ -887,7 +887,9 @@ function BivotReact(props) {
           console.log('bivot.current.getDiag() unavailable');
         }
         const meshPath = bivot.current.getMeshPathUsed();
-        setMeshOverride(meshPath);
+        if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
+          setMeshOverride(meshPath);
+        }
       }
     }
   }
