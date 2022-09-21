@@ -412,6 +412,7 @@ class bivotJs {
     this.seamsShowing = false;
     this.gridShowing = false;
     this.diag = null;
+    this.untiledImDims = [1, 1]; // Texture image dimensions derived from texDims
 
     this.needsResize = false;
     this.inFullScreen = false;
@@ -578,6 +579,28 @@ class bivotJs {
     });
     // ========== End mainline; functions follow ==========
 
+    function nextPowerOf2(n) {
+      if (n && !(n & (n - 1))) {
+        return n;
+      }
+
+      var p = 1;
+      while (p < n) {
+        p <<= 1;
+      }
+      return p;
+    }
+
+    function calcImDims(texDims) {
+      if (texDims) {
+        const maxDim = Math.max(texDims[0], texDims[1]);
+        const powerOf2 = nextPowerOf2(maxDim);
+        return [powerOf2, powerOf2];
+      } else {
+        return [1, 1];
+      }
+    }
+
     function showStats(show) {
       if (show) {
         _self.overlay.appendChild(_self.stats.dom);
@@ -672,18 +695,18 @@ class bivotJs {
         _self.opts.materialSet = null;
         if (!_self.opts.material) {
           // Load legacy config.json file
-          await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys)
+          await loadConfig(_self.opts.configPath, _self.config, _self.state, _self.opts.config, _self.vectorKeys);
         }
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
       convertLegacyState(_self.scans);
       if (_self.opts.hasOwnProperty('show')) {
-        var s = _self.opts.show
-        const n = Number(s)
+        var s = _self.opts.show;
+        const n = Number(s);
         if (Number.isInteger(n)) {
-          const keys = Object.keys(_self.scans)
+          const keys = Object.keys(_self.scans);
           if (n >= 0 && n < keys.length) {
-            s = keys[n]
+            s = keys[n];
           }
         }
         console.debug(`Setting starting scan to ${s}`)
@@ -1278,19 +1301,20 @@ class bivotJs {
       const intersects = raycaster.intersectObjects(_self.scene.children);
       if (intersects.length > 0 && texDimsUnstretched !== undefined) {
         const stretchedUv = _self.stretchUv(intersects[0].uv);
+        // TODO: Consider _self.state.yFlip here to determine UV Y-flip in these calculations
         if (_self.state.stretch) {
           // Stretched texture
           return [
             stretchedUv.x * texDimsUnstretched[0],
-            (1 - stretchedUv.y) * texDimsUnstretched[1]  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
+            (1 - stretchedUv.y) * texDimsUnstretched[1]
           ];
         } else {
-          // Centred texture in square image
-          const maxDim = Math.max(texDimsUnstretched[0], texDimsUnstretched[1]);
-          return [
-            stretchedUv.x * maxDim - (maxDim - texDimsUnstretched[0]) / 2,
-            (1 - stretchedUv.y) * maxDim - (maxDim - texDimsUnstretched[1]) / 2  // TODO: Consider _self.state.yFlip here to determine UV Y-flip
-          ];
+          // Map from useful texture to full texture image
+          const uv = {
+            x: (stretchedUv.x - 0.5) * _self.untiledImDims[0] / texDimsUnstretched[0] + 0.5,
+            y: ((1 - stretchedUv.y) - 0.5) * _self.untiledImDims[1] / texDimsUnstretched[1] + 0.5
+          };
+          return [uv.x * texDimsUnstretched[0], uv.y * texDimsUnstretched[1]];
         }
       }
       return null;
@@ -1332,12 +1356,12 @@ class bivotJs {
       }
     }
 
-    function unstretchedTexDims() {
-      const texDims = _self.state.texDims ?? [1, 1];
+    function unstretchedDims(dims) {
+      const inDims = dims ? dims : [1, 1];
       const stretch = _self.state.stretch ?? [1, 1];
       return [
-        texDims[0] * stretch[0],
-        texDims[1] * stretch[1]
+        inDims[0] * stretch[0],
+        inDims[1] * stretch[1]
       ];
     }
 
@@ -1347,7 +1371,7 @@ class bivotJs {
       if (sx === null || sy === null) {
         const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
         const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
-        const td = _self.state.texDims ?? [1, 1];
+        const td = _self.untiledImDims;
         const maxDim = Math.max(td[0], td[1]);
         sxi = (overlayTexW / maxDim) / ex;
         syi = (overlayTexH / maxDim) / ey;
@@ -1360,7 +1384,7 @@ class bivotJs {
     function findNearestDraggablePoint(u, v) {
       const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
       const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
-      const td = _self.state.texDims;
+      const td = _self.untiledImDims;
       const maxDim = Math.max(td[0], td[1]);
       const sx = overlayTexW / maxDim;
       const sy = overlayTexH / maxDim;
@@ -1420,10 +1444,10 @@ class bivotJs {
           if (_self.state.enableGridSelect) {
             captured = true;
             _self.gridSelectionState.state = 'selecting';
-            const texDimsUnstretched = unstretchedTexDims();
-            const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
-            if (uv) {
-              const { coords, phase } = texToGridCoords(uv, texDimsUnstretched);
+            const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+            const texCoords = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+            if (texCoords) {
+              const { coords, phase } = texToGridCoords(texCoords, texDimsUnstretched);
               _self.gridSelectionState.p0 = coords;
               _self.gridSelectionState.p1 = coords;
               _self.gridSelectionState.tilingPhase = phase;
@@ -1435,9 +1459,9 @@ class bivotJs {
             const anyInteractable = _self.state.pointsControl.some((pc) => (pc.draggable || pc.addNew));
             if (anyInteractable) {
               captured = true;
-              const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
-              if (uv) {
-                const { dist, group, point } = findNearestDraggablePoint(uv[0], uv[1]);
+              const texCoords = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
+              if (texCoords) {
+                const { dist, group, point } = findNearestDraggablePoint(texCoords[0], texCoords[1]);
                 if (dist !== null && dist < 1) {
                   document.body.style.cursor = `url('${crosshairsCursor}'), auto`;
                   _self.dragState.state = 'draggingPoint';
@@ -1462,7 +1486,7 @@ class bivotJs {
                     _self.dragState.group = addable;
                     _self.dragState.point = pointNum;
                     _self.dragState.addingNew = pointNum;
-                    _self.dragState.clickPos = uv;
+                    _self.dragState.clickPos = texCoords;
                     onMouseDrag(event);
                   }
                 }
@@ -1519,7 +1543,7 @@ class bivotJs {
     function onMouseDrag(event) {
       event.preventDefault();
       if (_self.state.enableGridSelect && _self.gridSelectionState.state === 'selecting') {
-        const texDimsUnstretched = unstretchedTexDims();
+        const texDimsUnstretched = unstretchedDims(_self.state.texDims);
         const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
         if (uv) {
           const { coords, _phase } = texToGridCoords(uv, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
@@ -1842,6 +1866,8 @@ class bivotJs {
         const tex_dir = _self.opts.texturePath + '/' + _self.scan + '/';
         loadScanMetadata(loadManager, tex_dir, keys);
       }
+
+      _self.untiledImDims = calcImDims(_self.state.texDims);
     }
 
     function loadScanFromMaterial(loadManager, material, keys, location) {
@@ -2943,16 +2969,13 @@ class bivotJs {
   }
 
   coordsToOverlay(points) {
-    if (this.state.texDims && points) {
+    if (this.state.texDims && points && this.untiledImDims) {
       const td = this.state.texDims;
-      const maxDim = Math.max(td[0], td[1]);
-      const sx = overlayTexW / maxDim;
-      const sy = overlayTexH / maxDim;
-      const tx = (maxDim - td[0]) / 2;
-      const ty = (maxDim - td[1]) / 2;
       var pMap = [];
       for (var i = 0; i < points.length; i++) {
-        pMap.push({ 'x': sx * (points[i].x + tx), 'y': sy * (points[i].y + ty) });
+        const x = ((points[i].x - td[0] / 2) / this.untiledImDims[0] + 0.5) * overlayTexW;
+        const y = ((points[i].y - td[1] / 2) / this.untiledImDims[1] + 0.5) * overlayTexH;
+        pMap.push({ x, y });
       }
       return pMap;
     } else {
