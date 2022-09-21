@@ -2956,8 +2956,13 @@ class bivotJs {
       const windowFactor = 2048 / window.innerWidth;
       const distFactor = Math.sqrt(this.camera.position.length()) / diag;
       const [xs, ys] = this.getTexRepeat();
-      const absLineWidthX = windowFactor * ys * distFactor * lineThicknessFactor;
-      const absLineWidthY = windowFactor * xs * distFactor * lineThicknessFactor;
+      var texFactor = 1;
+      if (this.state.texDims) {
+        const maxDim = Math.max(this.state.texDims[0], this.state.texDims[1]);
+        texFactor = Math.sqrt(this.untiledImDims[0] / maxDim);
+      }
+      const absLineWidthX = windowFactor * ys * distFactor * lineThicknessFactor * texFactor;
+      const absLineWidthY = windowFactor * xs * distFactor * lineThicknessFactor * texFactor;
       return [absLineWidthX, absLineWidthY];
     } else {
       return [0, 0];
