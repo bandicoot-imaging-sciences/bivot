@@ -6,7 +6,7 @@ import LightingIcon from '@material-ui/icons/WbSunny';
 import ColourIcon from '@material-ui/icons/Palette';
 import LayoutIcon from '@material-ui/icons/SquareFoot';
 
-import Bivot, { defaultSize, initialRepeatFactorX } from './bivot-js/bivot';
+import Bivot, { defaultSize, initialRepeatFactorX, DirtyFlag } from './bivot-js/bivot';
 import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
@@ -306,7 +306,7 @@ function BivotReact(props) {
     pixellated: false,
 
     // For bivot internal use only, no controls and not saved
-    dirty: false,
+    dirty: 0,
     textureLayer: 0,
     enableKeypress: false,
 
@@ -360,7 +360,7 @@ function BivotReact(props) {
     pixellated: false,
 
     // For bivot internal use only, no controls and not saved
-    dirty: false,
+    dirty: 0,
     textureLayer: 0,
     enableKeypress: false,
 
@@ -412,6 +412,7 @@ function BivotReact(props) {
       setDragControlsRotation(defaultState.dragControlsRotation);
       setDragControlsPanning(defaultState.dragControlsPanning);
     }
+    renderFrame(DirtyFlag.Controls);
   }
 
   // // If autoRotate is set in props, then override state
@@ -573,7 +574,7 @@ function BivotReact(props) {
       setMeshScaling(scaling);
       setZoom([zoom[0] * ratio, zoom[1] * ratio, zoom[2] * ratio]);
       setCurrentZoom(currentZoom * ratio);
-      renderFrame(true);
+      renderFrame(DirtyFlag.Zoom);
     }
   }, [state, diag]);
 
@@ -645,7 +646,7 @@ function BivotReact(props) {
 
   useEffect(() => {
     setUserPixellated(pixellated);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Textures);
   }, [pixellated]);
 
   // Shut down bivot when the component closes
@@ -860,7 +861,7 @@ function BivotReact(props) {
     zoomInitialVal = zoom;
 
     if (bivot.current) {
-      renderFrame(true);
+      renderFrame(DirtyFlag.All);
     }
   }
 
@@ -943,10 +944,8 @@ function BivotReact(props) {
     updateStateFields(checkpointState);
   }
 
-  function renderFrame(stateDirty) {
-    if (stateDirty) {
-      state.dirty = true;
-    }
+  function renderFrame(stateDirty=0) {
+    state.dirty |= stateDirty;
     if (bivot.current) {
       bivot.current.requestRender();
     }
@@ -954,29 +953,29 @@ function BivotReact(props) {
 
   function updateExposure(val) {
     setExposure(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateBrightness(val) {
     setBrightness(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateContrast(val) {
     setContrast(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateLightType(type, size) {
     setLightType(type);
     setAreaLightWidth(referenceAreaLightWidth * size);
     setAreaLightHeight(referenceAreaLightHeight * size);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Lighting);
   }
 
   function updateRotation(degrees) {
     setRotation(degrees);
-    renderFrame(true);
+    renderFrame(DirtyFlag.MeshRotation);
   }
 
   function addRotation(degrees) {
@@ -992,7 +991,7 @@ function BivotReact(props) {
 
   function updateSize(val) {
     setSize(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Canvas);
   }
 
   function updateZoom(val) {
@@ -1026,7 +1025,7 @@ function BivotReact(props) {
 
       setZoom(val);
       setCurrentZoom(val[zoomIndex]);
-      renderFrame(true);
+      renderFrame(DirtyFlag.Zoom);
     }
   }
 
@@ -1037,42 +1036,42 @@ function BivotReact(props) {
   function updateLightColor(val) {
     setLightColorControls(val.hex); // Controls: needs a hex value
     setLightColorBivot([val.rgb.r, val.rgb.g, val.rgb.b]); // Bivot state: needs RGB array
-    renderFrame(true);
+    renderFrame(DirtyFlag.Lighting);
   }
 
   function updateBackgroundColor(val) {
     setBackgroundColor(val.hex);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Background);
   }
 
   function updateColorTemperature(val) {
     setColorTemperature(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Color);
   }
 
   function updateHue(val) {
     setHue(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateSaturation(val) {
     setSaturation(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateStretch(val) {
     setStretch(val ? val : null);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Stretch);
   }
 
   function updateUserScale(val) {
     setUserScale(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Overlay);
   }
 
   function updateAutoRotate(val) {
     setAutoRotatePeriodMs(autoRotate === false ? 0 : val);
-    renderFrame(true);
+    renderFrame();
   }
 
   function updateDragControl(field, val) {
@@ -1090,34 +1089,34 @@ function BivotReact(props) {
         setLightTiltLimitDegrees(0);
       }
     }
-    renderFrame(true);
+    renderFrame(DirtyFlag.Controls);
   }
 
   function updateMeshOverride(path) {
     if (meshOverride !== path) {
       setMeshOverride(path);
-      renderFrame(true);
+      renderFrame(DirtyFlag.Mesh);
     }
   }
 
   function updateMeshesToCache(meshes) {
     setMeshesToCache(meshes);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Mesh);
   }
 
   function updateAoStrength(val) {
     setAoStrength(val);
-    renderFrame(false);
+    renderFrame();
   }
 
   function updateShowSeams(val) {
     setShowSeams(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Overlay);
   }
 
   function updateBoundary(val) {
     setBoundary(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Overlay);
   }
 
   function updateGrid(grid, selection, visible, selectEnabled) {
@@ -1125,12 +1124,12 @@ function BivotReact(props) {
     setGridSelection(selection);
     setShowGrid(visible);
     setEnableGridSelect(selectEnabled);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Overlay);
   }
 
   function updatePointsControl(userPointsControl) {
     setPointsControl(userPointsControl);
-    renderFrame(true);
+    renderFrame(DirtyFlag.Overlay);
   }
 
   function updateTextureLayer(val) {
@@ -1139,12 +1138,7 @@ function BivotReact(props) {
     } else {
       state.textureLayer = 0;
     }
-    renderFrame(true);
-  }
-
-  function updateHoverDisabled(val) {
-    setHoverDisabled(val);
-    renderFrame(true);
+    renderFrame(DirtyFlag.TextureLayer);
   }
 
   function fullScreenChanged() {
@@ -1153,11 +1147,11 @@ function BivotReact(props) {
       // My full screen opened
       savedSize.current = size;
       setSize([window.screen.width, window.screen.height]);
-      renderFrame(true);
+      renderFrame(DirtyFlag.Canvas);
     } else if (!fsElt && savedSize.current) {
       // My full screen closed
       setSize(savedSize.current);
-      renderFrame(true);
+      renderFrame(DirtyFlag.Canvas);
       savedSize.current = undefined;
       if (onExitFullScreen) {
         onExitFullScreen();

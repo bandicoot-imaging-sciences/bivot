@@ -166,9 +166,6 @@ function injectStyle(elem, style) {
 
 const crosshairsCursor = 'https://bandicoot-hosted.s3.ap-southeast-2.amazonaws.com/assets/cursor/Crossdot.cur';
 
-export const defaultSize = [792, 528];
-export const initialRepeatFactorX = 1.5;
-
 // Define dimensions of overlay texture
 const overlayTexW = 2048;
 const overlayTexH = 2048;
@@ -176,6 +173,25 @@ const overlayTexH = 2048;
 // Size factors for drawing lines and points on overlay
 const lineThicknessFactor = 1.0;
 const pointSizeFactor = 3.5;
+
+export const defaultSize = [792, 528];
+export const initialRepeatFactorX = 1.5;
+
+export const DirtyFlag = {
+  Background:   0x00000001,
+  Lighting:     0x00000002,
+  MeshRotation: 0x00000004,  // Before Mesh, to avoid flicker when changing meshes for rotated Shimmer
+  Mesh:         0x00000008,
+  Canvas:       0x00000010,
+  Zoom:         0x00000020,
+  Color:        0x00000040,
+  Overlay:      0x00000080,
+  Stretch:      0x00000100,
+  TextureLayer: 0x00000200,
+  Textures:     0x00000400,
+  Controls:     0x00000800,
+  All:          0x00000FFF
+};
 
 /*
   The options object is optional and can include the following:
@@ -185,6 +201,20 @@ const pointSizeFactor = 3.5;
     texturePath: relative or absolute URL for the folder containing the texture folders
 */
 class bivotJs {
+  DirtyFlagFuncs = [
+    this.updateBackground.bind(this),
+    this.updateLightingGrid.bind(this),
+    this.updateMeshRotation.bind(this),
+    this.updateMesh.bind(this),
+    this.updateCanvas.bind(this),
+    this.updateZoom.bind(this),
+    this.updateColor.bind(this),
+    this.updateOverlay.bind(this),
+    this.updateStretch.bind(this),
+    this.updateTextureLayer.bind(this),
+    this.updateTextures.bind(this),
+    this.updateControls.bind(this)
+  ];
 
   constructor(options) {
     this.controlModes = {
@@ -559,7 +589,7 @@ class bivotJs {
 
       this.updateCanvas();
       this.updateBackground();
-      this.updateControls(this.controls);
+      this.updateControls();
       this.updateZoom();
       this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
 
@@ -2563,18 +2593,19 @@ class bivotJs {
     this.requestRender();
   }
 
-  updateControls(controls) {
-    if (controls) {
+  updateControls(controls=null) {
+    const iControls = controls ? controls : this.controls;
+    if (iControls) {
       if (this.state.dragControlsRotation !== null) {
-        controls.mouseButtons.left = (this.state.dragControlsRotation) ? CameraControls.ACTION.ROTATE : CameraControls.ACTION.NONE;
+        iControls.mouseButtons.left = (this.state.dragControlsRotation) ? CameraControls.ACTION.ROTATE : CameraControls.ACTION.NONE;
       }
       if (this.state.dragControlsPanning !== null) {
-        controls.mouseButtons.right = (this.state.dragControlsPanning) ? CameraControls.ACTION.TRUCK : CameraControls.ACTION.NONE;
+        iControls.mouseButtons.right = (this.state.dragControlsPanning) ? CameraControls.ACTION.TRUCK : CameraControls.ACTION.NONE;
       }
       if (this.state.camTiltLimitDegrees !== null) {
-        this.updateCamTiltLimit(controls, this.state.camTiltLimitDegrees);
+        this.updateCamTiltLimit(iControls, this.state.camTiltLimitDegrees);
       }
-      controls.dollyToCursor = (this.state.camTiltWithMousePos === 0.0);
+      iControls.dollyToCursor = (this.state.camTiltWithMousePos === 0.0);
     }
   }
 
@@ -2773,8 +2804,10 @@ class bivotJs {
     const magFilter = this.state.pixellated ? THREE.NearestFilter : THREE.LinearFilter;
     if (this.brdfTextures) {
       for (const tex of this.brdfTextures.values()) {
-        tex.magFilter = magFilter;
-        tex.needsUpdate = true;
+        if (tex.magFilter !== magFilter) {
+          tex.magFilter = magFilter;
+          tex.needsUpdate = true;
+        }
       }
     }
   }
@@ -3172,22 +3205,14 @@ class bivotJs {
       }
       const frameStartTimeMs = Date.now();
 
-      // FIXME: Remove forced true after adding canvas client size event handler.
-      // FIXME: Break up into specific dirty flags rather than one flag for all updates.
-      if (this.state.dirty) {
-        this.state.dirty = false;
-        this.updateBackground();
-        this.updateLightingGrid();
-        this.updateMeshRotation(); // Before updateMesh(), to avoid flicker when changing meshes for rotated Shimmer
-        this.updateMesh();
-        this.updateCanvas();
-        this.updateZoom();
-        this.updateColor();
-        this.updateOverlay();
-        this.updateStretch();
-        this.updateTextureLayer();
-        this.updateTextures();
-        this.updateControls(this.controls);
+      // Call update functions according to which dirty flag bits are set
+      if (this.state.dirty !== 0) {
+        Object.values(DirtyFlag).forEach((b, i) => {
+          if (this.state.dirty & b) {
+            this.state.dirty &= ~b;
+            this.DirtyFlagFuncs[i]();
+          }
+        });
       }
 
       this.renderLoopUpdateCanvas();
