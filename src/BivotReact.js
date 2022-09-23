@@ -1066,7 +1066,7 @@ function BivotReact(props) {
 
   function updateUserScale(val) {
     setUserScale(val);
-    renderFrame(DirtyFlag.Overlay);
+    renderFrame(DirtyFlag.Stretch | DirtyFlag.Overlay);
   }
 
   function updateAutoRotate(val) {
