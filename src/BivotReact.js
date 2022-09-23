@@ -877,10 +877,13 @@ function BivotReact(props) {
   // Called when bivot finishes loading the material.
   async function loadingCompleteCallback(shimmerLoaded, meshLoaded) {
     if (bivot.current) {
+      renderFrame(DirtyFlag.Overlay);
+
       console.log('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
       if (statusCallback !== undefined) {
         statusCallback(2); // Loaded
       }
+
       if (meshLoaded) {
         try {
           setDiag(bivot.current.getDiag());
