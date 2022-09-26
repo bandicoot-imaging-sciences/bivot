@@ -3303,14 +3303,10 @@ class bivotJs {
     return this.meshPathUsed;
   }
 
-  resetCamera() {
+  resetCameraAngle() {
     if (this.camera && this.state && this.controls) {
-
-      // Retain existing camera distance
-      const xy = new THREE.Vector2(0, 0);
-      const camVec = this.xyTo3dDirection(xy, this.state._camPositionOffset, 0, 0);
-      camVec.multiplyScalar(this.camera.position.length());
-      this.controls.setPosition(camVec.x, camVec.y, camVec.z);
+      const target = this.controls.getTarget();
+      this.controls.setPosition(target.x, target.y, this.camera.position.z);
 
       // FIXME: fitToBox() produces NaNs in the position
       // if (this.geometry) {

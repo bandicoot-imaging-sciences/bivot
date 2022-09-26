@@ -400,7 +400,7 @@ function BivotReact(props) {
       setDragControlsRotation(2);
       setDragControlsPanning(true);
       if (bivot.current) {
-        bivot.current.resetCamera();
+        bivot.current.resetCameraAngle();
       }
     } else if (val === false) {
       setCamTiltWithMousePos(defaultState.camTiltWithMousePos);
