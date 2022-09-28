@@ -3100,10 +3100,9 @@ class bivotJs {
         this.drawSeams(ctx, texDims, this.state.stretch);
       }
       if (showGrid && this.state.grid) {
-        // Fine grid display disabled for now
-        // if (this.state.grid) {
-        //   this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#FF0F', 1);
-        // }
+        if (this.state.grid) {
+          this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#009F', 1);
+        }
         if (this.state.gridSelection) {
           var selectPoints = this.state.gridSelection;
           const gridPixels = [
@@ -3117,7 +3116,7 @@ class bivotJs {
               selectPoints[3] * this.state.grid[1]
             ];
           }
-          this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#00FF', 2);
+          this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#090F', 2);
         }
         if (this.gridSelectionState.state !== 'none') {
           const { p0, p1 } = this.gridSelectionState;
