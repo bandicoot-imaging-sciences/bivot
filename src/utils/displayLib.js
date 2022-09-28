@@ -48,6 +48,12 @@ export async function openFullScreen(element) {
     } else if (element.mozRequestFullscreen) { /* Mozilla */
       await element.mozRequestFullscreen();
     }
+
+    // Remove focus from any document element.  It's unclear why, but in
+    // Firefox, when certain elements like buttons have focus, document
+    // keydown events no longer trigger while in fullscreen.  Dropping
+    // focus here works around the issue.
+    document.activeElement.blur();
   }
 }
 
