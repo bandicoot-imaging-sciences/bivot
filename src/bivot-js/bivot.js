@@ -3178,7 +3178,6 @@ class bivotJs {
     this.uniforms.uRoughness.value = this.state.roughness;
     this.uniforms.uTint.value = this.state.tint;
     this.uniforms.uFresnel.value = this.state.fresnel;
-    this.uniforms.uAoStrength.value = this.state.aoStrength;
     this.uniforms.uColorTransform.value = this.state.colorTransform;
     this.uniforms.uHue.value = this.state.hue;
     this.uniforms.uSaturation.value = this.state.saturation;
@@ -3193,6 +3192,8 @@ class bivotJs {
     if (uvScaleMap) {
       this.uniforms.uvTransform.value.copy(uvScaleMap.matrix);
     }
+    // Turn on ambient occlusion only if viewing full render (not an individual texture layer)
+    this.uniforms.uAoStrength.value = (this.uniforms.textureLayer.value === 0) ? this.state.aoStrength : 0;
   }
 
   render(timeMs) {
