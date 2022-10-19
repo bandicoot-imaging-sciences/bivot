@@ -450,6 +450,7 @@ class bivotJs {
     this.stats = null;
     this.statsVisible = false;
 
+    this.firstRenderLoaded = false;
     this.iOSDetected = false;
 
     this.adaptFramerate = {
@@ -458,7 +459,6 @@ class bivotJs {
       framesCollected: 30,    // Number of frames to measure framerate over
       outliersDropped: 15,    // Number of frame time outliers to drop
       underSpeedRatio: 0.75,  // Threshold of target framerate below which render size will be adapted
-      iosRenderScale: 0.5,    // Scale in X and Y applied immediately (pre-measurement) on iOS
 
       // Measurement
       measuring: true,        // Setting to true to begin measurement; will automatically reset to false when done
@@ -496,7 +496,6 @@ class bivotJs {
     let baselineTilt = new THREE.Vector2(0, 0);
     let baselineTiltSet = false;
     let loader = null;
-    let firstRenderLoaded = false;
     let gui = null;
 
     let subtitleElem = null;
@@ -807,10 +806,10 @@ class bivotJs {
       // The web page also has to be served over https.
       // iOS 13 introduced a permissions API so that we can ask the user more directly. The request has to be in
       // response to a "user gesture", e.g. in response to the user tapping on the canvas.
-      if (orientPermWanted && !firstRenderLoaded && (iOSVersionOrientBlocked || orientPermNeeded) && !gyroDetected) {
+      if (orientPermWanted && !_self.firstRenderLoaded && (iOSVersionOrientBlocked || orientPermNeeded) && !gyroDetected) {
         setTiltWarning();
       }
-      firstRenderLoaded = true;
+      _self.firstRenderLoaded = true;
       baselineTiltSet = false;
     };
 
@@ -993,7 +992,6 @@ class bivotJs {
         bivotFps: ['1'],
         adaptFps: 'NON_NEG_INT',
         // adaptFpsCount: 'NON_NEG_INT',  // Debugging
-        // iosRenderScale: 'FLOAT',       // Debugging
       };
 
       const parsedUrl = new URL(window.location.href);
@@ -1069,9 +1067,6 @@ class bivotJs {
       // if (urlFlags.hasOwnProperty('adaptFpsCount')) {
       //   _self.adaptFramerate['framesCollected'] = urlFlags['adaptFpsCount'];
       //   _self.adaptFramerate['outliersDropped'] = urlFlags['adaptFpsCount'] / 2;
-      // }
-      // if (urlFlags.hasOwnProperty('iosRenderScale')) {
-      //   _self.adaptFramerate['iosRenderScale'] = urlFlags['iosRenderScale'];
       // }
     }
 
@@ -2649,56 +2644,47 @@ class bivotJs {
   }
 
   updateAnimation(timeMs, elapsed) {
-    if (this.adaptFramerate['measuring']) {
+    if (this.adaptFramerate['measuring'] && this.firstRenderLoaded) {
       var times = this.adaptFramerate['frameTimes'];
-      if (this.iOSDetected && this.adaptFramerate['iosRenderScale'] > 0 && times.length == 0 && this.adaptFramerate['renderedPixels'] == 0) {
-        // Immediately downscale 50%, then measure for further possible change
-        var { pixelWidth, pixelHeight } = this.getClientSize();
-        const width = Math.floor(pixelWidth * this.adaptFramerate['iosRenderScale']);
-        const height = Math.floor(pixelHeight * this.adaptFramerate['iosRenderScale']);
-        // console.log('Pre-downscale (iOS); width, height:', width, height);
-        this.updateRenderSize(width, height);
-        this.adaptFramerate['renderedPixels'] = width * height;
-      } else {
-        times.push(timeMs);
-        if (times.length == this.adaptFramerate['framesCollected']) {
-          var diffs = [];
-          times.forEach((val, i) => {
-            if (i > 0) {
-              diffs.push(val - times[i - 1]);
-            }
-          });
-          // console.log('Measured frame intervals (ms):', diffs);
+      times.push(timeMs);
 
-          for (var i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
-            const sum = diffs.reduce((a, b) => a + b, 0);
-            const avg = (sum / diffs.length);
-            var maxDiff = 0;
-            var maxDiffIndex = 0;
-            diffs.forEach((val, i) => {
-              if (Math.abs(val - avg) > maxDiff) {
-                maxDiff = Math.abs(val);
-                maxDiffIndex = i;
-              }
-            });
-            diffs.splice(maxDiffIndex, 1);
+      if (times.length == this.adaptFramerate['framesCollected']) {
+        var diffs = [];
+        times.forEach((val, i) => {
+          if (i > 0) {
+            diffs.push(val - times[i - 1]);
           }
+        });
+
+        for (var i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
           const sum = diffs.reduce((a, b) => a + b, 0);
           const avg = (sum / diffs.length);
-          const fr = 1000 / avg;
-          if (fr < this.adaptFramerate['underSpeedRatio'] * this.adaptFramerate['targetFps']) {
-            var factor = Math.sqrt(fr / this.adaptFramerate['targetFps']);
-            var { pixelWidth, pixelHeight } = this.getClientSize();
-            if (this.adaptFramerate['renderedPixels'] > 0) {
-              factor *= Math.sqrt(this.adaptFramerate['renderedPixels'] / (pixelWidth * pixelHeight));
+          var maxDiff = 0;
+          var maxDiffIndex = 0;
+          diffs.forEach((val, i) => {
+            if (Math.abs(val - avg) > maxDiff) {
+              maxDiff = Math.abs(val - avg);
+              maxDiffIndex = i;
             }
-            console.debug('FPS target:', this.adaptFramerate['targetFps'], '; Scaling render dims by factor:', factor);
-            const width = Math.floor(pixelWidth * factor);
-            const height = Math.floor(pixelHeight * factor);
-            this.updateRenderSize(width, height);
-            this.adaptFramerate['renderedPixels'] = width * height;
-            this.adaptFramerate['measuring'] = false;
+          });
+          diffs.splice(maxDiffIndex, 1);
+        }
+
+        const sum = diffs.reduce((a, b) => a + b, 0);
+        const avg = (sum / diffs.length);
+        const fr = 1000 / avg;
+        if (fr < this.adaptFramerate['underSpeedRatio'] * this.adaptFramerate['targetFps']) {
+          var factor = Math.sqrt(fr / this.adaptFramerate['targetFps']);
+          var { pixelWidth, pixelHeight } = this.getClientSize();
+          if (this.adaptFramerate['renderedPixels'] > 0) {
+            factor *= Math.sqrt(this.adaptFramerate['renderedPixels'] / (pixelWidth * pixelHeight));
           }
+          console.debug('FPS target:', this.adaptFramerate['targetFps'], '; Scaling render dims by factor:', factor);
+          const width = Math.floor(pixelWidth * factor);
+          const height = Math.floor(pixelHeight * factor);
+          this.updateRenderSize(width, height);
+          this.adaptFramerate['renderedPixels'] = width * height;
+          this.adaptFramerate['measuring'] = false;
         }
       }
     }
