@@ -10,7 +10,7 @@ function MeshOverrideControl({ overrides, value, onChange }) {
         </Tooltip></Grid>
         <Grid item xs>
           <Select
-            value={value ?? ''}
+            value={value ?? overrides['Flat']}  // Assumes default mesh is flat
             onChange={(event) => onChange(event.target.value)}
           >
             {Object.keys(overrides).map((name, i) => (
