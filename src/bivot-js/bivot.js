@@ -1544,6 +1544,7 @@ class bivotJs {
         if (_self.state.enableGridSelect) {
           _self.overlay.releasePointerCapture(event.pointerId);
           _self.gridSelectionState.state = 'selected';
+          _self.updateOverlay();
         } else if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
           document.body.style.cursor = 'auto';
           _self.overlay.releasePointerCapture(event.pointerId);
@@ -3090,19 +3091,22 @@ class bivotJs {
           this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#009F', 1);
         }
         if (this.state.gridSelection) {
-          var selectPoints = this.state.gridSelection;
-          const gridPixels = [
-            selectPoints[0] * this.state.grid[0],
-            selectPoints[1] * this.state.grid[1]
-          ]
-          var gridOffset = null;
-          if (this.state.gridSelection.length >= 4) {
-            gridOffset = [
-              selectPoints[2] * this.state.grid[0],
-              selectPoints[3] * this.state.grid[1]
-            ];
+          const single = (this.state.gridSelection[0] === 1 && this.state.gridSelection[1] === 1);
+          if (!single || this.gridSelectionState.state === 'selecting') {
+            var selectPoints = this.state.gridSelection;
+            const gridPixels = [
+              selectPoints[0] * this.state.grid[0],
+              selectPoints[1] * this.state.grid[1]
+            ]
+            var gridOffset = null;
+            if (this.state.gridSelection.length >= 4) {
+              gridOffset = [
+                selectPoints[2] * this.state.grid[0],
+                selectPoints[3] * this.state.grid[1]
+              ];
+            }
+            this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#090F', 2);
           }
-          this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#090F', 2);
         }
         if (this.gridSelectionState.state !== 'none') {
           const { p0, p1 } = this.gridSelectionState;
