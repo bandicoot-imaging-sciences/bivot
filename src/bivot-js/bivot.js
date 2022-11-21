@@ -457,8 +457,8 @@ class bivotJs {
       // Configuration
       targetFps: 30,          // The target framerate
       framesCollected: 30,    // Number of frames to measure framerate over
-      outliersDropped: 15,    // Number of frame time outliers to drop
-      underSpeedRatio: 0.75,  // Threshold of target framerate below which render size will be adapted
+      outliersDropped: 10,    // Number of frame time outliers to drop
+      underSpeedRatio: 1.0,   // Threshold of target framerate below which render size will be adapted
 
       // Measurement
       measuring: true,        // Setting to true to begin measurement; will automatically reset to false when done
@@ -2644,19 +2644,11 @@ class bivotJs {
     return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
   }
 
-  updateAnimation(timeMs, elapsed) {
+  updateAnimation(timeMs, frameElapsedMs) {
     if (this.adaptFramerate['measuring'] && this.firstRenderLoaded) {
-      var times = this.adaptFramerate['frameTimes'];
-      times.push(timeMs);
-
-      if (times.length == this.adaptFramerate['framesCollected']) {
-        var diffs = [];
-        times.forEach((val, i) => {
-          if (i > 0) {
-            diffs.push(val - times[i - 1]);
-          }
-        });
-
+      var diffs = this.adaptFramerate['frameTimes'];
+      diffs.push(frameElapsedMs);
+      if (diffs.length >= this.adaptFramerate['framesCollected']) {
         for (var i = 0; i < this.adaptFramerate['outliersDropped']; i++) {
           const sum = diffs.reduce((a, b) => a + b, 0);
           const avg = (sum / diffs.length);
@@ -2685,15 +2677,15 @@ class bivotJs {
           const height = Math.floor(pixelHeight * factor);
           this.updateRenderSize(width, height);
           this.adaptFramerate['renderedPixels'] = width * height;
-          this.adaptFramerate['measuring'] = false;
         }
+        this.adaptFramerate['measuring'] = false;
       }
     }
 
-    // Request next frame a little faster than target frame-rate, to compensate for
-    // buffering caused by requestAnimationFrame()
-    const timeoutFactor = 0.9;
-    const waitTime = timeoutFactor * Math.max(1000 / this.adaptFramerate['targetFps'] - elapsed, 0);
+    // Request wait until next frame start time to be equal to
+    //   frame period (1 / targetFps)
+    //     minus time since start of current frame to now (frameElapsedMs)
+    const waitTime = Math.max(1000 / this.adaptFramerate['targetFps'] - frameElapsedMs, 0);
     var updated = false;
     if (
       this.state.autoRotatePeriodMs &&
@@ -3212,15 +3204,8 @@ class bivotJs {
       const controlsUpdate = this.controls.update(delta);
       this.wheelInProgress = false;
 
-      const frameElapsedMs = Date.now() - frameStartTimeMs;
-      this.updateAnimation(timeMs, frameElapsedMs); // TODO: Try using delta
-
       this.updateUniforms();
       this.composer.render();
-
-      if (this.stats) {
-        this.stats.end();
-      }
 
       this.renderRequested = false;
 
@@ -3230,6 +3215,14 @@ class bivotJs {
       ) {
         this.requestRender();
       }
+
+      if (this.stats) {
+        this.stats.end();
+      }
+
+      const frameEndTimeMs = Date.now();
+      const frameTimeMs = frameEndTimeMs - frameStartTimeMs;
+      this.updateAnimation(frameEndTimeMs, frameTimeMs);
     }
   }
 
