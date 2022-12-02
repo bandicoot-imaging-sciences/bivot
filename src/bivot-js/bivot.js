@@ -3301,13 +3301,16 @@ class bivotJs {
   }
 
   insertContainerAndOverlay() {
-    console.assert(this.canvas !== null, 'canvas element ID not found:', this.opts.canvasID);
-    this.canvasParent = this.canvas.parentElement;
-    this.container = document.createElement('div');
-    this.overlay = document.createElement('div');
-    this.container.appendChild(this.canvas);
-    this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
-    this.canvasParent.appendChild(this.container);
+    if (this.canvas !== null) {
+      this.canvasParent = this.canvas.parentElement;
+      this.container = document.createElement('div');
+      this.overlay = document.createElement('div');
+      this.container.appendChild(this.canvas);
+      this.container.appendChild(this.overlay);  // Overlay goes on top (for visibility, and because mouse listeners attach to overlay)
+      this.canvasParent.appendChild(this.container);
+    } else {
+      console.warn('canvas element ID not found:', this.opts.canvasID);
+    }
   }
 
   removeContainerAndOverlay() {
