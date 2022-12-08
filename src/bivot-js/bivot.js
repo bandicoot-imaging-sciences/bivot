@@ -437,6 +437,7 @@ class bivotJs {
     // the canvas.
     this.mouseInCanvas = false;
     this.wheelInProgress = false;
+    this.resizeObserver = null;
     this.intersectionObserver = null;
     this.isVisible = false;
     this.seamsShowing = false;
@@ -470,7 +471,8 @@ class bivotJs {
     }
 
     // Tracking to handle cleanup
-    this.shuttingDown = false;
+    this.shutdownRequested = false;
+    this.shutdownStarted = false;
     this.timeouts = [];
     this.listeners = [];
     this.elements = [];
@@ -1644,10 +1646,12 @@ class bivotJs {
     }
 
     function onCanvasMouseOver(event) {
+      console.log('onCanvasMouseOver()');
       _self.mouseInCanvas = true;
     }
-
+    
     function onCanvasMouseOut(event) {
+      console.log('onCanvasMouseOut()');
       _self.mouseInCanvas = false;
     }
 
@@ -2128,10 +2132,10 @@ class bivotJs {
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
-    let ro = new ResizeObserver(entries => {
+    this.resizeObserver = new ResizeObserver(entries => {
       this.updateCanvasOnResize();
     });
-    ro.observe(this.canvas);
+    this.resizeObserver.observe(this.canvas);
   }
 
   initialiseRenderer() {
@@ -3179,8 +3183,8 @@ class bivotJs {
   }
 
   render(timeMs) {
-    if (this.shuttingDown) {
-      this.doShutdown();
+    if (this.shutdownRequested) {
+        this.doShutdown();
     } else if (this.controls && this.composer) {
       if (this.stats) {
         this.stats.begin();
@@ -3353,36 +3357,61 @@ class bivotJs {
     }
   }
 
-  shutdown() {
-    this.shuttingDown = true;
+  shutdown(shutdownCompleteCallback) {
+    console.log(`shutdown() ${this.opts.canvasID}`);
+    this.shutdownRequested = true;
+    this.shutdownCompleteCallback = shutdownCompleteCallback;
+    setTimeout(() => {
+      this.doShutdown();
+    }, 1000);
   }
 
   doShutdown() {
-    this.controls.dispose();
+    console.log(`doShutdown() ${this.opts.canvasID}`);
+    if (!this.shutdownStarted) {
+      console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+      this.shutdownStarted = true;
+      this.controls.dispose();
 
-    for (var i = 0; i < this.timeouts.length; i++) {
-      clearTimeout(this.timeouts[i]);
+      if (this.intersectionObserver) {
+        this.intersectionObserver.disconnect();
+      }
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+      }
+
+      for (var i = 0; i < this.timeouts.length; i++) {
+        clearTimeout(this.timeouts[i]);
+      }
+      this.timeouts = [];
+
+      for (var i = 0; i < this.listeners.length; i++) {
+        const { object, type, listener } = this.listeners[i];
+        object.removeEventListener(type, listener);
+      }
+      this.listeners = [];
+
+      for (var i = 0; i < this.elements.length; i++) {
+        const elem = this.elements[i];
+        elem.parentNode.removeChild(elem);
+      }
+      this.elements = [];
+
+      this.disposeTextures();
+      this.disposeMesh();
+      console.debug(`doShutdown() END renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+      this.renderer.dispose();
+      this.removeContainerAndOverlay();
+      this.canvas = null;
+      this.overlay = null;
+      this.container = null;
+
+      if (this.shutdownCompleteCallback) {
+        console.log('Calling shutdownCompleteCallback()');
+        this.shutdownCompleteCallback();
+        this.shutdownCompleteCallback = null;
+      }
     }
-    this.timeouts = [];
-
-    for (var i = 0; i < this.listeners.length; i++) {
-      const { object, type, listener } = this.listeners[i];
-      object.removeEventListener(type, listener);
-    }
-    this.listeners = [];
-
-    for (var i = 0; i < this.elements.length; i++) {
-      const elem = this.elements[i];
-      elem.parentNode.removeChild(elem);
-    }
-    this.elements = [];
-
-    this.disposeTextures();
-    this.disposeMesh();
-    this.removeContainerAndOverlay();
-    this.canvas = null;
-    this.overlay = null;
-    this.container = null;
   }
 }
 
