@@ -1647,12 +1647,10 @@ class bivotJs {
     }
 
     function onCanvasMouseOver(event) {
-      console.log('onCanvasMouseOver()');
       _self.mouseInCanvas = true;
     }
     
     function onCanvasMouseOut(event) {
-      console.log('onCanvasMouseOut()');
       _self.mouseInCanvas = false;
     }
 
@@ -3378,7 +3376,7 @@ class bivotJs {
   }
 
   shutdown(shutdownCompleteCallback) {
-    console.log(`shutdown() ${this.opts.canvasID}`);
+    // console.debug(`shutdown() ${this.opts.canvasID}`);
     this.shutdownRequested = true;
     this.shutdownCompleteCallback = shutdownCompleteCallback;
     setTimeout(() => {
@@ -3387,10 +3385,10 @@ class bivotJs {
   }
 
   doShutdown() {
-    console.log(`doShutdown() ${this.opts.canvasID}`);
+    // console.debug(`doShutdown() ${this.opts.canvasID}`);
     if (!this.shutdownStarted) {     
       if (this.renderer) {
-        console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+        // console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
       }
 
       this.shutdownStarted = true;
@@ -3437,7 +3435,7 @@ class bivotJs {
       this.container = null;
 
       if (this.shutdownCompleteCallback) {
-        console.log('Calling shutdownCompleteCallback()');
+        // console.debug('Calling shutdownCompleteCallback()');
         this.shutdownCompleteCallback();
         this.shutdownCompleteCallback = null;
       }

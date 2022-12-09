@@ -516,7 +516,7 @@ function BivotReact(props) {
 
   // Load bivot (if not waiting for shutdown and not deferred)
   useEffect(() => {
-    console.log(`Load Bivot useEffect ${id} -- isLoadPending: ${isLoadPending} isShuttingDown: ${isShuttingDown} deferLoading: ${deferLoading}`);
+    // console.debug(`Load Bivot useEffect ${id} -- isLoadPending: ${isLoadPending} isShuttingDown: ${isShuttingDown} deferLoading: ${deferLoading}`);
     if (isLoadPending && !isShuttingDown && deferLoading !== true) {
       console.log(`All clear ${id}: proceeding with loadBivot()`);
       setIsLoadPending(false);
@@ -525,7 +525,7 @@ function BivotReact(props) {
   }, [isLoadPending, isShuttingDown, deferLoading]);
 
   const shutdownCompleteCallback = useCallback(() => {
-    console.log(`shutdownCompleteCallback ${id}`);
+    // console.debug(`shutdownCompleteCallback ${id}`);
     setIsShuttingDown(false);
   }, []);
 
@@ -533,7 +533,7 @@ function BivotReact(props) {
   useEffect(() => {
     async function onChangeMaterial() {
       if (bivot.current) {
-        console.log(`Initiating Bivot shutdown sequence... ${id}`);
+        // console.debug(`Initiating Bivot shutdown sequence... ${id}`);
         setIsShuttingDown(true);
         setIsLoadPending(true);
         bivot.current.shutdown(shutdownCompleteCallback);
@@ -547,9 +547,9 @@ function BivotReact(props) {
   // Shut down bivot when the component closes
   useEffect(() => {
     return () => {
-      console.log(`Component closing ${id}`);
+      // console.debug(`Component closing ${id}`);
       if (bivot.current) {
-        console.log(`Component closing ${id} - shutting down Bivot`);
+        // console.debug(`Component closing ${id} - shutting down Bivot`);
         bivot.current.shutdown();
         bivot.current = null;
       }
