@@ -3385,7 +3385,7 @@ class bivotJs {
   }
 
   doShutdown() {
-    // console.debug(`doShutdown() ${this.opts.canvasID}`);
+    console.debug(`doShutdown() ${this.opts.canvasID}`);
     if (!this.shutdownStarted) {     
       if (this.renderer) {
         // console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
