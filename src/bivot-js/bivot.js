@@ -419,6 +419,7 @@ class bivotJs {
     this.lights = null;
     this.lights45 = null;
     this.brdfTextures = null;
+    this.overlayTexture = null;
     this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
     this.meshOrig = null;       // Default mesh associated with viewer
@@ -1032,7 +1033,7 @@ class bivotJs {
             }
           }
         } else {
-          console.warn('Invalid keys found in query parameters');
+          console.debug('Invalid keys found in query parameters');
         }
       }
 
@@ -2416,6 +2417,8 @@ class bivotJs {
     if (_self.mesh === null) {
       console.warn('Mesh unavailable; using planar geometry');
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
+      // Register for disposal
+      _self.meshCache[`plane-${_self.mesh.uuid}`] = _self.mesh;
     }
 
     // Set initial Z rotation for loaded mesh
@@ -2744,6 +2747,7 @@ class bivotJs {
         prevTexture.dispose();
       }
     }
+    this.overlayTexture = this.uniforms.overlayMap.value;
     this.seamsShowing = this.state.showSeams;
     this.gridShowing = this.state.showGrid;
   }
@@ -3341,6 +3345,11 @@ class bivotJs {
           tex.dispose();
         }
       }
+      this.brdfTextures = null;
+    }
+    if (this.overlayTexture) {
+      this.overlayTexture.dispose();
+      this.overlayTexture = null;
     }
   }
 
@@ -3354,6 +3363,17 @@ class bivotJs {
           }
         }
       );
+      this.mesh = null;
+    }
+  }
+
+  disposeMeshCache() {
+    if (this.meshCache) {
+      for (const [key, mesh] of Object.entries(this.meshCache)) {
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
+      this.meshCache = {};
     }
   }
 
@@ -3368,8 +3388,11 @@ class bivotJs {
 
   doShutdown() {
     console.log(`doShutdown() ${this.opts.canvasID}`);
-    if (!this.shutdownStarted) {
-      console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+    if (!this.shutdownStarted) {     
+      if (this.renderer) {
+        console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+      }
+
       this.shutdownStarted = true;
       this.controls.dispose();
 
@@ -3399,8 +3422,15 @@ class bivotJs {
 
       this.disposeTextures();
       this.disposeMesh();
-      console.debug(`doShutdown() END renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
-      this.renderer.dispose();
+      this.disposeMeshCache();
+      this.scene = null;
+      this.camera = null;
+      if (this.renderer) {
+        console.debug(`doShutdown() END renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+        this.renderer.dispose();
+        this.renderer = null;
+      }
+
       this.removeContainerAndOverlay();
       this.canvas = null;
       this.overlay = null;
