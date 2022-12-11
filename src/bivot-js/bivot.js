@@ -419,6 +419,7 @@ class bivotJs {
     this.lights = null;
     this.lights45 = null;
     this.brdfTextures = null;
+    this.overlayTexture = null;
     this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
     this.meshOrig = null;       // Default mesh associated with viewer
@@ -437,6 +438,7 @@ class bivotJs {
     // the canvas.
     this.mouseInCanvas = false;
     this.wheelInProgress = false;
+    this.resizeObserver = null;
     this.intersectionObserver = null;
     this.isVisible = false;
     this.seamsShowing = false;
@@ -470,7 +472,8 @@ class bivotJs {
     }
 
     // Tracking to handle cleanup
-    this.shuttingDown = false;
+    this.shutdownRequested = false;
+    this.shutdownStarted = false;
     this.timeouts = [];
     this.listeners = [];
     this.elements = [];
@@ -1030,7 +1033,7 @@ class bivotJs {
             }
           }
         } else {
-          console.warn('Invalid keys found in query parameters');
+          console.debug('Invalid keys found in query parameters');
         }
       }
 
@@ -1646,7 +1649,7 @@ class bivotJs {
     function onCanvasMouseOver(event) {
       _self.mouseInCanvas = true;
     }
-
+    
     function onCanvasMouseOut(event) {
       _self.mouseInCanvas = false;
     }
@@ -2128,10 +2131,10 @@ class bivotJs {
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
-    let ro = new ResizeObserver(entries => {
+    this.resizeObserver = new ResizeObserver(entries => {
       this.updateCanvasOnResize();
     });
-    ro.observe(this.canvas);
+    this.resizeObserver.observe(this.canvas);
   }
 
   initialiseRenderer() {
@@ -2412,6 +2415,8 @@ class bivotJs {
     if (_self.mesh === null) {
       console.warn('Mesh unavailable; using planar geometry');
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
+      // Use mesh cache purely to register for disposal (we never retrieve this mesh from the cache)
+      _self.meshCache[`plane-${_self.mesh.uuid}`] = _self.mesh;
     }
 
     // Set initial Z rotation for loaded mesh
@@ -2740,6 +2745,7 @@ class bivotJs {
         prevTexture.dispose();
       }
     }
+    this.overlayTexture = this.uniforms.overlayMap.value;
     this.seamsShowing = this.state.showSeams;
     this.gridShowing = this.state.showGrid;
   }
@@ -3179,8 +3185,8 @@ class bivotJs {
   }
 
   render(timeMs) {
-    if (this.shuttingDown) {
-      this.doShutdown();
+    if (this.shutdownRequested) {
+        this.doShutdown();
     } else if (this.controls && this.composer) {
       if (this.stats) {
         this.stats.begin();
@@ -3337,6 +3343,11 @@ class bivotJs {
           tex.dispose();
         }
       }
+      this.brdfTextures = null;
+    }
+    if (this.overlayTexture) {
+      this.overlayTexture.dispose();
+      this.overlayTexture = null;
     }
   }
 
@@ -3350,39 +3361,85 @@ class bivotJs {
           }
         }
       );
+      this.mesh = null;
     }
   }
 
-  shutdown() {
-    this.shuttingDown = true;
+  disposeMeshCache() {
+    if (this.meshCache) {
+      for (const [key, mesh] of Object.entries(this.meshCache)) {
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
+      this.meshCache = {};
+    }
+  }
+
+  shutdown(shutdownCompleteCallback) {
+    // console.debug(`shutdown() ${this.opts.canvasID}`);
+    this.shutdownRequested = true;
+    this.shutdownCompleteCallback = shutdownCompleteCallback;
+    setTimeout(() => {
+      this.doShutdown();
+    }, 1000);
   }
 
   doShutdown() {
-    this.controls.dispose();
+    if (!this.shutdownStarted) {     
+      console.debug(`doShutdown() ${this.opts.canvasID}`);
+      if (this.renderer) {
+        // console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+      }
 
-    for (var i = 0; i < this.timeouts.length; i++) {
-      clearTimeout(this.timeouts[i]);
+      this.shutdownStarted = true;
+      this.controls.dispose();
+
+      if (this.intersectionObserver) {
+        this.intersectionObserver.disconnect();
+      }
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+      }
+
+      for (var i = 0; i < this.timeouts.length; i++) {
+        clearTimeout(this.timeouts[i]);
+      }
+      this.timeouts = [];
+
+      for (var i = 0; i < this.listeners.length; i++) {
+        const { object, type, listener } = this.listeners[i];
+        object.removeEventListener(type, listener);
+      }
+      this.listeners = [];
+
+      for (var i = 0; i < this.elements.length; i++) {
+        const elem = this.elements[i];
+        elem.parentNode.removeChild(elem);
+      }
+      this.elements = [];
+
+      this.disposeTextures();
+      this.disposeMesh();
+      this.disposeMeshCache();
+      this.scene = null;
+      this.camera = null;
+      if (this.renderer) {
+        console.debug(`doShutdown() END renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
+        this.renderer.dispose();
+        this.renderer = null;
+      }
+
+      this.removeContainerAndOverlay();
+      this.canvas = null;
+      this.overlay = null;
+      this.container = null;
+
+      if (this.shutdownCompleteCallback) {
+        // console.debug('Calling shutdownCompleteCallback()');
+        this.shutdownCompleteCallback();
+        this.shutdownCompleteCallback = null;
+      }
     }
-    this.timeouts = [];
-
-    for (var i = 0; i < this.listeners.length; i++) {
-      const { object, type, listener } = this.listeners[i];
-      object.removeEventListener(type, listener);
-    }
-    this.listeners = [];
-
-    for (var i = 0; i < this.elements.length; i++) {
-      const elem = this.elements[i];
-      elem.parentNode.removeChild(elem);
-    }
-    this.elements = [];
-
-    this.disposeTextures();
-    this.disposeMesh();
-    this.removeContainerAndOverlay();
-    this.canvas = null;
-    this.overlay = null;
-    this.container = null;
   }
 }
 

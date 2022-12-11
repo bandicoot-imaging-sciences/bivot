@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
 import { AppBar, Tabs, Tab, Tooltip, Typography } from '@material-ui/core';
@@ -421,6 +421,8 @@ function BivotReact(props) {
   const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
+  const [isShuttingDown, setIsShuttingDown] = useState(false);
+  const [isLoadPending, setIsLoadPending] = useState(true);
   const [diag, setDiag] = useState(0.25);
   const [meshScaling, setMeshScaling] = useState(1.0);
   const [tabValue, setTabValue] = useState(0);
@@ -512,30 +514,48 @@ function BivotReact(props) {
   state.lightTiltWithMousePos = lightTiltWithMousePos;
   state.lightTiltWithDeviceOrient = lightTiltWithDeviceOrient;
 
-  async function onLoad() {
-    loadBivot();
-  }
-
-  // Load bivot (if not deferred)
+  // Load bivot (if not waiting for shutdown and not deferred)
   useEffect(() => {
-    if (deferLoading !== true) {
-      onLoad();
+    // console.debug(`Load Bivot useEffect ${id} -- isLoadPending: ${isLoadPending} isShuttingDown: ${isShuttingDown} deferLoading: ${deferLoading}`);
+    if (isLoadPending && !isShuttingDown && deferLoading !== true) {
+      console.log(`All clear ${id}: proceeding with loadBivot()`);
+      setIsLoadPending(false);
+      loadBivot();
     }
-  }, [deferLoading]);
+  }, [isLoadPending, isShuttingDown, deferLoading]);
 
-  // Update bivot when the whole material changes
+  const shutdownCompleteCallback = useCallback(() => {
+    // console.debug(`shutdownCompleteCallback ${id}`);
+    setIsShuttingDown(false);
+  }, []);
+
+  // Shut down bivot when the whole material changes and get ready to load a new bivot after shutdown
   useEffect(() => {
     async function onChangeMaterial() {
       if (bivot.current) {
-        bivot.current.shutdown();
+        // console.debug(`Initiating Bivot shutdown sequence... ${id}`);
+        setIsShuttingDown(true);
+        setIsLoadPending(true);
+        bivot.current.shutdown(shutdownCompleteCallback);
         setDiag(undefined);
         setMeshScaling(1.0);
-        onLoad();
       }
     }
     onChangeMaterial();
   }, [material]);
 
+  // Shut down bivot when the component closes
+  useEffect(() => {
+    return () => {
+      // console.debug(`Component closing ${id}`);
+      if (bivot.current) {
+        // console.debug(`Component closing ${id} - shutting down Bivot`);
+        bivot.current.shutdown();
+        bivot.current = null;
+      }
+    };
+  }, []);
+  
   useEffect(() => {
     // Update width/height
     var w, h;
@@ -648,16 +668,6 @@ function BivotReact(props) {
     setUserPixellated(pixellated);
     renderFrame(DirtyFlag.Textures);
   }, [pixellated]);
-
-  // Shut down bivot when the component closes
-  useEffect(() => {
-    return () => {
-      if (bivot.current) {
-        bivot.current.shutdown();
-        bivot.current = null;
-      }
-    };
-  }, []);
 
   // Watch for full screen change
   useEffect(() => {
@@ -793,6 +803,7 @@ function BivotReact(props) {
       onDrawing: userPointsOnSet,
     };
     console.log('Options:', options);
+    console.log(`new Bivot ${canvasID}`);
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
     bivot.current.startRender();
