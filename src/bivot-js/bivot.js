@@ -2415,7 +2415,7 @@ class bivotJs {
     if (_self.mesh === null) {
       console.warn('Mesh unavailable; using planar geometry');
       _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
-      // Register for disposal
+      // Use mesh cache purely to register for disposal (we never retrieve this mesh from the cache)
       _self.meshCache[`plane-${_self.mesh.uuid}`] = _self.mesh;
     }
 
