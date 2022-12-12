@@ -550,6 +550,9 @@ class bivotJs {
     this.stats.showPanel(0);
 
     initConfig().then(() => {
+      if (!this.overlay || this.shutdownRequested) {
+        return;
+      }
       // After loading (or failing to load) the config, begin the initialisation sequence.
       processUrlFlags();
 
@@ -764,6 +767,9 @@ class bivotJs {
       if (_self.mesh === null && !_self.meshLoadingFailed) {
         console.debug('Mesh pending');
         _self.loadCompleteButMeshMissing = true;
+        return;
+      } else if (_self.shutdownRequested) {
+        console.debug('onLoad: Bailing out (shutdown requested)');
         return;
       }
       _self.meshLoadingFailed = false;
