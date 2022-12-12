@@ -1851,7 +1851,11 @@ class bivotJs {
 
             _self.setTexRepeat(texture);
 
-            _self.brdfTextures.set(key, texture);
+            if (_self.brdfTextures) {
+              _self.brdfTextures.set(key, texture);
+            } else {
+              console.debug(`Failed to set new texture in _self.brdfTextures: ${key}`)
+            }
           },
           function (xhr) {},
           function (error) {
@@ -1876,6 +1880,9 @@ class bivotJs {
       loadManager.onLoad = onLoad;
       loadManager.onProgress = onProgress;
       loadManager.onStart = onStart;
+      loadManager.onError = (url) => {
+        console.debug(`LoadingManager: There was an error loading ${url}`);
+      }
 
       // List of keys to merge between the 3 states.
       const keys = Object.keys(_self.config.initialState);
@@ -3326,8 +3333,10 @@ class bivotJs {
   }
 
   registerEventListener(object, type, listener, ...args) {
-    object.addEventListener(type, listener, ...args);
-    this.listeners.push({ object, type, listener });
+    if (object) {
+      object.addEventListener(type, listener, ...args);
+      this.listeners.push({ object, type, listener });
+    }
   }
 
   registerElement(document, tagName) {
