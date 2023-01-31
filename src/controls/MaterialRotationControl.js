@@ -41,7 +41,7 @@ function MaterialRotationControl({ value, onChange }) {
               <ArrowLeft />
             </Button>
           </Tooltip>
-          <Tooltip title="Nudge anti-clockwise">
+          <Tooltip title="Nudge clockwise">
             <Button style={styles.button} onClick={() => {onChange(-0.5)}}>
               <ArrowRight />
             </Button>
