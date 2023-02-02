@@ -3137,8 +3137,8 @@ class bivotJs {
     const canvasTexture = new THREE.Texture(canvas);
     canvasTexture.flipX = false;
     canvasTexture.flipY = true;
-    canvasTexture.wrapS = THREE.RepeatWrapping;
-    canvasTexture.wrapT = THREE.RepeatWrapping;
+    canvasTexture.wrapS = THREE.ClampToEdgeWrapping;
+    canvasTexture.wrapT = THREE.ClampToEdgeWrapping;
     canvasTexture.needsUpdate = true;
 
     return canvasTexture;
@@ -3164,8 +3164,8 @@ class bivotJs {
       const [xs, ys] = this.getTexRepeat();
       texture.repeat.set(xs, ys);
       texture.offset.set((1 - xs) / 2, (1 - ys) / 2);
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.updateMatrix();
     }
   }
