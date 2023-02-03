@@ -572,9 +572,10 @@ class bivotJs {
       // TODO: Log unstringifiable content too, like callbacks
       console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
       console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
-      // console.debug('State:', JSON.parse(JSON.stringify(this.state)));
-      console.debug('State:', JSON.stringify(this.state));
+      console.debug('State:', JSON.parse(JSON.stringify(this.state)));
       console.debug('Renders:', JSON.parse(JSON.stringify(this.scans)));
+
+      console.debug(`this.state.focalLength: ${this.state.focalLength}`);
 
       orientPermWanted = (this.state.camTiltWithDeviceOrient != 0.0 || this.state.lightTiltWithDeviceOrient != 0.0);
 
