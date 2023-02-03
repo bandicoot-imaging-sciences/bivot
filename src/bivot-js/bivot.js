@@ -1155,6 +1155,7 @@ class bivotJs {
     }
 
     function initialiseCamera(focalLength) {
+      console.log(`focalLength: ${focalLength}`);
       // Physical distance units are in metres.
       const sensorHeight = 0.024;
       fov = fieldOfView(focalLength, sensorHeight);
