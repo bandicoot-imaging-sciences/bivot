@@ -572,7 +572,8 @@ class bivotJs {
       // TODO: Log unstringifiable content too, like callbacks
       console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
       console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
-      console.debug('State:', JSON.parse(JSON.stringify(this.state)));
+      // console.debug('State:', JSON.parse(JSON.stringify(this.state)));
+      console.debug('State:', JSON.stringify(this.state));
       console.debug('Renders:', JSON.parse(JSON.stringify(this.scans)));
 
       orientPermWanted = (this.state.camTiltWithDeviceOrient != 0.0 || this.state.lightTiltWithDeviceOrient != 0.0);
@@ -1155,7 +1156,6 @@ class bivotJs {
     }
 
     function initialiseCamera(focalLength) {
-      console.log(`focalLength: ${focalLength}`);
       // Physical distance units are in metres.
       const sensorHeight = 0.024;
       fov = fieldOfView(focalLength, sensorHeight);
