@@ -427,7 +427,9 @@ function BivotReact(props) {
   const [meshScaling, setMeshScaling] = useState(1.0);
   const [tabValue, setTabValue] = useState(0);
 
-  const savedSize = useRef(null);
+  const sizeRef = useRef(size); // Use a reference to access within event listener
+  const setSize = (s) => {sizeRef.current = s; _setSize(s);}
+  const savedSizeRef = useRef(null);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
@@ -438,7 +440,7 @@ function BivotReact(props) {
   const [areaLightWidth, setAreaLightWidth] = useState(state.areaLightWidth);
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
-  const [size, setSize] = useState(state.size);
+  const [size, _setSize] = useState(state.size);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -1159,14 +1161,14 @@ function BivotReact(props) {
     const fsElt = getDocumentFullScreenElement();
     if (fsElt && fsElt === getFullScreenElement()) {
       // My full screen opened
-      savedSize.current = size;
+      savedSizeRef.current = sizeRef.current;
       setSize([window.screen.width, window.screen.height]);
       renderFrame(DirtyFlag.Canvas);
-    } else if (!fsElt && savedSize.current) {
+    } else if (!fsElt && savedSizeRef.current) {
       // My full screen closed
-      setSize(savedSize.current);
+      setSize(savedSizeRef.current);
       renderFrame(DirtyFlag.Canvas);
-      savedSize.current = undefined;
+      savedSizeRef.current = undefined;
       if (onExitFullScreen) {
         onExitFullScreen();
       }
