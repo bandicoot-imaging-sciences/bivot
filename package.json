@@ -11,7 +11,6 @@
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.js",
-  "type": "module",
   "files": [
     "dist"
   ],
@@ -25,7 +24,7 @@
     "build": "microbundle --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "start": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "prepare": "run-s build",
-    "debug:shopfront": "run-s build && cp dist/index.js ../shopfront/node_modules/@bandicoot/bivot/dist && rm -rf ../shopfront/.next/cache",
+    "debug:shopfront": "run-s build && cp dist/index.js ../shopfront/node_modules/@bandicoot/bivot/dist && cp package.json ../shopfront/node_modules/@bandicoot/bivot && rm -rf ../shopfront/.next/cache",
     "test": "run-s test:unit test:lint test:build",
     "test:build": "run-s build",
     "test:lint": "exit 0 && eslint .",
