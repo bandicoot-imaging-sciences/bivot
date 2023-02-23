@@ -1,6 +1,6 @@
 // Copyright (C) Bandicoot Imaging Sciences 2021
 
-import * as THREE from '@bandicoot-imaging-sciences/three';
+import * as THREE from 'three';
 
 // sRGB to XYZ matrix
 const lsrgbToXyz = [

@@ -1,7 +1,7 @@
 // Copyright (C) Bandicoot Imaging Sciences 2020
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
-import * as THREE from '@bandicoot-imaging-sciences/three';
+import * as THREE from 'three';
 
 function arrayToVector(input, vecType) {
   // If the input is an Array, convert it to the specified vector type (either THREE.Vector2,

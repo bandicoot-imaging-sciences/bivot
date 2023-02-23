@@ -3,7 +3,7 @@
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-import * as THREE from '@bandicoot-imaging-sciences/three';
+import * as THREE from 'three';
 
 export default function getShaders() {
   const uniforms = THREE.UniformsUtils.merge([
@@ -163,6 +163,26 @@ export default function getShaders() {
       //float visibility = 0.25;
       float t = r2 / (1.0 + (r2 * r2 - 1.0) * ndh*ndh);
       return visibility * t*t / pi;
+    }
+
+    float punctualLightIntensityToIrradianceFactor( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {
+      #if defined ( PHYSICALLY_CORRECT_LIGHTS )
+        float distanceFalloff = 1.0 / max( pow( lightDistance, decayExponent ), 0.01 );
+        if( cutoffDistance > 0.0 ) {
+          distanceFalloff *= pow2( saturate( 1.0 - pow4( lightDistance / cutoffDistance ) ) );
+        }
+        return distanceFalloff;
+      #else
+        if( cutoffDistance > 0.0 && decayExponent > 0.0 ) {
+          return pow( saturate( -lightDistance / cutoffDistance + 1.0 ), decayExponent );
+        }
+        return 1.0;
+      #endif
+    }
+
+    vec3 F_Schlick( const in vec3 specularColor, const in float dotLH ) {
+      float fresnel = exp2( ( -5.55473 * dotLH - 6.98316 ) * dotLH );
+      return ( 1.0 - specularColor ) * fresnel + specularColor;
     }
 
     const mat3 RGB_TO_XYZ = (mat3(

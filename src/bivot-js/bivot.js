@@ -32,22 +32,21 @@ import ResizeObserver from 'resize-observer-polyfill';
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-import * as THREE from '@bandicoot-imaging-sciences/three';
+import * as THREE from 'three';
 
-import Stats from '@bandicoot-imaging-sciences/three/examples/jsm/libs/stats.module.js';
-//import { OrbitControls } from '@bandicoot-imaging-sciences/three/examples/jsm/controls/OrbitControls.js';
-import { EXRLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/EXRLoader.js';
-import { OBJLoader } from '@bandicoot-imaging-sciences/three/examples/jsm/loaders/OBJLoader.js';
-import { WEBGL } from '@bandicoot-imaging-sciences/three/examples/jsm/WebGL.js';
-import { EffectComposer } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from '@bandicoot-imaging-sciences/three/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
-import { FXAAShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from '@bandicoot-imaging-sciences/three/examples/jsm/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from '@bandicoot-imaging-sciences/three/examples/jsm/lights/RectAreaLightUniformsLib.js';
-//import { BufferGeometryUtils } from '@bandicoot-imaging-sciences/three/examples/jsm/utils/BufferGeometryUtils.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import WebGL from 'three/examples/jsm/capabilities/WebGL.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { AdaptiveToneMappingPass } from 'three/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+//import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import CameraControls from 'camera-controls';
 CameraControls.install({ THREE: THREE });
@@ -445,6 +444,7 @@ class bivotJs {
     this.gridShowing = false;
     this.diag = null;
     this.untiledImDims = [1, 1]; // Texture image dimensions derived from texDims
+    this.areaLightSetupDone = false;
 
     this.needsResize = false;
     this.inFullScreen = false;
@@ -589,7 +589,7 @@ class bivotJs {
       loadScan();
 
       this.renderer = this.initialiseRenderer();
-      RectAreaLightUniformsLib.init(this.renderer); // Initialise LTC look-up tables for area lighting
+      RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
       this.updateCanvas();
@@ -1761,11 +1761,11 @@ class bivotJs {
       }
       const deltaTilt = currentTilt.clone().sub(baselineTilt);
       const xy = new THREE.Vector2(
-        Math.sin(THREE.Math.degToRad(deltaTilt.y)),
-        Math.sin(THREE.Math.degToRad(deltaTilt.x))
+        Math.sin(THREE.MathUtils.degToRad(deltaTilt.y)),
+        Math.sin(THREE.MathUtils.degToRad(deltaTilt.x))
       );
       const elevationLimit = Math.max(_self.state.camTiltLimitDegrees, _self.state.lightTiltLimitDegrees);
-      const qLimit = Math.cos(THREE.Math.degToRad(elevationLimit));
+      const qLimit = Math.cos(THREE.MathUtils.degToRad(elevationLimit));
       if (xy.length() > qLimit) {
         const surplus = xy.length() - xy.clone().clampLength(0.0, qLimit).length();
         baselineTilt.addScaledVector(deltaTilt, surplus * _self.state.tiltDriftSpeed);
@@ -1873,12 +1873,13 @@ class bivotJs {
       _self.meshOrig = meshPath;
       _self.meshMaterial = meshPath;
       // Load the override mesh if set, otherwise use given textures mesh
+      var loadedMeshPath = meshPath;
       if (_self.state.meshOverride) {
         console.debug('Using meshOverride:', _self.state.meshOverride);
         _self.meshMaterial = _self.state.meshOverride;
-        meshPath = _self.state.meshOverride;
+        loadedMeshPath = _self.state.meshOverride;
       }
-      _self.loadMesh(_self, meshPath, loadManager);
+      _self.loadMesh(_self, loadedMeshPath, loadManager);
     }
 
     function loadScan() {
@@ -1933,11 +1934,11 @@ class bivotJs {
 
     function loadScanFromTextures(loadManager, textures, material, keys) {
       let paths = new Map();
-      paths.set('diffuse', {path: textures.basecolor, format: THREE.RGBFormat});
-      paths.set('normals', {path: textures.normals, format: THREE.RGBFormat});
-      paths.set('specular', {path: textures.specular, format: THREE.RGBFormat});
+      paths.set('diffuse', {path: textures.basecolor, format: THREE.RGBAFormat});
+      paths.set('normals', {path: textures.normals, format: THREE.RGBAFormat});
+      paths.set('specular', {path: textures.specular, format: THREE.RGBAFormat});
       if (textures.displacement) {
-        paths.set('displacement', {path: textures.displacement, format: THREE.RGBFormat});
+        paths.set('displacement', {path: textures.displacement, format: THREE.RGBAFormat});
       }
 
       let scanState = [];
@@ -2056,26 +2057,26 @@ class bivotJs {
       let paths = new Map();
       console.assert(['JPG', 'PNG', 'EXR'].includes(_self.config.textureFormat));
       if (_self.config.textureFormat == 'EXR') {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: THREE.RGBAFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
       } else {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: THREE.RGBFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: THREE.RGBAFormat});
         if (_self.config.dual8Bit) {
-          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBFormat});
-          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBFormat});
-          paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: THREE.RGBFormat});
+          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBAFormat});
+          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBAFormat});
+          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBAFormat});
+          paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: THREE.RGBAFormat});
         }
       }
 
@@ -2306,6 +2307,7 @@ class bivotJs {
   }
 
   meshValToPath(val) {
+    var meshPath;
     if (val === null || val === '') {
       // Material mesh requested; use mesh associated with loaded material set
       meshPath = this.meshMaterial;
@@ -3187,8 +3189,21 @@ class bivotJs {
     this.uniforms.uBrdfVersion.value = this.state.brdfVersion;
     this.uniforms.uLoadExr.value = (this.config.textureFormat == 'EXR');
     this.uniforms.uDual8Bit.value = this.config.dual8Bit;
-    this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_1;
-    this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_2;
+
+    // Set up look-up tables for area lighting.  Do it once for the first frame,
+    // regardless of whether area lights are in use yet.
+    if (!this.areaLightSetupDone) {
+      // If a browser doesn't support OES_texture_float_linear, but it does support
+      // OES_texture_half_float_linear, then we can grab LTC_HALF_[1|2] here instead
+      // of full floats.  Currently no such devices are known; previously iOS 14 had
+      // this problem.
+      this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_FLOAT_1;
+      this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_FLOAT_2;
+      THREE.UniformsLib.LTC_FLOAT_1.needsUpdate = true;
+      THREE.UniformsLib.LTC_FLOAT_2.needsUpdate = true;
+      this.areaLightSetupDone = true;
+    }
+
     const uvScaleMap = this.uniforms.diffuseMap.value;
     if (uvScaleMap) {
       this.uniforms.uvTransform.value.copy(uvScaleMap.matrix);
@@ -3279,8 +3294,8 @@ class bivotJs {
   }
 
   checkWebGL() {
-    if (WEBGL.isWebGLAvailable() === false) {
-      document.body.appendChild(WEBGL.getWebGLErrorMessage());
+    if (WebGL.isWebGLAvailable() === false) {
+      document.body.appendChild(WebGL.getWebGLErrorMessage());
     }
   }
 

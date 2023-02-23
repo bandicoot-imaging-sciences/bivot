@@ -5,14 +5,16 @@
   "private": true,
   "main": "dist/index.js",
   "source": "./index.js",
+  "type": "module",
   "scripts": {
-    "build": "microbundle-crl --format esm --css-modules false --external none",
+    "build": "microbundle --format esm --css-modules false --external none --no-pkg-main -o dist/index.js",
     "deploy:bperf": "aws s3 sync . s3://bis-bivot-dev-dxxjfu/bperf/ --delete",
     "deploy:speed": "aws s3 cp example/embed-bivot-js-speed-test.html s3://bis-bivot-dev-dxxjfu/bperf/example/embed-bivot-js-speed-test.html"
   },
   "devDependencies": {
-    "@bandicoot-imaging-sciences/three": "^0.121.101",
-    "microbundle-crl": "^0.13.11",
+    "@babel/plugin-proposal-decorators": "^7.21.0",
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
+    "microbundle": "^0.15.1",
     "resize-observer-polyfill": "^1.5.1"
   },
   "eslintConfig": {},
@@ -23,6 +25,7 @@
     "not op_mini all"
   ],
   "dependencies": {
-    "camera-controls": "^1.36.2"
+    "camera-controls": "^1.36.2",
+    "three": "^0.149.0"
   }
 }
