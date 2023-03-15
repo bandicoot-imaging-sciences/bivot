@@ -597,6 +597,7 @@ class bivotJs {
       this.updateCanvas();
       this.updateBackground();
       this.updateControls();
+      this.updateControlsPan();
       this.updateZoom();
       this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
 
@@ -2629,8 +2630,12 @@ class bivotJs {
   }
 
   updateControlsPan() {
-    if (this.controls && this.state.cameraPanArray) {
-      this.controls.setTarget(this.state.cameraPanArray[0], this.state.cameraPanArray[1], this.state.cameraPanArray[2]);
+    if (this.controls) {
+      if (this.state.cameraPanArray) {
+        this.controls.setTarget(this.state.cameraPanArray[0], this.state.cameraPanArray[1], this.state.cameraPanArray[2]);
+      } else {
+        this.controls.setTarget(this.state.cameraPan.x, this.state.cameraPan.y, this.state.cameraPan.z);
+      }
     }
   }
 
