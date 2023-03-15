@@ -189,7 +189,8 @@ export const DirtyFlag = {
   TextureLayer: 0x00000200,
   Textures:     0x00000400,
   Controls:     0x00000800,
-  All:          0x00000FFF
+  ControlsPan:  0x00001000,
+  All:          0x00001FFF
 };
 
 /*
@@ -212,7 +213,8 @@ class bivotJs {
     this.updateStretch.bind(this),
     this.updateTextureLayer.bind(this),
     this.updateTextures.bind(this),
-    this.updateControls.bind(this)
+    this.updateControls.bind(this),
+    this.updateControlsPan.bind(this)
   ];
 
   constructor(options) {
@@ -1168,6 +1170,7 @@ class bivotJs {
     function controlsChange(event) {
       if (_self.opts.setZoomCallback) {
         _self.opts.setZoomCallback(_self.camera.position.length());
+        _self.state.cameraPan = _self.controls.getTarget();
       }
       _self.requestRender();
     }
@@ -2622,6 +2625,12 @@ class bivotJs {
         this.updateCamTiltLimit(iControls, this.state.camTiltLimitDegrees);
       }
       iControls.dollyToCursor = (this.state.camTiltWithMousePos === 0.0);
+    }
+  }
+
+  updateControlsPan() {
+    if (this.controls && this.state.cameraPanArray) {
+      this.controls.setTarget(this.state.cameraPanArray[0], this.state.cameraPanArray[1], this.state.cameraPanArray[2]);
     }
   }
 

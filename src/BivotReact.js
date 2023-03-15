@@ -281,6 +281,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: defaultSize,
+    cameraPanArray: [0, 0, 0],
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
@@ -335,6 +336,7 @@ function BivotReact(props) {
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
     size: defaultSize,
+    cameraPanArray: [0, 0, 0],
     zoom: [0.2, 0.36, 0.36],
     currentZoom: 0.3,
     lightColor: [255, 255, 255],
@@ -441,6 +443,7 @@ function BivotReact(props) {
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
   const [size, _setSize] = useState(state.size);
+  const [cameraPanArray, setCameraPanArray] = useState(state.cameraPanArray);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
   // Bivot state expects 3-value array for light colour, but the control needs an object or hex value.
@@ -484,6 +487,7 @@ function BivotReact(props) {
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
   state.size = size;
+  state.cameraPanArray = cameraPanArray;
   state.zoom = zoom;
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
@@ -829,6 +833,7 @@ function BivotReact(props) {
       lightType,
       areaLightWidth,
       //areaLightHeight,
+      cameraPan,
       zoom,
       currentZoom,
       lightColor,
@@ -855,6 +860,7 @@ function BivotReact(props) {
     if (!width && !height) {
       updateSize(size);
     }
+    updateCameraPan(cameraPan);
     setZoom(zoom);
     setCurrentZoom(currentZoom);
     updateLightColor(rgbArrayToColorObj(lightColor));
@@ -943,16 +949,17 @@ function BivotReact(props) {
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
-      cameraPan: cameraPanArray,
+      cameraPan,
     }
-
-    config.state = { ...config.state, ...savedState };
+    // cameraPan is an array in file
+    const savedStateFile = { ...savedState, ...{ cameraPan: cameraPanArray } };
+    config.state = { ...config.state, ...savedStateFile };
     delete config.state.portrait; // Strip out legacy portrait flag, if present
 
     const { userId, materialId } = material;
     const success = await writeState(userId, materialId, materialSetInternal);
     if (success) {
-      copyStateFields(config.state, checkpointState);
+      copyStateFields(savedState, checkpointState);
     }
   }
 
@@ -987,6 +994,11 @@ function BivotReact(props) {
     setAreaLightWidth(referenceAreaLightWidth * size);
     setAreaLightHeight(referenceAreaLightHeight * size);
     renderFrame(DirtyFlag.Lighting);
+  }
+
+  function updateCameraPan(pan) {
+    setCameraPanArray([pan.x, pan.y, pan.z]);
+    renderFrame(DirtyFlag.ControlsPan);
   }
 
   function updateRotation(degrees) {
