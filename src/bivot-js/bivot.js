@@ -495,6 +495,22 @@ class bivotJs {
     });
   }
 
+  getUserAgentDataPromise() {
+    if (navigator.userAgentData !== undefined) {
+      try {
+        return navigator.userAgentData.getHighEntropyValues(['platform', 'platformVersion']);
+      } catch(e) {
+        if (!(e instanceof NotAllowedError)) {
+          // NotAllowedError means the broswer has declined to give the needed info.
+          // Any other error is re-thrown.
+          throw e;
+        }
+      }
+    }
+    // Unable to determine the needed info
+    return new Promise(function(resolve, reject) { return resolve(undefined); });
+  }
+
   startRender() {
     let _self = this;
 
@@ -533,10 +549,6 @@ class bivotJs {
     }
     let zoomHelpTimeoutID = null;
 
-    const parser = new UAParser();
-    this.userAgent = parser.getResult();
-    console.debug('userAgent:', this.userAgent);
-
     let urlFlags = getUrlFlags(); // Get options from URL
 
     if (Object.values(this.controlModes).indexOf(urlFlags.controls) > -1) {
@@ -560,68 +572,78 @@ class bivotJs {
     this.stats.showPanel(0);
 
     initConfig().then(() => {
-      if (!this.overlay || this.shutdownRequested) {
-        return;
-      }
-      // After loading (or failing to load) the config, begin the initialisation sequence.
-      processUrlFlags();
+      this.getUserAgentDataPromise().then((uaData) => {
+        if (!this.overlay || this.shutdownRequested) {
+          return;
+        }
 
-      // Backward compatibility for deprecated load* flags.
-      console.assert(((this.config.loadExr || 0) + (this.config.loadPng || 0) + (this.config.loadJpeg || 0)) <= 1);
-      if (this.config.loadExr) {
-        this.config.textureFormat = 'EXR';
-      } else if (this.config.loadPng) {
-        this.config.textureFormat = 'PNG';
-      } else if (this.config.loadJpeg) {
-        this.config.textureFormat = 'JPG';
-      }
-      if (this.config.hasOwnProperty('textureFormat') && typeof this.config.textureFormat === 'string') {
-        this.config.textureFormat = this.config.textureFormat.toUpperCase();
-      }
+        // Determine user agent info, required to work around OS-specific browser bugs
+        const parser = new UAParser();
+        this.userAgent = parser.getResult();
+        this.uaData = uaData;
+        console.debug('userAgent:', this.userAgent);
+        console.debug('uaData:', this.uaData);
 
-      // TODO: Log unstringifiable content too, like callbacks
-      console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
-      console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
-      console.debug('State:', JSON.parse(JSON.stringify(this.state)));
-      console.debug('Renders:', JSON.parse(JSON.stringify(this.scans)));
+        // After loading (or failing to load) the config, begin the initialisation sequence.
+        processUrlFlags();
 
-      orientPermWanted = (this.state.camTiltWithDeviceOrient != 0.0 || this.state.lightTiltWithDeviceOrient != 0.0);
+        // Backward compatibility for deprecated load* flags.
+        console.assert(((this.config.loadExr || 0) + (this.config.loadPng || 0) + (this.config.loadJpeg || 0)) <= 1);
+        if (this.config.loadExr) {
+          this.config.textureFormat = 'EXR';
+        } else if (this.config.loadPng) {
+          this.config.textureFormat = 'PNG';
+        } else if (this.config.loadJpeg) {
+          this.config.textureFormat = 'JPG';
+        }
+        if (this.config.hasOwnProperty('textureFormat') && typeof this.config.textureFormat === 'string') {
+          this.config.textureFormat = this.config.textureFormat.toUpperCase();
+        }
 
-      initialiseOverlays(this.overlay);
-      initialiseLighting(this.getBgColorFromState(this.state), this.scene);
-      this.camera = initialiseCamera(this.state.focalLength);
-      this.controls = initialiseControls(this.camera, this.overlay, this.config, this.config.initCamZ);
-      if (this.config.showInterface) {
-        addControlPanel();
-      }
-      this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
+        // TODO: Log unstringifiable content too, like callbacks
+        console.debug('Options:', JSON.parse(JSON.stringify(this.opts)));
+        console.debug('Config:', JSON.parse(JSON.stringify(this.config)));
+        console.debug('State:', JSON.parse(JSON.stringify(this.state)));
+        console.debug('Renders:', JSON.parse(JSON.stringify(this.scans)));
 
-      loadScan();
+        orientPermWanted = (this.state.camTiltWithDeviceOrient != 0.0 || this.state.lightTiltWithDeviceOrient != 0.0);
 
-      this.renderer = this.initialiseRenderer();
-      RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
-      this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
+        initialiseOverlays(this.overlay);
+        initialiseLighting(this.getBgColorFromState(this.state), this.scene);
+        this.camera = initialiseCamera(this.state.focalLength);
+        this.controls = initialiseControls(this.camera, this.overlay, this.config, this.config.initCamZ);
+        if (this.config.showInterface) {
+          addControlPanel();
+        }
+        this.initialiseCanvas(this.canvas, this.state.size[0], this.state.size[1]);
 
-      this.updateCanvas();
-      this.updateBackground();
-      this.updateControls();
-      this.updateControlsPan();
-      this.updateZoom();
-      this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
+        loadScan();
 
-      // Add listeners after finishing config and initialisation
-      if (orientPermWanted) {
-        this.registerEventListener(window, 'deviceorientation', detectGyro, false);
-      }
-      this.registerEventListener(window, 'resize', this.requestRender);
-      this.registerEventListener(document, 'keydown', onKeyDown, false);
-      this.registerEventListener(document, 'keyup', onKeyUp, false);
-      this.registerEventListener(document, 'wheel', onWheel, false);
-      this.registerEventListener(this.overlay, 'wheel', onOverlayWheel, false);
+        this.renderer = this.initialiseRenderer();
+        RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
+        this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
-      if (this.opts.useTouch === true || this.opts.useTouch === false) {
-        this.config.useTouch = this.opts.useTouch;
-      }
+        this.updateCanvas();
+        this.updateBackground();
+        this.updateControls();
+        this.updateControlsPan();
+        this.updateZoom();
+        this.updateCamTiltLimit(this.controls, this.state.camTiltLimitDegrees);
+
+        // Add listeners after finishing config and initialisation
+        if (orientPermWanted) {
+          this.registerEventListener(window, 'deviceorientation', detectGyro, false);
+        }
+        this.registerEventListener(window, 'resize', this.requestRender);
+        this.registerEventListener(document, 'keydown', onKeyDown, false);
+        this.registerEventListener(document, 'keyup', onKeyUp, false);
+        this.registerEventListener(document, 'wheel', onWheel, false);
+        this.registerEventListener(this.overlay, 'wheel', onOverlayWheel, false);
+
+        if (this.opts.useTouch === true || this.opts.useTouch === false) {
+          this.config.useTouch = this.opts.useTouch;
+        }
+      });
     });
     // ========== End mainline; functions follow ==========
 
@@ -2389,16 +2411,39 @@ class bivotJs {
 
   loadMesh(_self, meshPath, meshPathLow, loadManager, cacheOnly=false) {
     // On some MacOS 12 machines running Chrome, the render has major glitches in
-    // the form of the first (64k/3) faces rendering correctly, then every second
+    // the form of the first 64k/3 faces rendering correctly, then every second
     // mesh face after that being only half rendered.  This may also depend on
     // graphics card (some MacOS 12 Chrome environments do not trigger the bug.)
-    // The workaround is whenever MacOS12 + Chrome is detected, use a low res
-    // mesh (less than 64k/3 faces) if available instead of the usual mesh.
+    // As a workaround, we detect the OS version and browser, and if it's MacOS 12
+    // with Chrome, use a low res mesh (less than 64k/3 faces) if available instead
+    // of the usual mesh.
+    //
+    // In some MacOS versions and browsers, including the ones we need to detect
+    // to work around this rendering bug, the browser falsely and deliberately caps
+    // the userAgent Mac OS version at 10.15.7 even though the true version may be 11
+    // or 12.  To work around this, we also fetch the userAgentData and look for the
+    // version number there.  Users may be able to tell their browser not to provide
+    // this info, in which case we don't have a way to know whether to serve them with
+    // the rendering glitch workaround.
     const preferLowMesh = (
       _self.userAgent.os.name === 'Mac OS' &&
-      _self.userAgent.os.version.startsWith('12.') &&
       _self.userAgent.browser.name.startsWith('Chrome')
+    ) && (
+      _self.userAgent.os.version.startsWith('12.') ||
+      (
+        _self.userAgent.os.version === '10.15.7' &&
+        _self.uaData !== undefined &&
+        _self.uaData.platformVersion.startsWith('12.')
+      )
     );
+    if (!preferLowMesh &&
+      _self.userAgent.os.name === 'Mac OS' &&
+      _self.userAgent.browser.name.startsWith('Chrome') &&
+      _self.userAgent.os.version === '10.15.7' &&
+      _self.uaData === undefined
+    ) {
+      console.warn('Unable to determine OS version due to user browser settings.  Cannot apply browser rendering issue workaround even though it may be required (MacOS + Chrome).');
+    }
 
     var tryMeshPath;
     var tryingLowMesh;
