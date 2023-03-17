@@ -51,6 +51,8 @@ import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLigh
 import CameraControls from 'camera-controls';
 CameraControls.install({ THREE: THREE });
 
+import UAParser from 'ua-parser-js';
+
 import getShaders from './shaders.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
@@ -424,7 +426,9 @@ class bivotJs {
     this.mesh = null;           // The mesh object currently in use
     this.meshPathUsed = false;  // The path of the mesh object currently in use
     this.meshOrig = null;       // Default mesh associated with viewer
+    this.meshOrigLow = null;
     this.meshMaterial = null;   // Original mesh associated with material
+    this.meshMaterialLow = null;
     this.meshCache = {};        // Cache of loaded mesh objects
     this.useDispMap = null;     // True if displacement map is in use
     this.renderer = null;
@@ -528,6 +532,10 @@ class bivotJs {
       iOSVersionOrientBlocked = (iOSVersion[0] == 12 && iOSVersion[1] >= 2);
     }
     let zoomHelpTimeoutID = null;
+
+    const parser = new UAParser();
+    this.userAgent = parser.getResult();
+    console.debug('userAgent:', this.userAgent);
 
     let urlFlags = getUrlFlags(); // Get options from URL
 
@@ -1779,7 +1787,7 @@ class bivotJs {
       }
     }
 
-    function loadScansImpl(brdfTexturePaths, meshPath, loadManager) {
+    function loadScansImpl(brdfTexturePaths, meshPath, meshPathLow, loadManager) {
       updateControlPanel(gui);
 
       _self.disposeTextures();
@@ -1875,15 +1883,20 @@ class bivotJs {
       }
 
       _self.meshOrig = meshPath;
+      _self.meshOrigLow = meshPathLow;
       _self.meshMaterial = meshPath;
+      _self.meshMaterialLow = meshPathLow;
       // Load the override mesh if set, otherwise use given textures mesh
       var loadedMeshPath = meshPath;
+      var loadedMeshPathLow = meshPathLow;
       if (_self.state.meshOverride) {
         console.debug('Using meshOverride:', _self.state.meshOverride);
         _self.meshMaterial = _self.state.meshOverride;
+        _self.meshMaterialLow = null;
         loadedMeshPath = _self.state.meshOverride;
+        loadedMeshPathLow = null;
       }
-      _self.loadMesh(_self, loadedMeshPath, loadManager);
+      _self.loadMesh(_self, loadedMeshPath, loadedMeshPathLow, loadManager);
     }
 
     function loadScan() {
@@ -1970,7 +1983,12 @@ class bivotJs {
       }
 
       setLoadingImage();
-      loadScansImpl(paths, textures.mesh, loadManager);
+
+      // Note: meshLow might not exist as a member of textures in which case
+      // it will be passed here as undefined.  Alternatively, it may exist
+      // but have a null value, if the caller determined that no low mesh
+      // file exists.
+      loadScansImpl(paths, textures.mesh, textures.meshLow, loadManager);
     }
 
     function loadScanMetadata(loadManager, texturePath, keys) {
@@ -2084,7 +2102,7 @@ class bivotJs {
         }
       }
 
-      loadScansImpl(paths, texDir + 'brdf-mesh.obj', loadManager);
+      loadScansImpl(paths, texDir + 'brdf-mesh.obj', texDir + 'brdf-mesh_low.obj', loadManager);
     }
 
     function onStart(url, itemsLoaded, itemsTotal) {
@@ -2312,26 +2330,26 @@ class bivotJs {
 
   meshValToPath(val) {
     var meshPath;
+    var meshPathLow = undefined;
     if (val === null || val === '') {
-      // Material mesh requested; use mesh associated with loaded material set
       meshPath = this.meshMaterial;
+      meshPathLow = this.meshMaterialLow;
     } else if (val === false) {
-      // Default mesh requested; use original mesh in textures list
       meshPath = this.meshOrig;
+      meshPathLow = this.meshOrigLow;
     } else {
       // New custom mesh
       meshPath = val;
+      meshPathLow = val.replace('.obj', '_low.obj');
     }
-    return meshPath;
+    return { meshPath, meshPathLow };
   }
 
   updateMesh() {
-    const meshPath = this.meshValToPath(this.state.meshOverride);
-
     // Only update the mesh if the new path is different to the current path in use
+    const { meshPath, meshPathLow } = this.meshValToPath(this.state.meshOverride);
     if (this.meshPathUsed !== meshPath) {
       const _self = this;
-
       function onLoadUpdateMesh() {
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
@@ -2343,42 +2361,78 @@ class bivotJs {
       };
 
       // Reset and show progress bar, then load the mesh
-      _self.loadingElem.style.display = 'flex';
-      _self.progressBarElem.style.transform = 'scaleX(0)';
+      this.loadingElem.style.display = 'flex';
+      this.progressBarElem.style.transform = 'scaleX(0)';
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoadUpdateMesh;
-      this.loadMesh(this, meshPath, loadManager);
+      this.loadMesh(this, meshPath, meshPathLow, loadManager);
     }
 
     if (this.state.meshesToCache) {
       const loadManager = new THREE.LoadingManager();
       this.state.meshesToCache.forEach(val => {
-        const meshPath = this.meshValToPath(val);
-        this.loadMesh(this, meshPath, loadManager, true);
+        const { meshPath, meshPathLow } = this.meshValToPath(val);
+        this.loadMesh(this, meshPath, meshPathLow, loadManager, true);
       });
     }
   }
 
-  loadMesh(_self, meshPath, loadManager, cacheOnly=false) {
+  getMeshElemFromObject(object) {
+    var meshElem = null;
+    object.traverse(function(child) {
+      if (child instanceof THREE.Mesh) {
+        meshElem = child;
+      }
+    });
+    return meshElem;
+  }
+
+  loadMesh(_self, meshPath, meshPathLow, loadManager, cacheOnly=false) {
+    // On some MacOS 12 machines running Chrome, the render has major glitches in
+    // the form of the first (64k/3) faces rendering correctly, then every second
+    // mesh face after that being only half rendered.  This may also depend on
+    // graphics card (some MacOS 12 Chrome environments do not trigger the bug.)
+    // The workaround is whenever MacOS12 + Chrome is detected, use a low res
+    // mesh (less than 64k/3 faces) if available instead of the usual mesh.
+    const preferLowMesh = (
+      _self.userAgent.os.name === 'Mac OS' &&
+      _self.userAgent.os.version.startsWith('12.') &&
+      _self.userAgent.browser.name.startsWith('Chrome')
+    );
+
+    var tryMeshPath;
+    var tryingLowMesh;
+    if (preferLowMesh && meshPathLow) {
+      tryMeshPath = meshPathLow;
+      tryingLowMesh = true;
+      console.debug('Trying preferred low mesh:', tryMeshPath);
+    } else {
+      if (preferLowMesh) {
+        console.debug('Low mesh is preferred but unavailable');
+      }
+      tryMeshPath = meshPath;
+      tryingLowMesh = false;
+    }
     if (cacheOnly) {
       if (_self.meshCache.hasOwnProperty(meshPath)) {
         // Mesh has already been cached
         return;
       }
       var objLoader = new OBJLoader(loadManager);
-      objLoader.load(meshPath,
+      objLoader.load(tryMeshPath,
         function(object) {
-          var meshElem = null;
-          object.traverse(function(child) {
-            if (child instanceof THREE.Mesh) {
-              meshElem = child;
-            }
-          });
+          const meshElem = _self.getMeshElemFromObject(object);
           _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
         },
         function (xhr) {},
         function (error) {
-          console.debug('Error loading mesh ', meshPath);
+          if (tryingLowMesh) {
+            // Couldn't load low-res mesh.  Retry loading, this time using the standard mesh
+            console.debug('Mesh cache: Low mesh not loaded, falling back to standard mesh:', meshPath);
+            _self.loadMesh(_self, meshPath, null, loadManager, true);
+          } else {
+            console.debug('Mesh cache: Error loading mesh ', tryMeshPath);
+          }
         }
       );
     } else {
@@ -2391,14 +2445,9 @@ class bivotJs {
       } else {
         // Mesh cache miss.  Load the mesh from the given path.
         var objLoader = new OBJLoader(loadManager);
-        objLoader.load(meshPath,
+        objLoader.load(tryMeshPath,
           function(object) {
-            var meshElem = null;
-            object.traverse(function(child) {
-              if (child instanceof THREE.Mesh) {
-                meshElem = child;
-              }
-            });
+            const meshElem = _self.getMeshElemFromObject(object);
             _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
             _self.changeMesh(meshElem);
 
@@ -2409,8 +2458,14 @@ class bivotJs {
           },
           function (xhr) {},
           function (error) {
-            _self.meshLoadingFailed = true;
-            console.debug('Error loading mesh ', meshPath);
+            if (tryingLowMesh) {
+              // Couldn't load low-res mesh.  Retry loading, this time using the standard mesh
+              console.debug('Mesh load: Low mesh not loaded, falling back to standard mesh:', meshPath);
+              _self.loadMesh(_self, meshPath, null, loadManager, false);
+            } else {
+              _self.meshLoadingFailed = true;
+              console.debug('Mesh load: Error loading mesh ', tryMeshPath);
+            }
           }
         );
       }
