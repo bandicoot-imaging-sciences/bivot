@@ -205,6 +205,10 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     tilingBoundary,
 
+    // If set, a list of points to draw as a secondary boundary path.
+    // (Currently only supported for internal use)
+    tilingSubBoundary,
+
     // If set, a multiplier to the scale of the tiling.
     // (Currently only supported for internal use)
     tilingScale,
@@ -296,6 +300,7 @@ function BivotReact(props) {
     saturation: 0.0,
     showSeams: false,
     boundary: false,
+    subBoundary: false,
     showGrid: false,
     grid: null,
     gridSelection: null,
@@ -351,6 +356,7 @@ function BivotReact(props) {
     saturation: 0.0,
     showSeams: false,
     boundary: false,
+    subBoundary: false,
     showGrid: false,
     grid: null,
     gridSelection: null,
@@ -464,6 +470,7 @@ function BivotReact(props) {
   const [saturation, setSaturation] = useState(state.saturation);
   const [showSeams, setShowSeams] = useState(state.showSeams);
   const [boundary, setBoundary] = useState(state.boundary);
+  const [subBoundary, setSubBoundary] = useState(state.subBoundary);
   const [grid, setGrid] = useState(state.grid);
   const [gridSelection, setGridSelection] = useState(state.gridSelection);
   const [showGrid, setShowGrid] = useState(state.showGrid);
@@ -505,6 +512,7 @@ function BivotReact(props) {
   state.saturation = saturation;
   state.showSeams = showSeams;
   state.boundary = boundary;
+  state.subBoundary = subBoundary;
   state.showGrid = showGrid;
   state.grid = grid;
   state.gridSelection = gridSelection;
@@ -645,6 +653,10 @@ function BivotReact(props) {
   useEffect(() => {
     updateBoundary(tilingBoundary);
   }, [tilingBoundary]);
+
+  useEffect(() => {
+    updateSubBoundary(tilingSubBoundary);
+  }, [tilingSubBoundary]);
 
   useEffect(() => {
     updateGrid(userGrid, userGridSelection, Boolean(showUserGrid), Boolean(userGridSelectionEnabled));
@@ -1142,8 +1154,13 @@ function BivotReact(props) {
     renderFrame(DirtyFlag.Overlay);
   }
 
-  function updateBoundary(val) {
-    setBoundary(val);
+  function updateBoundary(path) {
+    setBoundary(path);
+    renderFrame(DirtyFlag.Overlay);
+  }
+
+  function updateSubBoundary(path) {
+    setSubBoundary(path);
     renderFrame(DirtyFlag.Overlay);
   }
 

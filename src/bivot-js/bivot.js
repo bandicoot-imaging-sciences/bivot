@@ -331,6 +331,7 @@ class bivotJs {
       pixellated: false,
       showSeams: false,
       boundary: false,
+      subBoundary: false,
       stretch: null,
       userScale: null,
       enableKeypress: false,
@@ -3010,13 +3011,15 @@ class bivotJs {
   }
 
 
-  drawDashedLine(ctx, points, wholeDashes=false) {
+  drawDashedLine(ctx, points, wholeDashes=false, stretchFactors=[1, 1], relThickness=1.0, colour1='#FFFF', colour2='#000F') {
     const relDashLength = 8;
-    const [absLineWidthX, absLineWidthY] = this.getLineWidths();
+    var [absLineWidthX, absLineWidthY] = this.getLineWidths();
+    absLineWidthX *= relThickness;
+    absLineWidthY *= relThickness;
     const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
-    const absDashLengthX = absLineWidthX * relDashLength;
-    const absDashLengthY = absLineWidthY * relDashLength;
-    const pMap = this.coordsToOverlay(points);
+    const absDashLengthX = absLineWidthX * relDashLength / relThickness;
+    const absDashLengthY = absLineWidthY * relDashLength / relThickness;
+    const pMap = this.coordsToOverlay(points, stretchFactors);
     if (pMap === null) {
       return;
     }
@@ -3038,14 +3041,14 @@ class bivotJs {
       }
 
       ctx.beginPath();
-      ctx.strokeStyle = '#000F';
+      ctx.strokeStyle = colour2;
       ctx.lineWidth = dashWidth;
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1, y1);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.strokeStyle = '#FFFF';
+      ctx.strokeStyle = colour1;
       ctx.lineWidth = dashWidth;
       dashPhase = this.drawDashedSegment(ctx, x0, y0, x1, y1, length, dashPhase);
       ctx.stroke();
@@ -3136,13 +3139,13 @@ class bivotJs {
     return [pointSizeFactor * absLineWidthY, pointSizeFactor * absLineWidthX];
   }
 
-  coordsToOverlay(points) {
+  coordsToOverlay(points, stretchFactors=[1, 1]) {
     if (this.state.texDims && points && this.untiledImDims) {
       const td = this.state.texDims;
       var pMap = [];
       for (var i = 0; i < points.length; i++) {
-        const x = ((points[i].x - td[0] / 2) / this.untiledImDims[0] + 0.5) * overlayTexW;
-        const y = ((points[i].y - td[1] / 2) / this.untiledImDims[1] + 0.5) * overlayTexH;
+        var x = ((points[i].x - td[0] / 2) / this.untiledImDims[0] + 0.5) * overlayTexW * stretchFactors[0];
+        var y = ((points[i].y - td[1] / 2) / this.untiledImDims[1] + 0.5) * overlayTexH * stretchFactors[1];
         pMap.push({ x, y });
       }
       return pMap;
@@ -3259,6 +3262,17 @@ class bivotJs {
     }
     if (this.state.boundary) {
       this.drawDashedLine(ctx, this.state.boundary);
+    }
+    if (this.state.subBoundary) {
+      var stretchFactors = [1, 1];
+      const { path, stretched } = this.state.subBoundary;
+      if (stretched) {
+        stretchFactors = [
+          (overlayTexW / texDims[0]) / this.state.stretch[0],
+          (overlayTexH / texDims[1]) / this.state.stretch[1]
+        ];
+      }
+      this.drawDashedLine(ctx, path, false, stretchFactors, 0.7, '#FF0F');
     }
     if (this.state.pointsControl) {
       this.state.pointsControl.forEach((p, i) => {
