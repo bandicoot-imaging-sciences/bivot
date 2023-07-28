@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem } from '@material-ui/core';
+import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem, ThemeProvider } from '@material-ui/core';
 import { CropLandscape, CropSquare, CropPortrait } from '@material-ui/icons';
 
 const aspects = {
@@ -17,9 +17,6 @@ const aspects = {
 }
 
 const styles = {
-  button: {
-    border: 'none',
-  },
   select: {
     width: '165px',
   },
@@ -119,14 +116,14 @@ function AspectControl({ value, onChange }) {
         <Grid item xs>
           <Grid container>
             <Grid item xs={12}>
-              <ButtonGroup variant="contained" color="primary">
+              <ButtonGroup variant='contained' color='accent' disableElevation={true}>
                 <Tooltip title='Landscape'>
                   <Button
                     id='LandscapeButton'
                     style={styles.button}
                     onClick={() => {onClick('landscape')}}
                     variant={mode == 'landscape' ? 'contained' : 'outlined'}
-                  >
+                    >
                     <CropLandscape />
                   </Button>
                 </Tooltip>
@@ -136,7 +133,7 @@ function AspectControl({ value, onChange }) {
                     style={styles.button}
                     onClick={() => {onClick('square')}}
                     variant={mode == 'square' ? 'contained' : 'outlined'}
-                  >
+                    >
                     <CropSquare />
                   </Button>
                 </Tooltip>

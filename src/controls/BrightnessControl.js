@@ -18,6 +18,7 @@ function BrightnessControl({ value, onChange }) {
           step={0.01}
           min={0.0}
           max={1.0}
+          color='secondary'
         />
       </Grid>
     </Grid>
