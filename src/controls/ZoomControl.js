@@ -31,6 +31,7 @@ function ZoomControl({ value, onChange, onChangeCommitted, max }) {
           value={mapper ? value.map(v => mapper.map(v)) : value}
           onChange={(event, newValue) => onChange(mapper ? newValue.map(v => mapper.unmap(v)) : newValue)}
           onChangeCommitted={(event, newValue) => onChangeCommitted()}
+          color='secondary'
         />
       </Grid>
     </Grid>

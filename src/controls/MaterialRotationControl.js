@@ -25,7 +25,7 @@ function MaterialRotationControl({ value, onChange }) {
         <Typography style={styles.rotationDegrees} variant='caption'>{value}°</Typography>
       </Grid>
       <Grid item xs>
-        <ButtonGroup variant="contained" color="primary" aria-label="contained primary button group">
+        <ButtonGroup variant="contained" color="accent" aria-label="contained accent button group" disableElevation={true}>
           <Tooltip title="90 anti-clockwise">
             <Button style={styles.button} onClick={() => {onChange(90)}}>
               <RotateLeft />

@@ -17,6 +17,7 @@ function AutoRotateControl({ value, onChange }) {
           step={8000}
           min={0}
           max={8000}
+          color='secondary'
         />
       </Grid>
       <Grid item><Tooltip title="Auto-rotate on"><ThreeDRotation /></Tooltip></Grid>

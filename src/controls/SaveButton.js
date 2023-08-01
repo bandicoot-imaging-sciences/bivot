@@ -8,6 +8,7 @@ function SaveButton({ onChange }) {
         id="saveButton"
         variant="contained"
         color="primary"
+        disableElevation={true}
         onClick={() => {onChange()}}
       >
         Save

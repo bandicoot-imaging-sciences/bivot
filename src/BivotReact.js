@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Paper, Grid, CircularProgress } from '@material-ui/core';
+import { Paper, Grid, CircularProgress, makeStyles } from '@material-ui/core';
 
 import { AppBar, Tabs, Tab, Tooltip, Typography } from '@material-ui/core';
+import { useTheme } from '@material-ui/core/styles';
 import LightingIcon from '@material-ui/icons/WbSunny';
 import ColourIcon from '@material-ui/icons/Palette';
 import LayoutIcon from '@material-ui/icons/SquareFoot';
@@ -54,7 +55,7 @@ const styles = {
     left: '20px',
   },
   controlPanel: {
-    width: 325,
+    width: 350,
     height: '100%',
   },
   controlContents: {
@@ -269,6 +270,7 @@ function BivotReact(props) {
   const canvasRef = useRef();
   const overlayRef = useRef();
   const bivot = useRef(null);
+  const theme = useTheme();
 
   const canvasID = `${id}-canvas`;
 
@@ -1225,13 +1227,20 @@ function BivotReact(props) {
       <Grid container spacing={2} wrap='nowrap'>
         {showEditor && (
           <Grid item>
-            <Paper style={styles.controlPanel}>
-              <AppBar position='static' style={styles.tabs}>
+            <Paper style={styles.controlPanel} elevation={0} variant='outlined'>
+              <AppBar 
+                position='static'
+                className={styles.tabs}
+                style={{
+                  backgroundColor: theme.palette.accent.main,
+                  boxShadow: 'none',
+                }}
+              >
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
                   indicatorColor='secondary'
-                  textColor='inherit'
+                  textColor='secondary'
                   variant='fullWidth'
                 >
                   <Tooltip title='Lighting'>
@@ -1343,7 +1352,7 @@ function BivotReact(props) {
                 <Grid item>
                   <Grid container direction='row' wrap='nowrap' justifyContent='space-between'>
                     <Grid item>
-                    <Grid container spacing={0}>
+                    <Grid container spacing={1}>
                     <Grid item>
                       {onSaveScreenshot && (
                         <SaveButton onChange={() => stateSave(onSaveScreenshot)} />

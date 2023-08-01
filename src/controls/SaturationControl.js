@@ -15,6 +15,7 @@ function SaturationControl({ value, onChange }) {
           step={0.01}
           min={-2}
           max={2}
+          color='secondary'
         />
       </Grid>
     </Grid>

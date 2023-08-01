@@ -17,6 +17,7 @@ function LightTypeControl({ type, size, onChange }) {
           step={0.1}
           min={0}
           max={1}
+          color='secondary'
         />
       </Grid>
       <Grid item><Tooltip title="Area light"><WbIridescent /></Tooltip></Grid>

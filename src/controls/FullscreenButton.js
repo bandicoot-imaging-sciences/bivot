@@ -18,7 +18,7 @@ function FullscreenButton({ getFullscreenElement }) {
     isFullScreenAvailable() ? (
       <Button
         id='fullscreenButton'
-        color='primary'
+        color='accent'
         onClick={() => openFullScreen(getFullscreenElement())}
       >
         <AspectRatio className={classes.icon} />
