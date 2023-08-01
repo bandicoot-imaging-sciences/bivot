@@ -18,6 +18,7 @@ function ContrastControl({ value, onChange }) {
           step={0.01}
           min={0}
           max={1}
+          color='secondary'
         />
       </Grid>
     </Grid>

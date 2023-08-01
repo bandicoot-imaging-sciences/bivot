@@ -15,6 +15,7 @@ function HueControl({ value, onChange }) {
           step={0.01}
           min={-3.15}
           max={3.15}
+          color='secondary'
         />
       </Grid>
     </Grid>

@@ -15,6 +15,7 @@ function IntensityControl({ value, onChange }) {
           step={0.01}
           min={0.0}
           max={4.0}
+          color='secondary'
         />
       </Grid>
     </Grid>

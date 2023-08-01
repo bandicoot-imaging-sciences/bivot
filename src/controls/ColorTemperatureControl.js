@@ -15,6 +15,7 @@ function ColorTemperatureControl({ value, onChange }) {
           step={10}
           min={1000}
           max={20000}
+          color='secondary'
         />
       </Grid>
     </Grid>
