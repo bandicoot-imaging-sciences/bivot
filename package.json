@@ -34,7 +34,7 @@
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {
-    "@material-ui/core": ">=4.11.0",
+    "@material-ui/core": "^4.12.4",
     "react": ">=16.8.0"
   },
   "devDependencies": {
@@ -52,7 +52,7 @@
     "eslint-plugin-node": "^11.0.0",
     "eslint-plugin-prettier": "^3.1.1",
     "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-react": "^7.17.0",
+    "eslint-plugin-react": "^7.33.1",
     "eslint-plugin-standard": "^4.0.1",
     "gh-pages": "^2.2.0",
     "microbundle": "^0.15.1",
