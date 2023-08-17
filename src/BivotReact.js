@@ -111,7 +111,7 @@ function BivotReact(props) {
     width,
     height,
 
-    // Size [ width, height ] of the live Shimmer View. Use defaultSize to 
+    // Size state [ width, height ] of the live Shimmer View. Use defaultSize to 
     // initialise in the parent component.
     size,
     setSize,
@@ -139,6 +139,17 @@ function BivotReact(props) {
     // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
 
+    // We cherry pick the size, exposure and aoStrength controls and lift them up for
+    // improved synchronisation between multiple Bivot components viewing the same material.
+    // In future we may lift the whole state object up to the parent.
+    // Exposure state of the live Shimmer View.
+    exposure,
+    setExposure,
+    
+    // Ambient occlusion strength state of the live Shimmer View.
+    aoStrength,
+    setAoStrength,
+  
     // If set to true or false, overrides the autoRotate setting in the
     // material set definition.
     autoRotate,
@@ -449,7 +460,6 @@ function BivotReact(props) {
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
   // and a corresponding assignment into the state object.
-  const [exposure, setExposure] = useState(state.exposure);
   const [brightness, setBrightness] = useState(state.brightness);
   const [contrast, setContrast] = useState(state.contrast);
   const [lightType, setLightType] = useState(state.lightType);
@@ -471,7 +481,6 @@ function BivotReact(props) {
   const [lightTiltLimitDegrees, setLightTiltLimitDegrees] = useState(state.lightTiltLimitDegrees);
   const [meshOverride, setMeshOverride] = useState(state.meshOverride);
   const [meshesToCache, setMeshesToCache] = useState(state.meshesToCache);
-  const [aoStrength, setAoStrength] = useState(state.aoStrength);
   const [colorTemperature, setColorTemperature] = useState(state.colorTemperature);
   const [hue, setHue] = useState(state.hue);
   const [saturation, setSaturation] = useState(state.saturation);
