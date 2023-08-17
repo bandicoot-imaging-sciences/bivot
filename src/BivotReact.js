@@ -111,11 +111,24 @@ function BivotReact(props) {
     width,
     height,
 
+    // We cherry pick the size, exposure and aoStrength controls and lift them up for
+    // improved synchronisation between multiple Bivot components viewing the same material.
+    // These props must be supplied by the parent. In future we may lift the whole state
+    // object up to the parent.
+
     // Size state [ width, height ] of the live Shimmer View. Use defaultSize to 
     // initialise in the parent component.
     size,
     setSize,
 
+    // Exposure state of the live Shimmer View.
+    exposure,
+    setExposure,
+    
+    // Ambient occlusion strength state of the live Shimmer View.
+    aoStrength,
+    setAoStrength,
+  
     // If true, Bivot renders with a fixed aspect ratio, with canvas width
     // changing responsively to fit the width of the parent element.  If false,
     // Bivot sets the canvas size directly from the width and height.
@@ -139,17 +152,6 @@ function BivotReact(props) {
     // If set, this function will be called when a user clicks on the Bivot viewer.
     onClick,
 
-    // We cherry pick the size, exposure and aoStrength controls and lift them up for
-    // improved synchronisation between multiple Bivot components viewing the same material.
-    // In future we may lift the whole state object up to the parent.
-    // Exposure state of the live Shimmer View.
-    exposure,
-    setExposure,
-    
-    // Ambient occlusion strength state of the live Shimmer View.
-    aoStrength,
-    setAoStrength,
-  
     // If set to true or false, overrides the autoRotate setting in the
     // material set definition.
     autoRotate,
