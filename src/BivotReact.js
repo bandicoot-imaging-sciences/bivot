@@ -55,6 +55,7 @@ const styles = {
     left: '20px',
   },
   controlPanel: {
+    // Keep this width in sync with any CSS widths in parent components that have their own control panels.
     width: 350,
     height: '100%',
   },
@@ -109,6 +110,11 @@ function BivotReact(props) {
     //       while loading, the loading image may be inconsistently scaled.
     width,
     height,
+
+    // Size [ width, height ] of the live Shimmer View. Use defaultSize to 
+    // initialise in the parent component.
+    size,
+    setSize,
 
     // If true, Bivot renders with a fixed aspect ratio, with canvas width
     // changing responsively to fit the width of the parent element.  If false,
@@ -438,7 +444,7 @@ function BivotReact(props) {
   const [tabValue, setTabValue] = useState(0);
 
   const sizeRef = useRef(size); // Use a reference to access within event listener
-  const setSize = (s) => {sizeRef.current = s; _setSize(s);}
+  const setSizeAndRef = (s) => {sizeRef.current = s; setSize(s);}
   const savedSizeRef = useRef(null);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
@@ -450,7 +456,6 @@ function BivotReact(props) {
   const [areaLightWidth, setAreaLightWidth] = useState(state.areaLightWidth);
   const [areaLightHeight, setAreaLightHeight] = useState(state.areaLightHeight);
   const [rotation, setRotation] = useState(state.meshRotateZDegrees);
-  const [size, _setSize] = useState(state.size);
   const [cameraPanArray, setCameraPanArray] = useState(state.cameraPanArray);
   const [zoom, setZoom] = useState(state.zoom);
   const [currentZoom, setCurrentZoom] = useState(state.currentZoom);
@@ -667,6 +672,11 @@ function BivotReact(props) {
   useEffect(() => {
     updatePointsControl(userPointsControl);
   }, [userPointsControl]);
+
+  useEffect(() => {
+    sizeRef.current = size;
+    renderFrame(DirtyFlag.Canvas);
+  }, [size]);
 
   useEffect(() => {
     updateUserScale(tilingScale);
@@ -1032,7 +1042,7 @@ function BivotReact(props) {
   }
 
   function updateSize(val) {
-    setSize(val);
+    setSizeAndRef(val);
     renderFrame(DirtyFlag.Canvas);
   }
 
@@ -1193,11 +1203,11 @@ function BivotReact(props) {
     if (fsElt && fsElt === getFullScreenElement()) {
       // My full screen opened
       savedSizeRef.current = sizeRef.current;
-      setSize([window.screen.width, window.screen.height]);
+      setSizeAndRef([window.screen.width, window.screen.height]);
       renderFrame(DirtyFlag.Canvas);
     } else if (!fsElt && savedSizeRef.current) {
       // My full screen closed
-      setSize(savedSizeRef.current);
+      setSizeAndRef(savedSizeRef.current);
       renderFrame(DirtyFlag.Canvas);
       savedSizeRef.current = undefined;
       if (onExitFullScreen) {
