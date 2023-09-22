@@ -1201,7 +1201,7 @@ function BivotReact(props) {
   }
 
   function updateTextureLayer(val) {
-    if ([1, 2, 3, 4, 5].includes(val)) {
+    if ([1, 2, 3, 4, 5, 6].includes(val)) {
       state.textureLayer = val;
     } else {
       state.textureLayer = 0;

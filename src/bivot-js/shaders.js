@@ -41,6 +41,7 @@ export default function getShaders() {
         'displacementMap': {value: null},
         'displacementScale': {value: 0.05},
         'displacementBias': {value: 0.0},
+        'alphaMap': {value: null},
         'uvTransform': {value: new THREE.Matrix3()},
       }
     ]);
@@ -126,6 +127,7 @@ export default function getShaders() {
     #include <bsdfs>
     #include <packing>
     #include <lights_pars_begin>
+    #include <alphamap_pars_fragment>
     #include <normalmap_pars_fragment>
     #include <lights_physical_pars_fragment>
 
@@ -283,6 +285,13 @@ export default function getShaders() {
 
       #ifdef USE_DISPLACEMENTMAP
         vec3 displacementSurface = texture2D(displacementMap, vUv).xyz;
+      #else
+        vec3 displacementSurface = vec3(0.0, 0.0, 0.0);
+      #endif
+      #ifdef USE_ALPHAMAP
+        float alphaSurface = texture2D(alphaMap, vUv).y;
+      #else
+        float alphaSurface = 1.0;
       #endif
 
       if (uDual8Bit) {
@@ -350,28 +359,37 @@ export default function getShaders() {
         roughnessSurface = 1.0;
         metallicSurface = 0.0;
         normalSurface = vec3(0.0, 0.0, 1.0);
+        alphaSurface = 1.0;
       } else if (textureLayer == 2) {
         diffuseSurface = vec4(vec3(roughnessSurface / 2.0), 1.0);
         roughnessSurface = 1.0;
         metallicSurface = 0.0;
         normalSurface = vec3(0.0, 0.0, 1.0);
+        alphaSurface = 1.0;
       } else if (textureLayer == 3) {
         diffuseSurface = vec4(vec3(metallicSurface / 2.0), 1.0);
         roughnessSurface = 1.0;
         metallicSurface = 0.0;
         normalSurface = vec3(0.0, 0.0, 1.0);
+        alphaSurface = 1.0;
       } else if (textureLayer == 4) {
         diffuseSurface = vec4(normalSurface.xyz / 2.0, 1.0);
         roughnessSurface = 1.0;
         metallicSurface = 0.0;
         normalSurface = vec3(0.0, 0.0, 1.0);
-      #ifdef USE_DISPLACEMENTMAP
-        } else if (textureLayer == 5) {
-          diffuseSurface = vec4(displacementSurface.xyz / 2.0, 1.0);
-          roughnessSurface = 1.0;
-          metallicSurface = 0.0;
-          normalSurface = vec3(0.0, 0.0, 1.0);
-      #endif
+        alphaSurface = 1.0;
+      } else if (textureLayer == 5) {
+        diffuseSurface = vec4(displacementSurface.xyz / 2.0, 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+        alphaSurface = 1.0;
+      } else if (textureLayer == 6) {
+        diffuseSurface = vec4(vec3(alphaSurface / 2.0), 1.0);
+        roughnessSurface = 1.0;
+        metallicSurface = 0.0;
+        normalSurface = vec3(0.0, 0.0, 1.0);
+        alphaSurface = 1.0;
       }
 
       // Composite the overlay onto the basecolor
@@ -389,6 +407,9 @@ export default function getShaders() {
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
         vec4 diffuseColor = diffuseSurface;
+        #ifdef USE_ALPHAMAP
+          diffuseColor.a *= alphaSurface;
+        #endif
         float metalnessFactor = metallicSurface;
         float roughnessFactor = uRoughness * roughnessSurface;
         #include <normal_fragment_begin>

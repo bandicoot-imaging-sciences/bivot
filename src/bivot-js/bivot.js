@@ -432,6 +432,7 @@ class bivotJs {
     this.meshMaterialLow = null;
     this.meshCache = {};        // Cache of loaded mesh objects
     this.useDispMap = null;     // True if displacement map is in use
+    this.useAlphaMap = null;    // True if alpha map is in use
     this.renderer = null;
     this.fxaaPass = null;
     this.toneMappingPass = null;
@@ -824,6 +825,12 @@ class bivotJs {
       } else {
         _self.useDispMap = false;
       }
+      if (_self.brdfTextures.get('alpha') !== undefined) {
+        _self.useAlphaMap = true;
+        _self.uniforms.alphaMap.value = _self.brdfTextures.get('alpha');
+      } else {
+        _self.useAlphaMap = false;
+      }
 
       if (_self.config.dual8Bit) {
         _self.uniforms.diffuseMapLow.value = _self.brdfTextures.get('diffuse_low');
@@ -831,6 +838,9 @@ class bivotJs {
         _self.uniforms.specularMapLow.value = _self.brdfTextures.get('specular_low');
         if (_self.useDispMap) {
           _self.uniforms.displacementMapLow.value = _self.brdfTextures.get('displacement_low');
+        }
+        if (_self.useAlphaMap) {
+          _self.uniforms.alphaMapLow.value = _self.brdfTextures.get('alpha_low');
         }
       }
 
@@ -1978,6 +1988,9 @@ class bivotJs {
       if (textures.displacement) {
         paths.set('displacement', {path: textures.displacement, format: THREE.RGBAFormat});
       }
+      if (textures.alpha) {
+        paths.set('alpha', {path: textures.alpha, format: THREE.RGBAFormat});
+      }
 
       let scanState = [];
       const metadata = material.config.renders[_self.scan];
@@ -2091,6 +2104,7 @@ class bivotJs {
         texNames.set('normals', 'normals');
         texNames.set('specular', 'roughness-metallic');
         texNames.set('displacement', 'displacement');
+        texNames.set('alpha', 'alpha');
       } else {
         texNames.set('diffuse', 'diffuse');
         texNames.set('normals', 'normals');
@@ -2104,22 +2118,26 @@ class bivotJs {
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBAFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBAFormat});
         paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: THREE.RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropf16.exr', format: THREE.RGBAFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
         paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
         paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
       } else {
         paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBAFormat});
         paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBAFormat});
         paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBAFormat});
         paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: THREE.RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.png', format: THREE.RGBAFormat});
         if (_self.config.dual8Bit) {
           paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBAFormat});
           paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBAFormat});
           paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBAFormat});
           paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: THREE.RGBAFormat});
+          paths.set('alpha_low', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_lo.png', format: THREE.RGBAFormat});
         }
       }
 
@@ -2601,6 +2619,12 @@ class bivotJs {
       //material.defines['USE_TANGENT'] = 1;
     } else {
       material.defines['OBJECTSPACE_NORMALMAP'] = 1;
+    }
+    if (_self.useAlphaMap) {
+      console.debug('Alpha map enabled');
+      material.defines['USE_ALPHAMAP'] = 1;
+      material.transparent = true;
+      material.side = THREE.DoubleSide;
     }
 
     material.extensions.derivatives = true;
