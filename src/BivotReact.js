@@ -111,10 +111,16 @@ function BivotReact(props) {
     width,
     height,
 
-    // We cherry pick the size, exposure and aoStrength controls and lift them up for
-    // improved synchronisation between multiple Bivot components viewing the same material.
-    // These props must be supplied by the parent. In future we may lift the whole state
-    // object up to the parent.
+    // If true, Bivot renders with a fixed aspect ratio, with canvas width
+    // changing responsively to fit the width of the parent element.  If false,
+    // Bivot sets the canvas size directly from the width and height.
+    // (Default: true)
+    responsive,
+
+    // ========== Synchronisation props ==========
+    // The caller may provide these controls to lift them up for improved
+    // synchronisation between multiple Bivot components viewing the same
+    // material.
 
     // Size state [ width, height ] of the live Shimmer View. Use defaultSize to 
     // initialise in the parent component.
@@ -129,11 +135,9 @@ function BivotReact(props) {
     aoStrength,
     setAoStrength,
   
-    // If true, Bivot renders with a fixed aspect ratio, with canvas width
-    // changing responsively to fit the width of the parent element.  If false,
-    // Bivot sets the canvas size directly from the width and height.
-    // (Default: true)
-    responsive,
+    // Background colour of the live Shimmer View, for example '#FFFFFF' for white.
+    backgroundColor,
+    setBackgroundColor,
 
     // ========== Advanced props ==========
     // When fullScreen becomes true or false, Bivot will correspondingly enter or
@@ -456,8 +460,8 @@ function BivotReact(props) {
   const [meshScaling, setMeshScaling] = useState(1.0);
   const [tabValue, setTabValue] = useState(0);
 
-  const sizeRef = useRef(size); // Use a reference to access within event listener
-  const setSizeAndRef = (s) => {sizeRef.current = s; setSize(s);}
+  const sizeRef = useRef(sizeBivot); // Use a reference to access within event listener
+  const setSizeAndRef = (s) => {sizeRef.current = s; setSizeBivot(s);}
   const savedSizeRef = useRef(null);
 
   // Set up GUI state.  Each control has a corresponding useState declaration,
@@ -475,7 +479,6 @@ function BivotReact(props) {
   // So we have to track bivot light colour and control light colour in separate values.
   const [lightColorBivot, setLightColorBivot] = useState(state.lightColor);
   const [lightColorControls, setLightColorControls] = useState(rgbArrayToHexString(state.lightColor));
-  const [backgroundColor, setBackgroundColor] = useState(state.backgroundColor);
   const [autoRotatePeriodMs, setAutoRotatePeriodMs] = useState(state.autoRotatePeriodMs);
   const [dragControlsRotation, setDragControlsRotation] = useState(state.dragControlsRotation);
   const [dragControlsPanning, setDragControlsPanning] = useState(state.dragControlsPanning);
@@ -504,19 +507,33 @@ function BivotReact(props) {
   const [lightTiltWithMousePos, setLightTiltWithMousePos] = useState(state.lightTiltWithMousePos);
   const [lightTiltWithDeviceOrient, setLightTiltWithDeviceOrient] = useState(state.lightTiltWithDeviceOrient);
 
-  state.exposure = exposure;
+  // Local state for when synchronisation props aren't provided
+  const [sizeLocal, setSizeLocal] = useState(state.size);
+  const [exposureLocal, setExposureLocal] = useState(state.exposure);
+  const [aoStrengthLocal, setAoStrengthLocal] = useState(state.aoStrength);
+  const [backgroundColorLocal, setBackgroundColorLocal] = useState(state.backgroundColor);
+
+  // Switching between local and caller-provided synchronisation props
+  var sizeBivot = size ?? sizeLocal;
+  var setSizeBivot = setSize ?? setSizeLocal;
+  var exposureBivot = exposure ?? exposureLocal;
+  var setExposureBivot = setExposure ?? setExposureLocal;
+  var aoStrengthBivot = aoStrength ?? aoStrengthLocal;
+  var setAoStrengthBivot = setAoStrength ?? setAoStrengthLocal;
+  var backgroundColorBivot = backgroundColor ?? backgroundColorLocal;
+  var setBackgroundColorBivot = setBackgroundColor ?? setBackgroundColorLocal;
+
+  // Hook up state, used in bivotJs, so that it updates when our useState values update
   state.brightness = brightness;
   state.contrast = contrast;
   state.lightType = lightType;
   state.areaLightWidth = areaLightWidth;
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
-  state.size = size;
   state.cameraPanArray = cameraPanArray;
   state.zoom = zoom;
   state.currentZoom = currentZoom;
   state.lightColor = lightColorBivot;
-  state.backgroundColor = backgroundColor;
   state.autoRotatePeriodMs = autoRotatePeriodMs;
   state.dragControlsRotation = dragControlsRotation;
   state.dragControlsPanning = dragControlsPanning;
@@ -524,7 +541,6 @@ function BivotReact(props) {
   state.lightTiltLimitDegrees = lightTiltLimitDegrees;
   state.meshOverride = meshOverride;
   state.meshesToCache = meshesToCache;
-  state.aoStrength = aoStrength;
   state.colorTemperature = colorTemperature;
   state.hue = hue;
   state.saturation = saturation;
@@ -545,6 +561,11 @@ function BivotReact(props) {
   state.camTiltWithDeviceOrient = camTiltWithDeviceOrient;
   state.lightTiltWithMousePos = lightTiltWithMousePos;
   state.lightTiltWithDeviceOrient = lightTiltWithDeviceOrient;
+
+  state.size = sizeBivot;
+  state.exposure = exposureBivot;
+  state.aoStrength = aoStrengthBivot;
+  state.backgroundColor = backgroundColorBivot;
 
   // Load bivot (if not waiting for shutdown and not deferred)
   useEffect(() => {
@@ -630,7 +651,6 @@ function BivotReact(props) {
     }
   }, [state, diag]);
 
-
   useEffect(() => {
     async function onChangeFullScreen() {
       if (isFullScreenAvailable()) {
@@ -685,9 +705,13 @@ function BivotReact(props) {
   }, [userPointsControl]);
 
   useEffect(() => {
-    sizeRef.current = size;
+    sizeRef.current = sizeBivot;
     renderFrame(DirtyFlag.Canvas);
-  }, [size]);
+  }, [sizeBivot]);
+
+  useEffect(() => {
+    updateBackgroundColor({ hex: backgroundColorBivot });
+  }, [backgroundColorBivot]);
 
   useEffect(() => {
     updateUserScale(tilingScale);
@@ -973,14 +997,18 @@ function BivotReact(props) {
     const cameraPanArray = [cameraPan.x, cameraPan.y, 0.0];
 
     const savedState = {
-      exposure, brightness, contrast, size,
+      brightness, contrast,
       zoom: [zoom[0] * meshScaling, currentZoom * meshScaling, zoom[2] * meshScaling],
       currentZoom: currentZoom * meshScaling,
-      backgroundColor, autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
+      size: sizeBivot,
+      exposure: exposureBivot,
+      aoStrength: aoStrengthBivot,
+      backgroundColor: backgroundColorBivot,
+      autoRotatePeriodMs, lightType, areaLightWidth, areaLightHeight,
       meshRotateZDegrees: rotation,
       lightColor: lightColorBivot,
       dragControlsRotation, dragControlsPanning,
-      meshOverride, aoStrength, colorTemperature, hue, saturation,
+      meshOverride, colorTemperature, hue, saturation,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
       autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
@@ -1010,7 +1038,7 @@ function BivotReact(props) {
   }
 
   function updateExposure(val) {
-    setExposure(val);
+    setExposureBivot(val);
     renderFrame();
   }
 
@@ -1103,7 +1131,7 @@ function BivotReact(props) {
   }
 
   function updateBackgroundColor(val) {
-    setBackgroundColor(val.hex);
+    setBackgroundColorBivot(val.hex);
     renderFrame(DirtyFlag.Background);
   }
 
@@ -1168,7 +1196,7 @@ function BivotReact(props) {
   }
 
   function updateAoStrength(val) {
-    setAoStrength(val);
+    setAoStrengthBivot(val);
     renderFrame();
   }
 
@@ -1281,7 +1309,7 @@ function BivotReact(props) {
                     {tabValue === 0 && (<React.Fragment>
                       <Grid item xs={1}>{decorators && decorators['exposure'] || ''}</Grid>
                       <Grid item xs={11}>
-                        <IntensityControl value={exposure} onChange={updateExposure} />
+                        <IntensityControl value={exposureBivot} onChange={updateExposure} />
                       </Grid>
                       <Grid item xs={1}>{decorators && decorators['lightWidth'] || ''}</Grid>
                       <Grid item xs={11}>
@@ -1293,7 +1321,7 @@ function BivotReact(props) {
                       </Grid>
                       <Grid item xs={1}>{decorators && decorators['aoStrength'] || ''}</Grid>
                       <Grid item xs={11}>
-                        <AmbientOcclusionControl value={aoStrength} onChange={updateAoStrength} />
+                        <AmbientOcclusionControl value={aoStrengthBivot} onChange={updateAoStrength} />
                       </Grid>
                       {/* <Grid item xs={1}>{decorators && decorators['showSeams'] || ''}</Grid>
                       <Grid item xs={11}>
@@ -1315,7 +1343,7 @@ function BivotReact(props) {
                       </Grid>
                       <Grid item xs={1}></Grid>
                       <Grid item xs={11}>
-                        <BackgroundColorControl value={backgroundColor} onChange={updateBackgroundColor} />
+                        <BackgroundColorControl value={backgroundColorBivot} onChange={updateBackgroundColor} />
                       </Grid>
                       <Grid item xs={1}>{decorators && decorators['brightness'] || ''}</Grid>
                       <Grid item xs={11}>
@@ -1329,7 +1357,7 @@ function BivotReact(props) {
                     {tabValue === 2 && (<React.Fragment>
                       <Grid item xs={1}>{decorators && decorators['aspectRatio'] || ''}</Grid>
                       <Grid item xs={11}>
-                        <AspectControl value={size} onChange={updateAspect} />
+                        <AspectControl value={sizeBivot} onChange={updateAspect} />
                       </Grid>
                       <Grid item xs={1}>{decorators && decorators['zoom'] || ''}</Grid>
                       <Grid item xs={11}>
