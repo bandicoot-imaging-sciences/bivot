@@ -5,6 +5,8 @@
 
 import * as THREE from 'three';
 
+import VRayMtlFragShader from './shaders-vray';
+
 export default function getShaders() {
   const uniforms = THREE.UniformsUtils.merge([
       THREE.UniformsLib.lights,
@@ -84,6 +86,11 @@ export default function getShaders() {
     `;
 
   const fragmentShader = glsl`
+    ////////////////////////////////////////////////////////////
+    // Define USE_VRAY to render using the V-Ray shader
+    #define USE_VRAY
+    ////////////////////////////////////////////////////////////
+
     uniform sampler2D diffuseMap;
     // Defined in <normalmap_pars_fragment>
     // uniform sampler2D normalMap;
@@ -404,6 +411,34 @@ export default function getShaders() {
       roughnessSurface = mix(roughnessSurface, 1.0, overlaySurface.a);
       metallicSurface = mix(metallicSurface, 0.0, overlaySurface.a);
 
+#ifdef USE_VRAY
+      bool useVRay = true;
+      if (useVRay) {
+        #include <normal_fragment_begin>
+        #include <normal_fragment_maps>
+        vec3 lVector = normalize(pointLights[0].position + vViewPosition.xyz);
+        vec3 cVector = normalize(vViewPosition.xyz);
+
+        vec3 vRayRgb = shade(
+          normal,                // normal
+          cVector,               // eyeDir
+          lVector,               // lightDir
+          0.0,                   // sweepFactor
+          0.0,                   // fragmentNoise
+          vUv,                   // uv
+          diffuseSurface.rgb,
+          roughnessSurface,
+          metallicSurface,
+          alphaSurface
+        );
+
+        vec3 pointDiffuseColor = diffuseSurface.rgb * (1.0 - metallicSurface);
+        vec3 ambientContrib = pointDiffuseColor * ambientLightColor / pi;
+        float attenuation = 0.5;
+        vec3 outgoingLight = white_L * uExposure * (ambientContrib + vRayRgb * attenuation);
+        gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, alphaSurface);
+      } else
+#endif
       if (uThreeJsShader && uBrdfModel == 1) {
         ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
         vec4 diffuseColor = diffuseSurface;
@@ -495,5 +530,5 @@ export default function getShaders() {
     }
   `;
 
-  return { uniforms, vertexShader, fragmentShader };
+  return { uniforms, vertexShader, fragmentShader: VRayMtlFragShader + fragmentShader };
 }
