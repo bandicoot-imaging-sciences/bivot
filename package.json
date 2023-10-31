@@ -21,6 +21,7 @@
     "node": ">=10"
   },
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "build": "microbundle --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "start": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "prepare": "run-s build",
@@ -30,7 +31,7 @@
     "test:lint": "exit 0 && eslint .",
     "test:unit": "exit 0 && cross-env CI=1 react-scripts test --env=jsdom",
     "test:watch": "react-scripts test --env=jsdom",
-    "predeploy": "cd example && npm install && npm run build",
+    "predeploy": "cd example && pnpm install && pnpm run build",
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {

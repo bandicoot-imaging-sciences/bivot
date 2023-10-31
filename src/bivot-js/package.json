@@ -7,6 +7,7 @@
   "source": "./index.js",
   "type": "module",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "build": "microbundle --format esm --css-modules false --external none --no-pkg-main -o dist/index.js",
     "deploy:bperf": "aws s3 sync . s3://bis-bivot-dev-dxxjfu/bperf/ --delete",
     "deploy:speed": "aws s3 cp example/embed-bivot-js-speed-test.html s3://bis-bivot-dev-dxxjfu/bperf/example/embed-bivot-js-speed-test.html"
