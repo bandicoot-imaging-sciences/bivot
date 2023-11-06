@@ -67,9 +67,6 @@ const styles = {
     justifyContent: 'space-between',
     flexDirection: 'column',
   },
-  tabs: {
-    marginBottom: '1em',
-  },
   tab: {
     height: tabHeight,
     minWidth: 100,
@@ -122,7 +119,7 @@ function BivotReact(props) {
     // synchronisation between multiple Bivot components viewing the same
     // material.
 
-    // Size state [ width, height ] of the live Shimmer View. Use defaultSize to 
+    // Size state [ width, height ] of the live Shimmer View. Use defaultSize to
     // initialise in the parent component.
     size,
     setSize,
@@ -130,11 +127,11 @@ function BivotReact(props) {
     // Exposure state of the live Shimmer View.
     exposure,
     setExposure,
-    
+
     // Ambient occlusion strength state of the live Shimmer View.
     aoStrength,
     setAoStrength,
-  
+
     // Background colour of the live Shimmer View, for example '#FFFFFF' for white.
     backgroundColor,
     setBackgroundColor,
@@ -571,7 +568,7 @@ function BivotReact(props) {
   useEffect(() => {
     // console.debug(`Load Bivot useEffect ${id} -- isLoadPending: ${isLoadPending} isShuttingDown: ${isShuttingDown} deferLoading: ${deferLoading}`);
     if (isLoadPending && !isShuttingDown && deferLoading !== true) {
-      console.log(`All clear ${id}: proceeding with loadBivot()`);
+      console.debug(`All clear ${id}: proceeding with loadBivot()`);
       setIsLoadPending(false);
       loadBivot();
     }
@@ -608,7 +605,7 @@ function BivotReact(props) {
       }
     };
   }, []);
-  
+
   useEffect(() => {
     // Update width/height
     var w, h;
@@ -867,8 +864,8 @@ function BivotReact(props) {
       onGridSelect: userGridOnSelect,
       onDrawing: userPointsOnSet,
     };
-    console.log('Options:', options);
-    console.log(`new Bivot ${canvasID}`);
+    console.debug('Options:', options);
+    console.debug(`new Bivot ${canvasID}`);
     bivot.current = new Bivot(options);
     bivot.current.checkWebGL();
     bivot.current.startRender();
@@ -957,7 +954,7 @@ function BivotReact(props) {
     if (bivot.current) {
       renderFrame(DirtyFlag.Overlay);
 
-      console.log('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
+      console.debug('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
       if (statusCallback !== undefined) {
         statusCallback(2); // Loaded
       }
@@ -966,7 +963,7 @@ function BivotReact(props) {
         try {
           setDiag(bivot.current.getDiag());
         } catch(e) {
-          console.log('bivot.current.getDiag() unavailable');
+          console.debug('bivot.current.getDiag() unavailable');
         }
         const meshPath = bivot.current.getMeshPathUsed();
         if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
@@ -1277,12 +1274,12 @@ function BivotReact(props) {
         {showEditor && (
           <Grid item>
             <Paper style={styles.controlPanel} elevation={0} variant='outlined'>
-              <AppBar 
+              <AppBar
                 position='static'
-                className={styles.tabs}
                 style={{
                   backgroundColor: theme.palette.accent.main,
                   boxShadow: 'none',
+                  marginBottom: '1em',
                 }}
               >
                 <Tabs
