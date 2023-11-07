@@ -22,7 +22,7 @@ function ShowSeamsControl({ value, onChange }) {
         <Typography>Show tile seams</Typography>
       </Grid>
       <Grid item>
-        <ButtonGroup variant="contained" color="accent">
+        <ButtonGroup variant="contained">
           <Tooltip title='Overlay markers showing the location of the tiling seams'>
             <Checkbox
               className={classes.checkbox}

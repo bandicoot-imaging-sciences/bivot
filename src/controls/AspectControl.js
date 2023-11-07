@@ -116,7 +116,7 @@ function AspectControl({ value, onChange }) {
         <Grid item xs>
           <Grid container>
             <Grid item xs={12}>
-              <ButtonGroup variant='contained' color='accent' disableElevation={true}>
+              <ButtonGroup variant='contained' disableElevation={true}>
                 <Tooltip title='Landscape'>
                   <Button
                     id='LandscapeButton'

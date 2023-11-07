@@ -70,7 +70,7 @@ function DragControl({ value, onChange, advancedMode }) {
           <Typography>User controls</Typography>
         </Grid>
         <Grid item>
-          <ButtonGroup variant='contained' color='accent' disableElevation={true}>
+          <ButtonGroup variant='contained' disableElevation={true}>
             <Tooltip title='On devices with a mouse, user may hover to rotate the Shimmer'>
               <Button
                 id='HoverButton'

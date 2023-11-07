@@ -43,9 +43,9 @@ Multiple `<Bivot>` components can be embedded on the same page, if different `id
 The `width` and `height` of a `<Bivot>` component can be overridden responsively.
 
 An example showing these concepts is below.
-  
+
     import { Bivot } from '@bandicoot/bivot';
-    
+
     export default function ViewerExample({ width, height, mat1, mat2 }) {
       return (<>
         <Bivot
@@ -69,23 +69,23 @@ A complete example app is provided in the `example` directory of the source repo
 
     {
       // ========== Basic props ==========
-    
+
       // The pathname of a material set defining a Shimmer View to display in
       // the Bivot viewer.  May be a local path relative to the public html
       // directory, or a URL.
       materialSet,
-    
+
       // The pathname of an image to display while the Shimmer View is loading.
       // May be a local path relative to the public html directory, or a URL.
       // If unset, a thumbnail image relative to the material set path is
       // automatically used.
       // If false, then a blank canvas is shown while loading.
       loadingImage,
-    
+
       // An ID of this Bivot instance, needed if multiple Bivots are used in
       // the same page.
       id,
-    
+
       // Updates the width and height of the live Shimmer View.  If unset, the
       // width and height are taken from the materialSet file.  When responsive
       // is true, it's the aspect ratio of the responsively sized view.  When
@@ -94,7 +94,7 @@ A complete example app is provided in the `example` directory of the source repo
       //       while loading, the loading image may be inconsistently scaled.
       width,
       height,
-    
+
       // If true, Bivot renders with a fixed aspect ratio, with canvas width
       // changing responsively to fit the width of the parent element.  If false,
       // Bivot sets the canvas size directly from the width and height.
@@ -118,7 +118,7 @@ A complete example app is provided in the `example` directory of the source repo
 
       // If set, this function will be called when a user clicks on the Bivot viewer.
       onClick,
-    
+
       // If set to True or False, overrides the autoRotate setting in the
       // material set definition.
       autoRotate,
@@ -139,7 +139,7 @@ A complete example app is provided in the `example` directory of the source repo
       // filename.
       // (Currently only supported for internal use)
       material,
-      
+
       // An optional callback to use when loading paths in the material set.  Only
       // required if paths in the material set aren't directly accessible.   For
       // example, if the material set contains private S3 paths, fetchFiles can
@@ -147,21 +147,21 @@ A complete example app is provided in the `example` directory of the source repo
       // authorised.
       // (Currently only supported for internal use)
       fetchFiles,
-      
+
       // ========== Editor props ==========
-      
+
       // Set to True to show the Bivot editor.
       // (Currently only supported for internal use)
       showEditor,
-      
+
       // Set to True to show advanced controls in the Bivot editor.
       // (Currently only supported for internal use)
       showAdvancedControls,
-      
+
       // If supplied, this callback is called upon pressing "Save" in the editor.
       // (Currently only supported for internal use)
       writeState,
-      
+
       // If supplied, this callback is called when a screenshot is saved during
       // the "save" operation of the editor.
       // (Currently only supported for internal use)
@@ -196,12 +196,12 @@ Bivot asks the user to grant tilt control on mobile environments which block it 
 
 ## Developer environment
 
-1. Install NPM
+1. Install NPM and PNPM
 2. [Create a Github personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
 3. [Add your Github personal access token to your `~/.npmrc`](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)
 4. Check out bivot
-5. In the top level bivot folder, run `npm install`
-6. In `src/bivot-js`, run `npm install`
+5. In the top level bivot folder, run `pnpm install`
+6. In `src/bivot-js`, run `pnpm install`
 
 The last step relies on both `~/.npmrc` (for your login, **not checked in**) and `src/bivot-js/.npmrc` (to know where to read the Github Three.js package, is checked in).
 
