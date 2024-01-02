@@ -220,6 +220,14 @@ export default function getShaders() {
       return y;
     }
 
+    vec3 srgbToLinearSrgb(vec3 srgb) {
+      vec3 thresh = step(vec3(0.04045), srgb);
+      vec3 lin = srgb / 12.92;
+      vec3 a = vec3(0.055);
+      vec3 curve = pow((srgb + a) / (vec3(1.0) + a), vec3(2.4));
+      return mix(lin, curve, thresh);
+    }
+
     vec3 rgbToXyz(vec3 rgb) {
       return RGB_TO_XYZ * rgb;
     }
@@ -354,42 +362,34 @@ export default function getShaders() {
         diffuseSurface = vec4(hueSatShift(diffuseSurface.rgb, uHue, uSaturation), diffuseSurface.a);
       #endif
 
-      if (textureLayer == 1) {
-        diffuseSurface = vec4(diffuseSurface.rgb / 2.0, 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
-      } else if (textureLayer == 2) {
-        diffuseSurface = vec4(vec3(roughnessSurface / 2.0), 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
-      } else if (textureLayer == 3) {
-        diffuseSurface = vec4(vec3(metallicSurface / 2.0), 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
-      } else if (textureLayer == 4) {
-        diffuseSurface = vec4(normalSurface.xyz / 2.0, 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
-      } else if (textureLayer == 5) {
-        diffuseSurface = vec4(displacementSurface.xyz / 2.0, 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
-      } else if (textureLayer == 6) {
-        diffuseSurface = vec4(vec3(alphaSurface / 2.0), 1.0);
-        roughnessSurface = 1.0;
-        metallicSurface = 0.0;
-        normalSurface = vec3(0.0, 0.0, 1.0);
-        alphaSurface = 1.0;
+      if (textureLayer > 0) {
+        // Perform a direct pass-through render for any individual texture layer.
+        // Textures other than basecolor need conversion to sRGB, to cancel out
+        // the sRGB to linear shader pass that is always applied.
+        vec3 col;
+        bool needsSrgb = true;
+        if (textureLayer == 1) {
+          col = diffuseSurface.rgb;
+          needsSrgb = false;
+        } else if (textureLayer == 2) {
+          col = vec3(roughnessSurface);
+        } else if (textureLayer == 3) {
+          col = vec3(metallicSurface);
+        } else if (textureLayer == 4) {
+          col = normalSurface.xyz;
+        } else if (textureLayer == 5) {
+          col = displacementSurface.xyz;
+        } else if (textureLayer == 6) {
+          col = vec3(alphaSurface);
+        } else {
+          // Unknown texture layer requested
+          col = vec3(0.0);
+        }
+        if (needsSrgb) {
+          col = srgbToLinearSrgb(col);
+        }
+        gl_FragColor = vec4(col, 1.0);
+        return;
       }
 
       // Composite the overlay onto the basecolor
