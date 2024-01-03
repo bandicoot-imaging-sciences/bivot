@@ -362,6 +362,8 @@ export default function getShaders() {
         diffuseSurface = vec4(hueSatShift(diffuseSurface.rgb, uHue, uSaturation), diffuseSurface.a);
       #endif
 
+      vec4 overlaySurface = texture2D(overlayMap, vUv);
+
       if (textureLayer > 0) {
         // Perform a direct pass-through render for any individual texture layer.
         // Textures other than basecolor need conversion to sRGB, to cancel out
@@ -388,12 +390,13 @@ export default function getShaders() {
         if (needsSrgb) {
           col = srgbToLinearSrgb(col);
         }
+        // Composite overlay surface onto pass-through output
+        col = mix(col, overlaySurface.rgb, overlaySurface.a);
         gl_FragColor = vec4(col, 1.0);
         return;
       }
 
       // Composite the overlay onto the basecolor
-      vec4 overlaySurface = texture2D(overlayMap, vUv);
       // if (overlaySurface.a > 0.0) {
       //   diffuseSurface.rgb = mix(diffuseSurface.rgb, overlaySurface.rgb, overlaySurface.a);
       //   gl_FragColor = diffuseSurface;
