@@ -1202,7 +1202,7 @@ class bivotJs {
       fov = fieldOfView(focalLength, sensorHeight);
       const aspect = 2;  // the canvas default
       const near = 0.01;
-      const far = 10;
+      const far = 50;
       var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
       return camera;
     }
@@ -1698,7 +1698,7 @@ class bivotJs {
     function onCanvasMouseOver(event) {
       _self.mouseInCanvas = true;
     }
-    
+
     function onCanvasMouseOut(event) {
       _self.mouseInCanvas = false;
     }
@@ -3583,7 +3583,7 @@ class bivotJs {
   }
 
   doShutdown() {
-    if (!this.shutdownStarted) {     
+    if (!this.shutdownStarted) {
       console.debug(`doShutdown() ${this.opts.canvasID}`);
       if (this.renderer) {
         // console.debug(`doShutdown() START renderer.info.memory ${JSON.stringify(this.renderer.info.memory)}`);
