@@ -25,6 +25,8 @@
     "build": "microbundle       --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "watch": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
     "prepare": "run-s build",
+    "debug:example": "run-s build && cp dist/index.js example/node_modules/@bandicoot/bivot/dist && cp package.json example/node_modules/@bandicoot/bivot && rm -rf example/.next/cache",
+    "watch:example": "watch 'pnpm run debug:example' src --ignoreDotFiles",
     "debug:shopfront": "run-s build && cp dist/index.js ../shopfront/node_modules/@bandicoot/bivot/dist && cp package.json ../shopfront/node_modules/@bandicoot/bivot && rm -rf ../shopfront/.next/cache",
     "watch:shopfront": "watch 'pnpm run debug:shopfront' src --ignoreDotFiles",
     "test": "run-s test:unit test:lint test:build",

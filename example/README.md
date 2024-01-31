@@ -15,7 +15,15 @@ To set up and run this example app (paths relative to the root of the checkout):
 
 To use the example app to test local changes to Bivot without publishing a new Bivot package:
 
-1. Run the example app in `example` using `pnpm start`
-2. Change the Bivot code
-3. At top level, run `pnpm run build`
-4. After the build finishes, the example app should automatically refresh and pick up the changes
+1. In `src/bivot-js` run `pnpm watch`
+2. At top level run `pnpm watch:example`
+3. In `example` run `pnpm start`
+4. Change the Bivot or BivotReact code
+5. Bivot or BivotReact will automatically rebuild
+6. The example app will automatically refresh and pick up the changes
+
+To revert the `example` app back to using the published Bivot package:
+
+1. Change directory to `example`
+2. `rm -rf node_modules`
+3. `pnpm install`
