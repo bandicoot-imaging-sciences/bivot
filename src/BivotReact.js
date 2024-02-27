@@ -214,9 +214,10 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     userPointsControl,
 
-    // An optional callback function called when drawing on the textures is performed.
+    // Optional callback functions called when drawing on the textures is performed.
     // (Currently only supported for internal use)
     userPointsOnSet,
+    userPointsOnSelect,
 
     // If set, repeated indicators are drawn along tiling seams in a tiled view.
     // (Currently only supported for internal use)
@@ -862,6 +863,7 @@ function BivotReact(props) {
       canvasID,
       onClick,
       onGridSelect: userGridOnSelect,
+      onPointSelect: userPointsOnSelect,
       onDrawing: userPointsOnSet,
     };
     console.debug('Options:', options);

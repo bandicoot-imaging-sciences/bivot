@@ -253,6 +253,7 @@ class bivotJs {
       setZoomCallback: null,
       onClick: null,
       onGridSelect: null,
+      onPointSelect: null,
       onDrawing: null,
     };
     this.opts = {...defaultOptions, ...options};
@@ -1609,8 +1610,13 @@ class bivotJs {
             pcg.points[1] = { 'x': uv[0], 'y': pos0.y };
             _self.dragState.point = 2;
           }
-          if (uv && _self.opts.onDrawing) {
-            _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, uv[0], uv[1]);
+          if (uv) {
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, uv[0], uv[1]);
+            }
+            if (_self.opts.onPointSelect) {
+              _self.opts.onPointSelect(_self.dragState.group, _self.dragState.point);
+            }
           }
           _self.dragState.state = 'selected';
           _self.dragState.addingNew = null;
@@ -1703,6 +1709,46 @@ class bivotJs {
       _self.mouseInCanvas = false;
     }
 
+    function jumpToPoint(group, point) {
+      const points = _self.state.pointsControl[group].points;
+      const pMap = _self.coordsToWorld([points[point]]);
+      _self.controls.setPosition(pMap[0].x, pMap[0].y, _self.camera.position.z);
+      _self.controls.setTarget(pMap[0].x, pMap[0].y, 0);
+      _self.updateOverlay();
+      _self.requestRender();
+      if (_self.opts.onPointSelect) {
+        _self.opts.onPointSelect(group, point);
+      }
+    }
+
+    function tryJumpToFirstPoint(group) {
+      if (_self.dragState.state === 'none') {
+        if (_self.state.pointsControl && group < _self.state.pointsControl.length) {
+          if (_self.state.pointsControl[group] && _self.state.pointsControl[group].points && _self.state.pointsControl[group].points.length > 0) {
+            _self.dragState.group = group;
+            _self.dragState.point = 0;
+            _self.dragState.state = 'selected';
+            jumpToPoint(group, 0);
+          }
+        }
+      }
+    }
+
+    function findNearestPoint(points, i0, candidates) {
+      var nearestDist2;
+      var nearestIndex = null;
+      const p0 = points[i0];
+      candidates.forEach(i1 => {
+        const p1 = points[i1];
+        const dist2 = Math.pow(p1.x - p0.x, 2) + Math.pow(p1.y - p0.y, 2);
+        if (nearestIndex === null || dist2 < nearestDist2) {
+          nearestIndex = i1;
+          nearestDist2 = dist2;
+        }
+      });
+      return nearestIndex;
+    }
+
     function onKeyDown(event) {
       if (_self.mouseInCanvas) {
         switch (event.keyCode) {
@@ -1716,25 +1762,119 @@ class bivotJs {
               toggleStats();
             }
             break;
-          case 46: // Delete
-            if (_self.state.enableKeypress || true) {
-              if (_self.dragState.state === 'selected') {
-                const group = _self.dragState.group;
-                const point = _self.dragState.point;
-                const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
-                if (newSelection !== null) {
-                  _self.dragState.point = newSelection;
+        }
+      }
+      switch (event.keyCode) {
+        case 188: // Comma - Jump to prev point or point pair
+          if (_self.dragState.state === 'selected') {
+            const group = _self.dragState.group;
+            const points = _self.state.pointsControl[group].points;
+            const p = _self.dragState.point;
+            if (_self.state.pointsControl[group].lines === 'pairs') {
+              if (points.length == 1) {
+                newP = 0;
+              } else {
+                var newP1 = 2 * Math.floor(p / 2) - 2;
+                var newP2 = newP1 + 1;
+                if (newP2 < 0) {
+                  if (points.length % 2 === 1) {
+                    newP1 = points.length - 1;
+                    newP2 = newP1;
+                  } else {
+                    newP1 = points.length - 2;
+                    newP2 = newP1 + 1;
+                  }
+                }
+                if (newP1 < 0) {
+                  newP = newP2;
                 } else {
-                  _self.dragState.state = 'none';
+                  newP = findNearestPoint(points, p, [newP1, newP2]);
                 }
-                if (_self.opts.onDrawing) {
-                  _self.opts.onDrawing(group, point, null, null);
+              }
+            } else {
+              newP = (p + points.length - 1) % points.length;
+            }
+            _self.dragState.point = newP;
+            jumpToPoint(group, newP);
+          } else {
+            tryJumpToFirstPoint(0);
+          }
+          break;
+
+        case 190: // Full stop - Jump to next point or point pair
+          if (_self.dragState.state === 'selected') {
+            const group = _self.dragState.group;
+            const points = _self.state.pointsControl[group].points;
+            const p = _self.dragState.point;
+            var newP;
+            if (_self.state.pointsControl[group].lines === 'pairs') {
+              if (points.length == 1) {
+                newP = 0;
+              } else {
+                var newP1 = 2 * Math.floor(p / 2) + 2;
+                var newP2 = newP1 + 1;
+                if (newP1 >= points.length) {
+                  newP1 = 0;
+                  newP2 = 1;
                 }
-                _self.updateOverlay();
-                _self.requestRender();
+                if (newP2 >= points.length) {
+                  newP = newP1;
+                } else {
+                  newP = findNearestPoint(points, p, [newP1, newP2]);
+                }
+              }
+            } else {
+              newP = (p + 1) % points.length;
+            }
+            _self.dragState.point = newP;
+            jumpToPoint(group, newP);
+          } else {
+            tryJumpToFirstPoint(0);
+          }
+          break;
+
+        case 77: // M - Jump to matching pair
+          if (_self.dragState.state === 'selected') {
+            const group = _self.dragState.group;
+            const points = _self.state.pointsControl[group].points;
+            if (_self.state.pointsControl[group].lines === 'pairs') {
+              const p = _self.dragState.point;
+              const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
+              if (newP < points.length) {
+                _self.dragState.point = newP;
+                jumpToPoint(group, newP);
               }
             }
-        }
+          } else {
+            tryJumpToFirstPoint(1);
+          }
+          break;
+
+        case 46: // Delete
+          if (_self.state.enableKeypress || true) {
+            if (_self.dragState.state === 'selected') {
+              const group = _self.dragState.group;
+              const point = _self.dragState.point;
+              const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
+              if (newSelection !== null) {
+                _self.dragState.point = newSelection;
+              } else {
+                _self.dragState.state = 'none';
+              }
+              if (_self.opts.onDrawing) {
+                _self.opts.onDrawing(group, point, null, null);
+              }
+              if (_self.opts.onPointSelect && _self.dragState.state !== 'none') {
+                if (_self.dragState.state === 'selected') {
+                  _self.opts.onPointSelect(_self.dragState.group, _self.dragState.point);
+                } else {
+                  _self.opts.onPointSelect(_self.dragState.group, null);
+                }
+              }
+              _self.updateOverlay();
+              _self.requestRender();
+            }
+          }
       }
     }
 
@@ -3177,6 +3317,68 @@ class bivotJs {
       return null;
     }
   }
+
+  coordsToWorld(points) {
+    if (this.state.texDims && points && this.geometry) {
+      const box = this.geometry.boundingBox;
+      const uv = this.mesh.geometry.getAttribute('uv');
+      const coords = this.mesh.geometry.getAttribute('position');
+      if (box && uv && coords) {
+        const i0 = 0;             // First UV index (assuming has minimum X,Y and U,V)
+        const i1 = uv.count - 1;  // Final UV index (assuming has minimum X,Y and U,V)
+
+        // UV min, max, and lengths
+        const u0 = uv.array[i0 * uv.itemSize];
+        const v0 = uv.array[i0 * uv.itemSize + 1];
+        const u1 = uv.array[i1 * uv.itemSize];
+        const v1 = uv.array[i1 * uv.itemSize + 1];
+        const us = u1 - u0;
+        const vs = v1 - v0;
+
+        // Actual vertex min, max, and lengths
+        const x0 = coords.array[i0 * coords.itemSize];
+        const y0 = coords.array[i0 * coords.itemSize + 1];
+        const x1 = coords.array[i1 * coords.itemSize];
+        const y1 = coords.array[i1 * coords.itemSize + 1];
+        const xs = x1 - x0;
+        const ys = y1 - y0;
+
+        // Three.js computed bounding box lengths
+        const bxs = box.max.x - box.min.x;
+        const bys = box.max.y - box.min.y;
+
+        // Compute X and Y scaling factors for precise mapping.  Assumption:
+        // The UV space of the mesh is approximately 1 in the long direction,
+        // and less than 1 in the short direction
+        var factorX, factorY;
+        if (us > vs) {
+          factorX = us;
+          factorY = factorX * (bxs / bys) / (xs / ys);
+        } else {
+          factorY = vs;
+          factorX = factorY * (bys / bxs) / (ys / xs);
+        }
+
+        // Effective texture dimensions for co-ordinate mapping
+        //const td = [this.state.texDims[0] * factorX, this.state.texDims[1] * factorY];
+        const td = [
+          this.untiledImDims[0] * factorX,
+          this.untiledImDims[1] * this.state.texDims[1] / this.state.texDims[0] * factorY
+        ];
+
+        // Map points and return
+        var pMap = [];
+        for (var i = 0; i < points.length; i++) {
+          var x = (points[i].x / td[0]) * xs + x0;
+          var y = (1 - (points[i].y / td[1])) * ys + y0;
+          pMap.push({ x, y });
+        }
+        return pMap;
+      }
+    }
+    return null;
+  }
+
 
   drawPoints(ctx, p, groupSelected) {
     if (!p || !p.points) {
