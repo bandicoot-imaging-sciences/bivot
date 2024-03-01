@@ -2386,7 +2386,6 @@ class bivotJs {
     this.gammaCorrectPass = new ShaderPass(GammaCorrectionShader);
     composer.addPass(this.gammaCorrectPass);
 
-
     return composer;
   }
 
@@ -2890,7 +2889,8 @@ class bivotJs {
   }
 
   updateBackground() {
-    this.scene.background = new THREE.Color(this.getBgColorFromState(this.state));
+    // Convert to linear sRGB to cancel out the shader adding sRGB gamma back in again
+    this.scene.background = new THREE.Color(this.getBgColorFromState(this.state)).convertSRGBToLinear();
     this.requestRender();
   }
 
