@@ -820,8 +820,9 @@ class bivotJs {
         _self.useDispMap = true;
         _self.uniforms.displacementMap.value = _self.brdfTextures.get('displacement');
         if (_self.state.displacementUnits) {
+          // BIS displacementOffset is not the same as three.js displacementBias, so it is converted here
           _self.uniforms.displacementScale.value = _self.state.displacementUnits;
-          _self.uniforms.displacementBias.value = 0; // Lay all displacements on top of the base mesh
+          _self.uniforms.displacementBias.value = -_self.state.displacementOffset * _self.state.displacementUnits;
         }
       } else {
         _self.useDispMap = false;
