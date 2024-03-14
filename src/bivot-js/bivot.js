@@ -173,7 +173,7 @@ const overlayTexH = 2048;
 
 // Size factors for drawing lines and points on overlay
 const lineThicknessFactor = 1.0;
-const pointSizeFactor = 3.5;
+const pointSizeFactor = 5;
 
 export const defaultSize = [792, 528];
 export const initialRepeatFactorX = 1.5;
@@ -1567,6 +1567,11 @@ class bivotJs {
                     _self.dragState.addingNew = pointNum;
                     _self.dragState.clickPos = texCoords;
                     onMouseDrag(event);
+                  } else {
+                    // Deselect any currently selected point
+                    _self.dragState.state = 'none';
+                    _self.updateOverlay();
+                    _self.requestRender();
                   }
                 }
               }
@@ -3285,7 +3290,7 @@ class bivotJs {
     const diag = this.getDiag();
     if (this.camera && diag) {
       const windowFactor = 2048 / window.innerWidth;
-      const distFactor = Math.sqrt(this.camera.position.length()) / diag;
+      const distFactor = 2.5 * Math.sqrt(this.camera.position.length() / diag);
       const [xs, ys] = this.getTexRepeat();
       var texFactor = 1;
       if (this.state.texDims) {
@@ -3381,10 +3386,13 @@ class bivotJs {
   }
 
 
-  drawPoints(ctx, p, groupSelected) {
+  drawPoints(ctx, p, groupSelected, anySelected) {
+    // groupSelected: True if the group containing p is selected
+    // anySelected: True if any group is selected
     if (!p || !p.points) {
       return;
     }
+    const alphaStr = (!groupSelected && anySelected) ? '7f' : 'ff';
     const numPoints = p.points.length;
     if (p.visible && numPoints > 0 && this.state.texDims) {
       const pMap = this.coordsToOverlay(p.points);
@@ -3397,7 +3405,7 @@ class bivotJs {
       function drawPoint(ctx, arr, i, selectedPoint=-1) {
         ctx.beginPath();
         const pointSelected = (groupSelected && i === selectedPoint);
-        ctx.strokeStyle = (pointSelected ? p.selectedColor : p.color) ?? '#ffffffff';
+        ctx.strokeStyle = ((pointSelected ? p.selectedColor : p.color) ?? '#ffffff') + alphaStr;
         ctx.lineWidth = (absLineWidthX + absLineWidthY) / 2;
         ctx.ellipse(arr[i].x, arr[i].y, ex, ey, 0, 0, 2 * Math.PI);
         ctx.stroke();
@@ -3407,10 +3415,13 @@ class bivotJs {
         const angle = Math.atan2((y1 - y0) / ey, (x1 - x0) / ex);
         const c = Math.cos(angle);
         const s = Math.sin(angle);
+        const p0 = [x0 + c * ex * endPoints[0], y0 + s * ey * endPoints[0]];
+        const p1 = [x1 - c * ex * endPoints[1], y1 - s * ey * endPoints[1]];
         ctx.beginPath();
         ctx.lineWidth = Math.sqrt(Math.pow(absLineWidthX * c, 2) + Math.pow(absLineWidthY * s, 2));
-        ctx.moveTo(x0 + c * ex * endPoints[0], y0 + s * ey * endPoints[0]);
-        ctx.lineTo(x1 - c * ex * endPoints[1], y1 - s * ey * endPoints[1]);
+        ctx.strokeStyle = (p.color ?? '#ffffff') + alphaStr;
+        ctx.moveTo(p0[0], p0[1]);
+        ctx.lineTo(p1[0], p1[1]);
         ctx.stroke();
       }
 
@@ -3418,7 +3429,6 @@ class bivotJs {
         drawPoint(ctx, pMap, 0, this.dragState.point)
         if (numPoints > 1) {
           drawPoint(ctx, pMap, 1, this.dragState.point)
-          ctx.strokeStyle = p.color ?? '#ffffffff';
           drawLineSegment(ctx, pMap[0].x, pMap[0].y, pMap[1].x, pMap[0].y, [1, 0]);
           drawLineSegment(ctx, pMap[1].x, pMap[0].y, pMap[1].x, pMap[1].y, [0, 1]);
           drawLineSegment(ctx, pMap[1].x, pMap[1].y, pMap[0].x, pMap[1].y, [1, 0]);
@@ -3428,7 +3438,6 @@ class bivotJs {
         for (var i = 0; i < numPoints; i++) {
           drawPoint(ctx, pMap, i, this.dragState.point)
         }
-        ctx.strokeStyle = p.color ?? '#ffffffff';
         for (var i = 1; i < numPoints; i++) {
           drawLineSegment(ctx, pMap[i-1].x, pMap[i-1].y, pMap[i].x, pMap[i].y);
         }
@@ -3439,7 +3448,6 @@ class bivotJs {
         for (var i = 0; i < numPoints; i++) {
           drawPoint(ctx, pMap, i, this.dragState.point)
         }
-        ctx.strokeStyle = p.color ?? '#ffffffff';
         for (var i = 0; i < Math.floor(numPoints / 2); i++) {
           drawLineSegment(ctx, pMap[i * 2].x, pMap[i * 2].y, pMap[i * 2 + 1].x, pMap[i * 2 + 1].y);
         }
@@ -3503,7 +3511,9 @@ class bivotJs {
     }
     if (this.state.pointsControl) {
       this.state.pointsControl.forEach((p, i) => {
-        this.drawPoints(ctx, p, ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state) && this.dragState.group === i);
+        const groupSelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state) && this.dragState.group === i;
+        const anySelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state);
+        this.drawPoints(ctx, p, groupSelected, anySelected);
       });
     }
 
