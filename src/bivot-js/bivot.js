@@ -3353,24 +3353,25 @@ class bivotJs {
         const bxs = box.max.x - box.min.x;
         const bys = box.max.y - box.min.y;
 
-        // Compute X and Y scaling factors for precise mapping.  Assumption:
-        // The UV space of the mesh is approximately 1 in the long direction,
+        // Assumption: The UV space of the mesh is ~1 in the long direction,
         // and less than 1 in the short direction
-        var factorX, factorY;
+        var factorX, factorY;   // X and Y scaling factors for precise mapping
+        var td;                 // Effective texture dimensions for co-ordinate mapping
         if (us > vs) {
           factorX = us;
           factorY = factorX * (bxs / bys) / (xs / ys);
+          td = [
+            this.untiledImDims[0] * factorX,
+            this.untiledImDims[1] * this.state.texDims[1] / this.state.texDims[0] * factorY
+          ];
         } else {
           factorY = vs;
           factorX = factorY * (bys / bxs) / (ys / xs);
+          td = [
+            this.untiledImDims[0] * this.state.texDims[0] / this.state.texDims[1] * factorX,
+            this.untiledImDims[1] * factorY
+          ];
         }
-
-        // Effective texture dimensions for co-ordinate mapping
-        //const td = [this.state.texDims[0] * factorX, this.state.texDims[1] * factorY];
-        const td = [
-          this.untiledImDims[0] * factorX,
-          this.untiledImDims[1] * this.state.texDims[1] / this.state.texDims[0] * factorY
-        ];
 
         // Map points and return
         var pMap = [];
