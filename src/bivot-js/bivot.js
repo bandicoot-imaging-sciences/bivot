@@ -1856,6 +1856,74 @@ class bivotJs {
           }
           break;
 
+        case 38: // Up
+          if (_self.dragState.state === 'selected') {
+            event.preventDefault();
+            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            p.y -= 1 * (event.ctrlKey ? 10 : 1);
+            if (p.y < 0) {
+              p.y = 0;
+            }
+            _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+          break;
+
+        case 40: // Down
+          if (_self.dragState.state === 'selected') {
+            event.preventDefault();
+            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            p.y += 1 * (event.ctrlKey ? 10 : 1);
+            if (p.y > _self.state.texDims[1] - 1) {
+              p.y = _self.state.texDims[1] - 1;
+            }
+            _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+          break;
+
+        case 37: // Left
+          if (_self.dragState.state === 'selected') {
+            event.preventDefault();
+            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            p.x -= 1 * (event.ctrlKey ? 10 : 1);
+            if (p.x < 0) {
+              p.x = 0;
+            }
+            _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+          break;
+
+        case 39: // Right
+          if (_self.dragState.state === 'selected') {
+            event.preventDefault();
+            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            p.x += 1 * (event.ctrlKey ? 10 : 1);
+            if (p.x > _self.state.texDims[0] - 1) {
+              p.x = _self.state.texDims[0] - 1;
+            }
+            _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+          break;
+
         case 46: // Delete
           if (_self.state.enableKeypress || true) {
             if (_self.dragState.state === 'selected') {
