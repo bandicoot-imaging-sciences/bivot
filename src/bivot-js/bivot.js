@@ -1860,7 +1860,7 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.y -= 1 * (event.ctrlKey ? 10 : 1);
+            p.y -= 1 * (event.shiftKey ? 10 : 1);
             if (p.y < 0) {
               p.y = 0;
             }
@@ -1877,7 +1877,7 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.y += 1 * (event.ctrlKey ? 10 : 1);
+            p.y += 1 * (event.shiftKey ? 10 : 1);
             if (p.y > _self.state.texDims[1] - 1) {
               p.y = _self.state.texDims[1] - 1;
             }
@@ -1894,7 +1894,7 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.x -= 1 * (event.ctrlKey ? 10 : 1);
+            p.x -= 1 * (event.shiftKey ? 10 : 1);
             if (p.x < 0) {
               p.x = 0;
             }
@@ -1911,7 +1911,7 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.x += 1 * (event.ctrlKey ? 10 : 1);
+            p.x += 1 * (event.shiftKey ? 10 : 1);
             if (p.x > _self.state.texDims[0] - 1) {
               p.x = _self.state.texDims[0] - 1;
             }
