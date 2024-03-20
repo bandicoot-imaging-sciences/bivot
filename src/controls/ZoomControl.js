@@ -24,7 +24,7 @@ function ZoomControl({ value, onChange, onChangeCommitted, max }) {
       <Grid item xs>
         <Slider
           getAriaLabel={(index) => (index === 0 ? 'Minimum zoom' : 'Maximum zoom')}
-          min={0.05}
+          min={0.03}
           max={1}
           valueLabelDisplay="auto"
           step={0.01}
