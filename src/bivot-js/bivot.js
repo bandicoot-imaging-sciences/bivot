@@ -1756,6 +1756,11 @@ class bivotJs {
     }
 
     function onKeyDown(event) {
+      if (!_self.canvas.offsetParent) {
+        // Ignore keystrokes if the canvas isn't visible
+        return;
+      }
+
       if (_self.mouseInCanvas) {
         switch (event.keyCode) {
           case 17: // Ctrl
