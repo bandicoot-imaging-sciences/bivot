@@ -428,7 +428,8 @@ export default function getShaders() {
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
         vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
         vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor);
-        gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, diffuseColor.a);
+        float alpha = max(overlaySurface.a, diffuseColor.a);
+        gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, alpha);
       } else {
         vec3 macroNormal = normalize(vNormal);
         #ifdef TANGENTSPACE_NORMALMAP
