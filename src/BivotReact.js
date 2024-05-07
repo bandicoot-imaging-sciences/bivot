@@ -190,17 +190,25 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     fetchFiles,
 
-    // If set, the X,Y spacing of a base grid (in units of pixels).
+    // If set, an object containing the following members:
+    //   grid: The X,Y spacing of a base grid (in units of pixels).
+    //   source: A string describing the source of these values
     // (Currently only supported for internal use)
     userGrid,
 
-    // If set, the X,Y size and offset of a highlighted selection grid (in units of userGrid).
+    // If set, an object containing the following members:
+    //   grid: The X,Y size and offset of a highlighted selection grid (in units of userGrid).
+    //   source: A string describing the source of these values
     // (Currently only supported for internal use)
     userGridSelection,
 
-    // True to display any given userGrid and userGridSelection.
+    // True to display any given userGrid.
     // (Currently only supported for internal use)
     showUserGrid,
+
+    // True to display any given userGridSelection.
+    // (Currently only supported for internal use)
+    showUserGridSelection,
 
     // True to enable mouse-driven selection of a grid region.
     // (Currently only supported for internal use)
@@ -325,6 +333,7 @@ function BivotReact(props) {
     boundary: false,
     subBoundary: false,
     showGrid: false,
+    showGridSelection: false,
     grid: null,
     gridSelection: null,
     enableGridSelect: false,
@@ -338,6 +347,7 @@ function BivotReact(props) {
     dirty: 0,
     textureLayer: 0,
     enableKeypress: false,
+    overlayRepeats: true,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -381,6 +391,7 @@ function BivotReact(props) {
     boundary: false,
     subBoundary: false,
     showGrid: false,
+    showGridSelection: false,
     grid: null,
     gridSelection: null,
     enableGridSelect: false,
@@ -394,6 +405,7 @@ function BivotReact(props) {
     dirty: 0,
     textureLayer: 0,
     enableKeypress: false,
+    overlayRepeats: true,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -493,6 +505,7 @@ function BivotReact(props) {
   const [grid, setGrid] = useState(state.grid);
   const [gridSelection, setGridSelection] = useState(state.gridSelection);
   const [showGrid, setShowGrid] = useState(state.showGrid);
+  const [showGridSelection, setShowGridSelection] = useState(state.showGridSelection);
   const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
   const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
   const [pointsControl, setPointsControl] = useState(state.pointsControl);
@@ -546,6 +559,7 @@ function BivotReact(props) {
   state.boundary = boundary;
   state.subBoundary = subBoundary;
   state.showGrid = showGrid;
+  state.showGridSelection = showGridSelection;
   state.grid = grid;
   state.gridSelection = gridSelection;
   state.enableGridSelect = enableGridSelect;
@@ -695,8 +709,15 @@ function BivotReact(props) {
   }, [tilingSubBoundary]);
 
   useEffect(() => {
-    updateGrid(userGrid, userGridSelection, Boolean(showUserGrid), Boolean(userGridSelectionEnabled));
-  }, [userGrid, userGridSelection, showUserGrid, userGridSelectionEnabled]);
+    const update = {};
+    if (userGrid) {
+      const { grid, source } = userGrid; // userGridSelection
+      const { grid: selectionGrid, source: selectionSource } = userGridSelection; // userGridSelection
+      updateGrid(grid, selectionGrid, Boolean(showUserGrid), Boolean(showUserGridSelection), Boolean(userGridSelectionEnabled), source, selectionSource);
+    } else {
+      updateGrid(null, null, Boolean(showUserGrid), Boolean(showUserGridSelection), Boolean(userGridSelectionEnabled), null, null);
+    }
+  }, [userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled]);
 
   useEffect(() => {
     updatePointsControl(userPointsControl);
@@ -1214,12 +1235,20 @@ function BivotReact(props) {
     renderFrame(DirtyFlag.Overlay);
   }
 
-  function updateGrid(grid, selection, visible, selectEnabled) {
+  function updateGrid(grid, selection, gridVisible, selectionVisible, selectEnabled, source, selectionSource) {
+    //console.log('updateGrid():', grid, selection, gridVisible, selectionVisible, selectEnabled, source, selectionSource)
+    state.overlayRepeats = !selectionVisible;
     setGrid(grid);
     setGridSelection(selection);
-    setShowGrid(visible);
+    setShowGrid(gridVisible);
+    setShowGridSelection(selectionVisible);
     setEnableGridSelect(selectEnabled);
+    // Only call Bivot's updateGrid method if the source of the grid update was external to Bivot
+    if (selectionSource === 'external' && bivot.current) {
+      bivot.current.updateGrid(selection);
+    }
     renderFrame(DirtyFlag.Overlay);
+
   }
 
   function updatePointsControl(userPointsControl) {

@@ -451,6 +451,7 @@ class bivotJs {
     this.isVisible = false;
     this.seamsShowing = false;
     this.gridShowing = false;
+    this.gridSelectionShowing = false;
     this.diag = null;
     this.untiledImDims = [1, 1]; // Texture image dimensions derived from texDims
     this.areaLightSetupDone = false;
@@ -1399,39 +1400,21 @@ class bivotJs {
       return null;
     }
 
-    function texToGridCoords(uv, texDimsUnstretched, phaseIn=null) {
-      const grid = _self.state.grid;
-      if (grid) {
-        const x = Math.floor(uv[0] / grid[0]);
-        const y = Math.floor(uv[1] / grid[1]);
-        const numGridRepeats = [
-          Math.round(texDimsUnstretched[0] / grid[0]),
-          Math.round(texDimsUnstretched[1] / grid[1])
-        ];
-        var xMod = ((x % numGridRepeats[0]) + numGridRepeats[0]) % numGridRepeats[0];
-        var yMod = ((y % numGridRepeats[1]) + numGridRepeats[1]) % numGridRepeats[1];
-        const phase = [
-          Math.round((x - xMod) / numGridRepeats[0]),
-          Math.round((y - yMod) / numGridRepeats[1])
-        ];
-
-        if (phaseIn) {
-          // Clamp to the given input phase
-          if (phase[0] > phaseIn[0]) {
-            xMod = Math.round(texDimsUnstretched[0] / grid[0]) - 1;
-          } else if (phase[0] < phaseIn[0]) {
-            xMod = 0;
-          }
-          if (phase[1] > phaseIn[1]) {
-            yMod = Math.round(texDimsUnstretched[1] / grid[1]) - 1;
-          } else if (phase[1] < phaseIn[1]) {
-            yMod = 0;
-          }
+    function adjustGridSelectPoint(p) {
+      if (_self.state.enableGridSelect) {
+        const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+        const pxS = p.x * texDimsUnstretched[0] / _self.state.texDims[0];
+        const pyS = p.y * texDimsUnstretched[1] / _self.state.texDims[1];
+        const { coords, phase } = _self.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
+        const { p0, p1 }  = _self.gridSelectionState;
+        if (_self.findClosestPoint(p0, p1, coords) === 0) {
+          _self.gridSelectionState.p0 = coords;
+        } else {
+          _self.gridSelectionState.p1 = coords;
         }
-
-        return { coords: [xMod, yMod], phase };
-      } else {
-        return { coords: uv, phase: [0, 0] };
+        if (_self.opts.onGridSelect) {
+          _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+        }
       }
     }
 
@@ -1442,22 +1425,6 @@ class bivotJs {
         inDims[0] * stretch[0],
         inDims[1] * stretch[1]
       ];
-    }
-
-    function pointsDist(x0, y0, x1, y1, sx=null, sy=null) {
-      var sxi = sx;
-      var syi = sy;
-      if (sx === null || sy === null) {
-        const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
-        const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
-        const td = _self.untiledImDims;
-        const maxDim = Math.max(td[0], td[1]);
-        sxi = (overlayTexW / maxDim) / ex;
-        syi = (overlayTexH / maxDim) / ey;
-      }
-      const dx = (x0 - x1) * sxi;
-      const dy = (y0 - y1) * syi;
-      return Math.sqrt(dx * dx + dy * dy);
     }
 
     function findNearestDraggablePoint(u, v) {
@@ -1473,7 +1440,7 @@ class bivotJs {
       _self.state.pointsControl.forEach((pc, gi) => {
         if (pc.draggable) {
           pc.points.forEach((p, pi) => {
-            const dist = pointsDist(u, v, p.x, p.y, sx / ex, sy / ey);
+            const dist = _self.pointsDist(u, v, p.x, p.y, sx / ex, sy / ey);
             if (minDist === null || dist < minDist) {
               minDist = dist;
               minHitGroup = gi;
@@ -1490,6 +1457,11 @@ class bivotJs {
     }
 
     function deletePoint(points, group, point) {
+      if (_self.state.pointsControl[group].snapToGrid && _self.state.enableGridSelect) {
+        // Point can't be deleted in grid select mode
+        return point;
+      }
+
       const length = points.length;
       points.splice(point, 1);
 
@@ -1520,21 +1492,7 @@ class bivotJs {
       if (event.button === 0) {  // Primary button
         var captured = false;
         if (_self.state.enableGridSelect || _self.state.pointsControl) {
-          if (_self.state.enableGridSelect) {
-            captured = true;
-            _self.gridSelectionState.state = 'selecting';
-            const texDimsUnstretched = unstretchedDims(_self.state.texDims);
-            const texCoords = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
-            if (texCoords) {
-              const { coords, phase } = texToGridCoords(texCoords, texDimsUnstretched);
-              _self.gridSelectionState.p0 = coords;
-              _self.gridSelectionState.p1 = coords;
-              _self.gridSelectionState.tilingPhase = phase;
-              if (_self.opts.onGridSelect) {
-                _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
-              }
-            }
-          } else if (_self.state.pointsControl) {
+          if (_self.state.pointsControl) {
             const anyInteractable = _self.state.pointsControl.some((pc) => (pc.draggable || pc.addNew));
             if (anyInteractable) {
               captured = true;
@@ -1546,6 +1504,26 @@ class bivotJs {
                   _self.dragState.state = 'draggingPoint';
                   _self.dragState.group = group;
                   _self.dragState.point = point;
+
+                  if (_self.state.enableGridSelect) {
+                    const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+                    const tcU = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+                    if (tcU) {
+                      _self.gridSelectionState.state = 'selecting';
+                      const { coords, phase } = _self.texToGridCoords(tcU, texDimsUnstretched, [0, 0]);
+                      const { p0, p1 }  = _self.gridSelectionState;
+                      if (_self.findClosestPoint(p0, p1, coords) === 0) {
+                        _self.gridSelectionState.p0 = coords;
+                      } else {
+                        _self.gridSelectionState.p1 = coords;
+                      }
+                      _self.gridSelectionState.tilingPhase = phase;
+                      if (_self.opts.onGridSelect) {
+                        _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+                      }
+                    }
+                  }
+
                   _self.updateOverlay();
                   _self.requestRender();
                 }
@@ -1558,15 +1536,36 @@ class bivotJs {
                     }
                   }
                   if (addable !== null) {
-                    document.body.style.cursor = `url('${crosshairsCursor}'), auto`;
-                    const pointNum = _self.state.pointsControl[addable].points.length ?? 0;
-                    _self.controls.enabled = false;
-                    _self.dragState.state = 'draggingPoint';
-                    _self.dragState.group = addable;
-                    _self.dragState.point = pointNum;
-                    _self.dragState.addingNew = pointNum;
-                    _self.dragState.clickPos = texCoords;
-                    onMouseDrag(event);
+                    var cancelClick = false;
+                    if (_self.state.pointsControl[addable].snapToGrid && _self.state.enableGridSelect) {
+                      const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+                      const tcU = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+                      if (tcU) {
+                        const { coords, phase } = _self.texToGridCoords(tcU, texDimsUnstretched, [0, 0]);
+                        if (phase[0] === 0 && phase[1] === 0) { // Only accept grid drawing in primary tile
+                          _self.gridSelectionState.state = 'selecting';
+                          _self.gridSelectionState.p0 = coords;
+                          _self.gridSelectionState.p1 = coords;
+                          _self.gridSelectionState.tilingPhase = phase;
+                          if (_self.opts.onGridSelect) {
+                            _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+                          }
+                        } else {
+                          cancelClick = true;
+                        }
+                      }
+                    }
+                    if (!cancelClick) {
+                      document.body.style.cursor = `url('${crosshairsCursor}'), auto`;
+                      const pointNum = _self.state.pointsControl[addable].points.length ?? 0;
+                      _self.controls.enabled = false;
+                      _self.dragState.state = 'draggingPoint';
+                      _self.dragState.group = addable;
+                      _self.dragState.point = pointNum;
+                      _self.dragState.addingNew = pointNum;
+                      _self.dragState.clickPos = texCoords;
+                      onMouseDrag(event);
+                    }
                   } else {
                     // Deselect any currently selected point
                     _self.dragState.state = 'none';
@@ -1604,7 +1603,8 @@ class bivotJs {
           _self.overlay.releasePointerCapture(event.pointerId);
           _self.gridSelectionState.state = 'selected';
           _self.updateOverlay();
-        } else if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
+        }
+        if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
           document.body.style.cursor = 'auto';
           _self.overlay.releasePointerCapture(event.pointerId);
           const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
@@ -1617,6 +1617,17 @@ class bivotJs {
             _self.dragState.point = 2;
           }
           if (uv) {
+            if (_self.state.enableGridSelect) {
+              // Snap the drawn box to the repeat grid when dragging is finished
+              const { p0, p1 } = _self.gridSelectionState;
+              const selection = [
+                Math.abs(p1[0] - p0[0]),
+                Math.abs(p1[1] - p0[1]),
+                Math.min(p0[0], p1[0]),
+                Math.min(p0[1], p1[1])
+              ];
+              _self.updateGrid(selection, true);
+            }
             if (_self.opts.onDrawing) {
               _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, uv[0], uv[1]);
             }
@@ -1632,37 +1643,51 @@ class bivotJs {
 
     function onMouseDrag(event) {
       event.preventDefault();
-      if (_self.state.enableGridSelect && _self.gridSelectionState.state === 'selecting') {
-        const texDimsUnstretched = unstretchedDims(_self.state.texDims);
-        const uv = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
-        if (uv) {
-          const { coords, _phase } = texToGridCoords(uv, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
-          if (_self.gridSelectionState.p1 === null || coords[0] !== _self.gridSelectionState.p1[0] || coords[1] !== _self.gridSelectionState.p1[1]) {
-            _self.gridSelectionState.p1 = coords;
-            if (_self.opts.onGridSelect) {
-              _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
-            }
-          }
-        }
-      } else if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
+      if (['draggingPoint', 'draggingRect'].includes(_self.dragState.state)) {
         const uv = mouseToTexCoords(event.layerX, event.layerY, _self.state.texDims);
         if (uv) {
-          _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = { 'x': uv[0], 'y': uv[1] };
-
-          const pos0 = _self.dragState.clickPos;
-          if (_self.dragState.addingNew === 0 && _self.dragState.point === 0 && pos0) {
-            const dist = pointsDist(uv[0], uv[1], pos0[0], pos0[1]);
-            if (dist > 1) {
-              if (['rect', 'closed4'].includes(_self.state.pointsControl[_self.dragState.group].lines)) {
-                _self.state.pointsControl[_self.dragState.group].points[0] = { 'x': pos0[0], 'y': pos0[1] };
-                _self.state.pointsControl[_self.dragState.group].points.push({ 'x': uv[0], 'y': uv[1] });
-                _self.dragState.point = 1;
-                _self.dragState.state = 'draggingRect';
+          var cancelDrag = false;
+          const selectingGrid = _self.state.enableGridSelect && _self.gridSelectionState.state === 'selecting';
+          if (selectingGrid) {
+            const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+            const uvU = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
+            if (uvU) {
+              const { coords, phase } = _self.texToGridCoords(uvU, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
+              if (phase[0] === 0 && phase[1] === 0) { // Only accept grid drawing in primary tile
+                const { p0, p1 }  = _self.gridSelectionState;
+                if (p0 && p1) {
+                  if (_self.findClosestPoint(p0, p1, coords) === 0) {
+                    _self.gridSelectionState.p0 = coords;
+                  } else {
+                    _self.gridSelectionState.p1 = coords;
+                  }
+                  if (_self.opts.onGridSelect) {
+                    _self.opts.onGridSelect(_self.gridSelectionState.p0, _self.gridSelectionState.p1);
+                  }
+                }
+              } else {
+                cancelDrag = true;
               }
             }
           }
-          _self.updateOverlay();
-          _self.requestRender();
+
+          if (!cancelDrag) {
+            _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = { 'x': uv[0], 'y': uv[1] };
+            const pos0 = _self.dragState.clickPos;
+            if (_self.dragState.addingNew === 0 && _self.dragState.point === 0 && pos0) {
+              const dist = _self.pointsDist(uv[0], uv[1], pos0[0], pos0[1]);
+              if (dist > 1 || selectingGrid) {
+                if (['rect', 'closed4'].includes(_self.state.pointsControl[_self.dragState.group].lines)) {
+                  _self.state.pointsControl[_self.dragState.group].points[0] = { 'x': pos0[0], 'y': pos0[1] };
+                  _self.state.pointsControl[_self.dragState.group].points.push({ 'x': uv[0], 'y': uv[1] });
+                  _self.dragState.point = 1;
+                  _self.dragState.state = 'draggingRect';
+                }
+              }
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
         }
       } else {
         // Drag is part of regular mouse controls
@@ -1865,11 +1890,17 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.y -= 1 * (event.shiftKey ? 10 : 1);
+            var unit = 1;
+            if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
+              const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+              unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
+            }
+            p.y -= unit * (event.shiftKey ? 10 : 1);
             if (p.y < 0) {
               p.y = 0;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            adjustGridSelectPoint(p);
             if (_self.opts.onDrawing) {
               _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
             }
@@ -1882,11 +1913,17 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.y += 1 * (event.shiftKey ? 10 : 1);
+            var unit = 1;
+            if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
+              const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+              unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
+            }
+            p.y += unit * (event.shiftKey ? 10 : 1);
             if (p.y > _self.state.texDims[1] - 1) {
               p.y = _self.state.texDims[1] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            adjustGridSelectPoint(p);
             if (_self.opts.onDrawing) {
               _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
             }
@@ -1899,11 +1936,17 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.x -= 1 * (event.shiftKey ? 10 : 1);
+            var unit = 1;
+            if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
+              const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+              unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
+            }
+            p.x -= unit * (event.shiftKey ? 10 : 1);
             if (p.x < 0) {
               p.x = 0;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            adjustGridSelectPoint(p);
             if (_self.opts.onDrawing) {
               _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
             }
@@ -1916,11 +1959,17 @@ class bivotJs {
           if (_self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            p.x += 1 * (event.shiftKey ? 10 : 1);
+            var unit = 1;
+            if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
+              const texDimsUnstretched = unstretchedDims(_self.state.texDims);
+              unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
+            }
+            p.x += unit * (event.shiftKey ? 10 : 1);
             if (p.x > _self.state.texDims[0] - 1) {
               p.x = _self.state.texDims[0] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
+            adjustGridSelectPoint(p);
             if (_self.opts.onDrawing) {
               _self.opts.onDrawing(_self.dragState.group, _self.dragState.point, p[0], p[1]);
             }
@@ -3125,11 +3174,12 @@ class bivotJs {
     const update = (
       (this.state.showSeams || this.seamsShowing) ||
       (this.state.showGrid || this.gridShowing) ||
+      (this.state.showGridSelection || this.gridSelectionShowing) ||
       (this.state.pointsControl)
     );
     if (update) {
       const prevTexture = this.uniforms.overlayMap.value;
-      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams, this.state.showGrid);
+      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams, this.state.showGrid, this.state.showGridSelection);
       if (prevTexture) {
         prevTexture.dispose();
       }
@@ -3137,6 +3187,7 @@ class bivotJs {
     this.overlayTexture = this.uniforms.overlayMap.value;
     this.seamsShowing = this.state.showSeams;
     this.gridShowing = this.state.showGrid;
+    this.gridSelectionShowing = this.state.showGridSelection;
   }
 
   updateStretch() {
@@ -3225,6 +3276,35 @@ class bivotJs {
     return phaseOut;
   }
 
+  clearEdge(ctx, alpha) {
+    const w = overlayTexW;
+    const h = overlayTexH;
+
+    var c0 = '#FFFF';
+    var c1 = '#FFFF';
+    var th = 2.0;
+    ctx.globalCompositeOperation = 'destination-out';
+    this.drawDashedLine(ctx, [{x: 0, y: 0}, {x: w, y: 0}], true, [1, 1], th, c0, c1);
+    this.drawDashedLine(ctx, [{x: 0, y: h}, {x: w, y: h}], true, [1, 1], th, c0, c1);
+    this.drawDashedLine(ctx, [{x: 0, y: 0}, {x: 0, y: h}], true, [1, 1], th, c0, c1);
+    this.drawDashedLine(ctx, [{x: w, y: 0}, {x: w, y: h}], true, [1, 1], th, c0, c1);
+
+    c0 = `rgba(255, 255, 255, ${alpha})`;
+    c1 = `rgba(255, 255, 255, ${alpha})`;
+    th = 2.0;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    this.drawDashedLine(ctx, [{x: 0, y: 0}, {x: w, y: 0}], true, [1, 1], th, c0, c1, false);
+    this.drawDashedLine(ctx, [{x: 0, y: h}, {x: w, y: h}], true, [1, 1], th, c0, c1, false);
+    this.drawDashedLine(ctx, [{x: 0, y: 0}, {x: 0, y: h}], true, [1, 1], th, c0, c1, false);
+    this.drawDashedLine(ctx, [{x: w, y: 0}, {x: w, y: h}], true, [1, 1], th, c0, c1, false);
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1.0;
+  }
+
   drawSeams(ctx, texDims, stretch) {
     const w = overlayTexW;
     const h = overlayTexH;
@@ -3253,8 +3333,7 @@ class bivotJs {
     this.drawDashedLine(ctx, [{x: x2, y: 0}, {x: x2, y: h-1}], true);
   }
 
-
-  drawDashedLine(ctx, points, wholeDashes=false, stretchFactors=[1, 1], relThickness=1.0, colour1='#FFFF', colour2='#000F') {
+  drawDashedLine(ctx, points, wholeDashes=false, stretchFactors=[1, 1], relThickness=1.0, colour1='#FFFF', colour2='#000F', doStroke=true) {
     const relDashLength = 8;
     var [absLineWidthX, absLineWidthY] = this.getLineWidths();
     absLineWidthX *= relThickness;
@@ -3277,24 +3356,31 @@ class bivotJs {
       const c = Math.cos(angle);
       const s = Math.sin(angle);
       const dashWidth = Math.sqrt(Math.pow(absLineWidthX * c, 2) + Math.pow(absLineWidthY * s, 2));
-      var length = Math.sqrt(Math.pow(absDashLengthX * s, 2) + Math.pow(absDashLengthY * c, 2));
-      if (wholeDashes) {
-        const segLength = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-        length = segLength / (2 * Math.round(segLength / (length * 2)));
-      }
 
-      ctx.beginPath();
+      if (doStroke) {
+        ctx.beginPath();
+      }
       ctx.strokeStyle = colour2;
       ctx.lineWidth = dashWidth;
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1, y1);
-      ctx.stroke();
+      if (doStroke) {
+        ctx.stroke();
+      }
 
-      ctx.beginPath();
-      ctx.strokeStyle = colour1;
-      ctx.lineWidth = dashWidth;
-      dashPhase = this.drawDashedSegment(ctx, x0, y0, x1, y1, length, dashPhase);
-      ctx.stroke();
+      if (colour1 !== colour2) {
+        var length = Math.sqrt(Math.pow(absDashLengthX * s, 2) + Math.pow(absDashLengthY * c, 2));
+        if (wholeDashes) {
+          const segLength = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+          length = segLength / (2 * Math.round(segLength / (length * 2)));
+        }
+
+        ctx.beginPath();
+        ctx.strokeStyle = colour1;
+        ctx.lineWidth = dashWidth;
+        dashPhase = this.drawDashedSegment(ctx, x0, y0, x1, y1, length, dashPhase);
+        ctx.stroke();
+      }
     }
   }
 
@@ -3304,8 +3390,8 @@ class bivotJs {
       (overlayTexH / texDims[1]) / stretch[1]
     ];
     const gridDimsStretch = [
-      cellDims[0] * stretchFactors[0],
-      cellDims[1] * stretchFactors[1]
+      Math.max(cellDims[0], 1) * stretchFactors[0],
+      Math.max(cellDims[1], 1) * stretchFactors[1]
     ];
 
     const [xs, ys] = this.getTexRepeat();
@@ -3446,11 +3532,15 @@ class bivotJs {
           ];
         }
 
+        const [xR, yR] = this.getTexRepeat();
+        const fx = 1 / xR;
+        const fy = 1 / yR;
+
         // Map points and return
         var pMap = [];
         for (var i = 0; i < points.length; i++) {
-          var x = (points[i].x / td[0]) * xs + x0;
-          var y = (1 - (points[i].y / td[1])) * ys + y0;
+          var x = ((    (points[i].x / td[0])) * xs + x0) * fx;
+          var y = ((1 - (points[i].y / td[1])) * ys + y0) * fy;
           pMap.push({ x, y });
         }
         return pMap;
@@ -3529,7 +3619,7 @@ class bivotJs {
     }
   }
 
-  createOverlayTexture(showSeams, showGrid) {
+  createOverlayTexture(showSeams, showGrid, showGridSelection) {
     const texDims = this.state.texDims; // Useful texture region
 
     const canvas = document.createElement('canvas');
@@ -3541,32 +3631,27 @@ class bivotJs {
       if (showSeams) {
         this.drawSeams(ctx, texDims, this.state.stretch);
       }
-      if (showGrid && this.state.grid) {
-        if (this.state.grid) {
+      if (this.state.grid) {
+        if (showGrid) {
           this.drawGrid(ctx, texDims, this.state.grid, null, this.state.stretch, '#009F', 1);
         }
-        if (this.state.gridSelection) {
-          const single = (this.state.gridSelection[0] === 1 && this.state.gridSelection[1] === 1);
-          if (!single || this.gridSelectionState.state === 'selecting') {
-            var selectPoints = this.state.gridSelection;
-            const gridPixels = [
-              selectPoints[0] * this.state.grid[0],
-              selectPoints[1] * this.state.grid[1]
-            ]
-            var gridOffset = null;
-            if (this.state.gridSelection.length >= 4) {
-              gridOffset = [
-                selectPoints[2] * this.state.grid[0],
-                selectPoints[3] * this.state.grid[1]
-              ];
+        if (showGridSelection) {
+          const gs = this.state.gridSelection;
+          if (gs) {
+            const single = (gs[0] === 1 && gs[1] === 1);
+            if (!single || this.gridSelectionState.state === 'selecting') {
+              const gridPixels = [gs[0] * this.state.grid[0], gs[1] * this.state.grid[1]];
+              var gridOffset = null;
+              if (this.state.gridSelection.length >= 4) {
+                gridOffset = [gs[2] * this.state.grid[0], gs[3] * this.state.grid[1]];
+              }
+              this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#090F', 2);
             }
-            this.drawGrid(ctx, texDims, gridPixels, gridOffset, this.state.stretch, '#090F', 2);
           }
         }
-        if (this.gridSelectionState.state !== 'none') {
-          const { p0, p1 } = this.gridSelectionState;
-          this.drawRect(ctx, texDims, this.state.grid, p0, p1, this.state.stretch, '#0F0F', 3);
-        }
+      }
+      if (!this.state.overlayRepeats) {
+        this.clearEdge(ctx, showGridSelection ? 0.6 : 0.0);
       }
     }
     if (this.state.boundary) {
@@ -3594,11 +3679,82 @@ class bivotJs {
     const canvasTexture = new THREE.Texture(canvas);
     canvasTexture.flipX = false;
     canvasTexture.flipY = true;
-    canvasTexture.wrapS = THREE.RepeatWrapping;
-    canvasTexture.wrapT = THREE.RepeatWrapping;
+    const wrapMode = this.state.overlayRepeats ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+    canvasTexture.wrapS = wrapMode;
+    canvasTexture.wrapT = wrapMode;
     canvasTexture.needsUpdate = true;
 
     return canvasTexture;
+  }
+
+
+
+  unstretchedDims(dims) {
+    const inDims = dims ? dims : [1, 1];
+    const stretch = this.state.stretch ?? [1, 1];
+    return [
+      inDims[0] * stretch[0],
+      inDims[1] * stretch[1]
+    ];
+  }
+
+  texToGridCoords(uv, texDimsUnstretched, phaseIn=null) {
+    //console.log('texToGridCoords(), uv, phaseIn:', uv, phaseIn)
+    const grid = this.state.grid;
+    if (grid) {
+      const x = Math.round(uv[0] / grid[0] - 0.0);
+      const y = Math.round(uv[1] / grid[1] - 0.0);
+      const numGridRepeats = [
+        Math.round(texDimsUnstretched[0] / grid[0]),
+        Math.round(texDimsUnstretched[1] / grid[1])
+      ];
+      var xMod = ((x % numGridRepeats[0]) + numGridRepeats[0]) % numGridRepeats[0];
+      var yMod = ((y % numGridRepeats[1]) + numGridRepeats[1]) % numGridRepeats[1];
+      const phase = [
+        Math.round((x - xMod) / numGridRepeats[0]),
+        Math.round((y - yMod) / numGridRepeats[1])
+      ];
+
+      if (phaseIn) {
+        // Clamp to the given input phase
+        if (phase[0] > phaseIn[0]) {
+          xMod = Math.round(texDimsUnstretched[0] / grid[0]) - 1;
+        } else if (phase[0] < phaseIn[0]) {
+          xMod = 0;
+        }
+        if (phase[1] > phaseIn[1]) {
+          yMod = Math.round(texDimsUnstretched[1] / grid[1]) - 1;
+        } else if (phase[1] < phaseIn[1]) {
+          yMod = 0;
+        }
+      }
+
+      return { coords: [xMod, yMod], phase };
+    } else {
+      return { coords: uv, phase: [0, 0] };
+    }
+  }
+
+  findClosestPoint(p0, p1, target) {
+    const d0 = this.pointsDist(p0[0], p0[1], target[0], target[1]);
+    const d1 = this.pointsDist(p1[0], p1[1], target[0], target[1]);
+    return (d0 <= d1) ? 0 : 1;
+  }
+
+  pointsDist(x0, y0, x1, y1, sx=null, sy=null) {
+    var sxi = sx;
+    var syi = sy;
+    if (sx === null || sy === null) {
+      const [absLineWidthX, absLineWidthY] = this.getLineWidths();
+      const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
+      const td = this.untiledImDims;
+      const maxDim = Math.max(td[0], td[1]);
+      sxi = (overlayTexW / maxDim) / ex;
+      syi = (overlayTexH / maxDim) / ey;
+    }
+    const dx = (x0 - x1) * sxi;
+    const dy = (y0 - y1) * syi;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   getTexRepeat() {
@@ -3773,6 +3929,79 @@ class bivotJs {
 
   getMeshPathUsed() {
     return this.meshPathUsed;
+  }
+
+  updateGrid(selection, round=false) {
+    //console.log('updateGrid:', selection, round)
+    if (!this.state.enableGridSelect || !selection || selection.length < 4) {
+      return;
+    }
+
+    // Look for a points control group that snaps to grid and is draggable
+    var pc = null;
+    var group = null;
+    for (group = 0; group < this.state.pointsControl.length; group++) {
+      const pointsControl = this.state.pointsControl[group];
+      if (pointsControl.snapToGrid && pointsControl.draggable) {
+        pc = pointsControl;
+        break;
+      }
+    }
+    if (pc === null) {
+      return;
+    }
+
+    // Determine which of the given selection points match the corner handles
+    // of the points in the control group, if any.
+    var gsP = [
+      [selection[2] + selection[0], selection[3] + selection[1]],
+      [selection[2], selection[3]]
+    ];
+    const texDimsUnstretched = this.unstretchedDims(this.state.texDims);
+    var matched = [null, null];
+    for (const [i, p] of pc.points.entries()) {
+      const pxS = p.x * texDimsUnstretched[0] / this.state.texDims[0];
+      const pyS = p.y * texDimsUnstretched[1] / this.state.texDims[1];
+      const { coords, _phase } = this.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
+      for (const [j, gs] of gsP.entries()) {
+        if (coords[0] === gs[0] && coords[1] === gs[1]) {
+          matched[i] = j;
+        }
+      }
+    }
+
+    // If one and only one of the points matches, assume the other point has been
+    // updated externally, and update the other point in the pointsControl data
+    // and the gridSelection data.
+    // Alternatively, if round is true, then adjust points even both points match,
+    // to round the points onto the grid.
+    if (matched.filter(c => c === null).length === 1 || round) {
+      var toSetI;
+      var toSetP;
+      for ([i, m] of matched.entries()) {
+        if (m !== null) {
+          toSetI = 1 - i;
+          toSetP = gsP[1 - m];
+          if (m === 0) {
+            this.state.gridSelection.p1 = toSetP;
+          } else {
+            this.state.gridSelection.p0 = toSetP;
+          }
+          const newP = {
+            x: toSetP[0] * this.state.grid[0] * this.state.texDims[0] / texDimsUnstretched[0],
+            y: toSetP[1] * this.state.grid[1] * this.state.texDims[1] / texDimsUnstretched[1]
+          };
+          pc.points[toSetI] = newP;
+          if (this.opts.onDrawing) {
+            this.opts.onDrawing(group, toSetI, newP.x, newP.y);
+          }
+        }
+      }
+
+      // Update overlay and render
+      this.updateOverlay();
+      this.requestRender();
+    }
   }
 
   resetCameraAngle() {
