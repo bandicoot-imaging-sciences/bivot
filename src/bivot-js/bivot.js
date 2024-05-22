@@ -1652,7 +1652,12 @@ class bivotJs {
             const texDimsUnstretched = unstretchedDims(_self.state.texDims);
             const uvU = mouseToTexCoords(event.layerX, event.layerY, texDimsUnstretched);
             if (uvU) {
-              const { coords, phase } = _self.texToGridCoords(uvU, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
+              // Clamp dragged point to bounds of primary tile
+              const uvUClamped = [
+                Math.max(0, Math.min(uvU[0], texDimsUnstretched[0] - 1)),
+                Math.max(0, Math.min(uvU[1], texDimsUnstretched[1] - 1))
+              ];
+              var { coords, phase } = _self.texToGridCoords(uvUClamped, texDimsUnstretched, _self.gridSelectionState.tilingPhase);
               if (phase[0] === 0 && phase[1] === 0) { // Only accept grid drawing in primary tile
                 const { p0, p1 }  = _self.gridSelectionState;
                 if (p0 && p1) {
@@ -3710,19 +3715,25 @@ class bivotJs {
       ];
       var xMod = ((x % numGridRepeats[0]) + numGridRepeats[0]) % numGridRepeats[0];
       var yMod = ((y % numGridRepeats[1]) + numGridRepeats[1]) % numGridRepeats[1];
-      const phase = [
+      var phase = [
         Math.round((x - xMod) / numGridRepeats[0]),
         Math.round((y - yMod) / numGridRepeats[1])
       ];
 
       if (phaseIn) {
         // Clamp to the given input phase
-        if (phase[0] > phaseIn[0]) {
+        if (phase[0] === phaseIn[0] + 1 && xMod === 0) {
+          phase = [phaseIn[0], phase[1]];
+          xMod = x;
+        } else if (phase[0] > phaseIn[0]) {
           xMod = Math.round(texDimsUnstretched[0] / grid[0]) - 1;
         } else if (phase[0] < phaseIn[0]) {
           xMod = 0;
         }
-        if (phase[1] > phaseIn[1]) {
+        if (phase[1] === phaseIn[1] + 1 && yMod === 0) {
+          phase = [phase[0], phaseIn[1]];
+          yMod = y;
+        } else if (phase[1] > phaseIn[1]) {
           yMod = Math.round(texDimsUnstretched[1] / grid[1]) - 1;
         } else if (phase[1] < phaseIn[1]) {
           yMod = 0;
