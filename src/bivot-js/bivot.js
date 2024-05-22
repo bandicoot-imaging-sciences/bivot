@@ -3650,9 +3650,6 @@ class bivotJs {
           }
         }
       }
-      if (!this.state.overlayRepeats) {
-        this.clearEdge(ctx, showGridSelection ? 0.6 : 0.0);
-      }
     }
     if (this.state.boundary) {
       this.drawDashedLine(ctx, this.state.boundary);
@@ -3674,6 +3671,9 @@ class bivotJs {
         const anySelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state);
         this.drawPoints(ctx, p, groupSelected, anySelected);
       });
+    }
+    if (!this.state.overlayRepeats) {
+      this.clearEdge(ctx, showGridSelection ? 0.6 : 0.0);
     }
 
     const canvasTexture = new THREE.Texture(canvas);
