@@ -709,14 +709,7 @@ function BivotReact(props) {
   }, [tilingSubBoundary]);
 
   useEffect(() => {
-    const update = {};
-    if (userGrid) {
-      const { grid, source } = userGrid; // userGridSelection
-      const { grid: selectionGrid, source: selectionSource } = userGridSelection; // userGridSelection
-      updateGrid(grid, selectionGrid, Boolean(showUserGrid), Boolean(showUserGridSelection), Boolean(userGridSelectionEnabled), source, selectionSource);
-    } else {
-      updateGrid(null, null, Boolean(showUserGrid), Boolean(showUserGridSelection), Boolean(userGridSelectionEnabled), null, null);
-    }
+    mapUserGrid(userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled);
   }, [userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled]);
 
   useEffect(() => {
@@ -893,6 +886,7 @@ function BivotReact(props) {
     bivot.current.checkWebGL();
     bivot.current.startRender();
 
+    mapUserGrid(userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled, true);
     copyStateFields(state, checkpointState);
     setLoading(false);
 
@@ -1235,7 +1229,26 @@ function BivotReact(props) {
     renderFrame(DirtyFlag.Overlay);
   }
 
-  function updateGrid(grid, selection, gridVisible, selectionVisible, selectEnabled, source, selectionSource) {
+  function mapUserGrid(userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled, forceUpdate=false) {
+    if (userGrid) {
+      const { grid, source } = userGrid;
+      const { grid: selectionGrid, source: selectionSource } = userGridSelection;
+      updateGrid(
+        grid,
+        selectionGrid,
+        Boolean(showUserGrid),
+        Boolean(showUserGridSelection),
+        Boolean(userGridSelectionEnabled),
+        source,
+        selectionSource,
+        forceUpdate
+      );
+    } else {
+      updateGrid(null, null, Boolean(showUserGrid), Boolean(showUserGridSelection), Boolean(userGridSelectionEnabled), null, null);
+    }
+  }
+
+  function updateGrid(grid, selection, gridVisible, selectionVisible, selectEnabled, source, selectionSource, forceUpdate) {
     //console.log('updateGrid():', grid, selection, gridVisible, selectionVisible, selectEnabled, source, selectionSource)
     state.overlayRepeats = !selectionVisible;
     setGrid(grid);
@@ -1244,8 +1257,8 @@ function BivotReact(props) {
     setShowGridSelection(selectionVisible);
     setEnableGridSelect(selectEnabled);
     // Only call Bivot's updateGrid method if the source of the grid update was external to Bivot
-    if (selectionSource === 'external' && bivot.current) {
-      bivot.current.updateGrid(selection);
+    if (bivot.current && (forceUpdate || selectionSource === 'external')) {
+      bivot.current.updateGrid(selection, forceUpdate);
     }
     renderFrame(DirtyFlag.Overlay);
 
