@@ -243,6 +243,10 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     tilingScale,
 
+    // If set, the physical displacement range in metres to use.
+    // (Currently only supported for internal use)
+    displacementScale,
+
     // If set, indicates a single texture to render as the basecolor, with
     // other texture channels unused, for debugging purposes.  Values are
     // 1 (basecolor), 2 (roughness), 3 (metallic), 4 (normals), 5 (displacement),
@@ -306,7 +310,6 @@ function BivotReact(props) {
   const referenceAreaLightWidth = 5;
   const referenceAreaLightHeight = 0.2;
 
-  // FIXME: Find a sensible way to not have to duplicate the initial / default state object
   const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
@@ -341,6 +344,7 @@ function BivotReact(props) {
     pointsControl: null,
     stretch: null,
     userScale: 1,
+    displacementUnits: null,
     pixellated: false,
 
     // For bivot internal use only, no controls and not saved
@@ -365,63 +369,7 @@ function BivotReact(props) {
     metresPerPixelTextures: undefined,
   };
 
-  const [state, _setState] = useState({
-    exposure: 1.0,
-    brightness: 0.5,
-    contrast: 0.5,
-    lightType: 'point',
-    areaLightWidth: referenceAreaLightWidth,
-    areaLightHeight: referenceAreaLightHeight,
-    meshRotateZDegrees: 0,
-    size: defaultSize,
-    cameraPanArray: [0, 0, 0],
-    zoom: [0.2, 0.36, 0.36],
-    currentZoom: 0.3,
-    lightColor: [255, 255, 255],
-    backgroundColor: '#FFFFFF',
-    dragControlsRotation: false,
-    dragControlsPanning: false,
-    meshOverride: false,
-    meshesToCache: null,
-    aoStrength: 1.0,
-    colorTemperature: 6500,
-    hue: 0.0,
-    saturation: 0.0,
-    showSeams: false,
-    boundary: false,
-    subBoundary: false,
-    showGrid: false,
-    showGridSelection: false,
-    grid: null,
-    gridSelection: null,
-    enableGridSelect: false,
-    onSelectGrid: null,
-    pointsControl: null,
-    stretch: null,
-    userScale: 1,
-    pixellated: false,
-
-    // For bivot internal use only, no controls and not saved
-    dirty: 0,
-    textureLayer: 0,
-    enableKeypress: false,
-    overlayRepeats: true,
-
-    // State to be saved for the bivot render for which there aren't controls
-    camTiltWithMousePos: -0.3,
-    camTiltWithDeviceOrient: 0.6,
-    camTiltLimitDegrees: 70.0,
-    lightTiltWithMousePos: 1.0,
-    lightTiltWithDeviceOrient: 2.8,
-    lightTiltLimitDegrees: 50.0,
-    autoRotatePeriodMs: 8000,
-    autoRotateFps: 30, // Deprecated
-    autoRotateCamFactor: 0.5,
-    autoRotateLightFactor: 0.9,
-    bloom: 0.0,
-    texDims: undefined,
-    metresPerPixelTextures: undefined,
-  });
+  const [state, _setState] = useState({ ...defaultState });
   const [checkpointState, _setCheckpointState] = useState({});
 
   function updateAutoRotateOverride(val) {
@@ -523,6 +471,7 @@ function BivotReact(props) {
   const [exposureLocal, setExposureLocal] = useState(state.exposure);
   const [aoStrengthLocal, setAoStrengthLocal] = useState(state.aoStrength);
   const [backgroundColorLocal, setBackgroundColorLocal] = useState(state.backgroundColor);
+  const [displacementScaleLocal, setDisplacementScaleLocal] = useState(state.displacementScale);
 
   // Switching between local and caller-provided synchronisation props
   var sizeBivot = size ?? sizeLocal;
@@ -533,6 +482,7 @@ function BivotReact(props) {
   var setAoStrengthBivot = setAoStrength ?? setAoStrengthLocal;
   var backgroundColorBivot = backgroundColor ?? backgroundColorLocal;
   var setBackgroundColorBivot = setBackgroundColor ?? setBackgroundColorLocal;
+  var displacementScaleBivot = displacementScale ?? displacementScaleLocal;
 
   // Hook up state, used in bivotJs, so that it updates when our useState values update
   state.brightness = brightness;
@@ -578,6 +528,7 @@ function BivotReact(props) {
   state.exposure = exposureBivot;
   state.aoStrength = aoStrengthBivot;
   state.backgroundColor = backgroundColorBivot;
+  state.displacementUnits = displacementScaleBivot;
 
   // Load bivot (if not waiting for shutdown and not deferred)
   useEffect(() => {
@@ -728,6 +679,10 @@ function BivotReact(props) {
   useEffect(() => {
     updateUserScale(tilingScale);
   }, [tilingScale]);
+
+  useEffect(() => {
+    renderFrame(DirtyFlag.Displacement)
+  }, [displacementScale]);
 
   useEffect(() => {
     updateHoverDisabledOverride(hoverDisabled);

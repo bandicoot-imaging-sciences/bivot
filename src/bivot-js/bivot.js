@@ -192,6 +192,7 @@ export const DirtyFlag = {
   Textures:     0x00000400,
   Controls:     0x00000800,
   ControlsPan:  0x00001000,
+  Displacement: 0x00002000,
   All:          0x00001FFF
 };
 
@@ -216,7 +217,8 @@ class bivotJs {
     this.updateTextureLayer.bind(this),
     this.updateTextures.bind(this),
     this.updateControls.bind(this),
-    this.updateControlsPan.bind(this)
+    this.updateControlsPan.bind(this),
+    this.updateDisplacementUnits.bind(this),
   ];
 
   constructor(options) {
@@ -821,9 +823,7 @@ class bivotJs {
         _self.useDispMap = true;
         _self.uniforms.displacementMap.value = _self.brdfTextures.get('displacement');
         if (_self.state.displacementUnits) {
-          // BIS displacementOffset is not the same as three.js displacementBias, so it is converted here
-          _self.uniforms.displacementScale.value = _self.state.displacementUnits;
-          _self.uniforms.displacementBias.value = -_self.state.displacementOffset * _self.state.displacementUnits;
+          _self.updateDisplacementUnits();
         }
       } else {
         _self.useDispMap = false;
@@ -3940,6 +3940,12 @@ class bivotJs {
 
   getMeshPathUsed() {
     return this.meshPathUsed;
+  }
+
+  updateDisplacementUnits() {
+    // Note that BIS displacementOffset is not the same as three.js displacementBias, so it is converted here
+    this.uniforms.displacementScale.value = this.state.displacementUnits;
+    this.uniforms.displacementBias.value = -this.state.displacementOffset * this.state.displacementUnits;
   }
 
   updateGrid(selection, round=false) {
