@@ -1612,7 +1612,9 @@ class bivotJs {
           if (_self.dragState.state === 'draggingRect' && pcg.lines === 'closed4') {
             const pos0 = pcg.points[0];
             pcg.points.push({ 'x': uv[0], 'y': uv[1] });
-            pcg.points.push({ 'x': pos0.x, 'y': uv[1] });
+            if (!pcg.staggered) {
+              pcg.points.push({ 'x': pos0.x, 'y': uv[1] });
+            }
             pcg.points[1] = { 'x': uv[0], 'y': pos0.y };
             _self.dragState.point = 2;
           }
@@ -3607,11 +3609,69 @@ class bivotJs {
         for (var i = 0; i < numPoints; i++) {
           drawPoint(ctx, pMap, i, this.dragState.point)
         }
-        for (var i = 1; i < numPoints; i++) {
-          drawLineSegment(ctx, pMap[i-1].x, pMap[i-1].y, pMap[i].x, pMap[i].y);
-        }
-        if (numPoints >= 4) {
-          drawLineSegment(ctx, pMap[3].x, pMap[3].y, pMap[0].x, pMap[0].y);
+        if (p.staggered) {
+          if (numPoints >= 2) {
+            drawLineSegment(ctx, pMap[0].x, pMap[0].y, pMap[1].x, pMap[1].y);
+          }
+          if (numPoints >= 3) {
+            const x0 = pMap[0].x, y0 = pMap[0].y;
+            const x1 = pMap[1].x, y1 = pMap[1].y;
+            const x2 = pMap[2].x, y2 = pMap[2].y;
+            const A = y1 - y0;
+            const B = x0 - x1;
+            const C = x1 * y0 - x0 * y1;
+            const den = Math.sqrt(A * A + B * B);
+            var orthoDist;
+            if (den < 1e-9) {
+              orthoDist = Math.sqrt(Math.pow(x2 - x0, 2) + Math.pow(y2 - y0), 2);
+            } else {
+              orthoDist = Math.abs(A * x2 + B * y2 + C) / den;
+            }
+            const det = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+            const f = (det < 0) ? -1 : 1;   // Sign flip based on handedness of the 3 points
+            const primaryLength = Math.max(1e-9, Math.sqrt(Math.pow(x1 - x0, 2) + Math.pow(y1 - y0, 2)));
+            const primaryVector = [f * (x1 - x0) / primaryLength, f * (y1 - y0) / primaryLength];
+            const orthoVector = [-primaryVector[1], primaryVector[0]];
+
+            const c0 = [x0 + orthoDist * orthoVector[0], y0 + orthoDist * orthoVector[1]];
+            const c1 = [x1 + orthoDist * orthoVector[0], y1 + orthoDist * orthoVector[1]];
+            const dot = (x2 - x0) * (x1 - x0) + (y2 - y0) * (y1 - y0);
+            if (dot >= 0 && dot <= Math.pow(primaryLength, 2)) {
+              // Draw additional lines if the third point projected onto the primary edge
+              // lies within the primary edge
+              drawLineSegment(ctx, x0, y0, c0[0], c0[1], [1, 0]);
+              drawLineSegment(ctx, x1, y1, c1[0], c1[1], [1, 0]);
+              drawLineSegment(ctx, x2, y2, c0[0], c0[1], [1, 0]);
+              drawLineSegment(ctx, x2, y2, c1[0], c1[1], [1, 0]);
+
+              // Add short lines into the adjacent tiles that are shifted
+              const len = 0.1  // Length of short lines, relative to the tile diagonal
+              const diag = Math.sqrt(Math.pow(orthoDist, 2) + Math.pow(primaryLength, 2));
+              const vo = [len * diag * orthoVector[0], len * diag * orthoVector[1]];;
+              drawLineSegment(ctx, x2, y2, x2 + vo[0], y2 + vo[1], [1, 0]);
+              const shiftDist = f * Math.sqrt(Math.pow(c1[0] - x2, 2) + Math.pow(c1[1] - y2, 2));
+              const shiftPrimary = [shiftDist * primaryVector[0], shiftDist * primaryVector[1]];
+              const r0 = [x0 + shiftPrimary[0], y0 + shiftPrimary[1]];
+              const r1 = [x0 + shiftPrimary[0] - vo[0], y0 + shiftPrimary[1] - vo[1]];
+              drawLineSegment(ctx, r0[0], r0[1], r1[0], r1[1], [0, 0]);
+
+              // Add short lines into the adjacent tiles that aren't shifted
+              const vp = [-f * vo[1], f * vo[0]];
+              drawLineSegment(ctx, x0, y0, x0 + vp[0], y0 + vp[1], [1, 0]);
+              drawLineSegment(ctx, x1, y1, x1 - vp[0], y1 - vp[1], [1, 0]);
+              drawLineSegment(ctx, c0[0], c0[1], c0[0] + vp[0], c0[1] + vp[1], [0, 0]);
+              drawLineSegment(ctx, c1[0], c1[1], c1[0] - vp[0], c1[1] - vp[1], [0, 0]);
+            } else {
+              drawLineSegment(ctx, c0[0], c0[1], c1[0], c1[1], [0, 0]);
+            }
+          }
+        } else {
+          for (var i = 1; i < numPoints; i++) {
+            drawLineSegment(ctx, pMap[i-1].x, pMap[i-1].y, pMap[i].x, pMap[i].y);
+          }
+          if (numPoints >= 4) {
+            drawLineSegment(ctx, pMap[3].x, pMap[3].y, pMap[0].x, pMap[0].y);
+          }
         }
       } else if (p.lines === 'pairs') {
         for (var i = 0; i < numPoints; i++) {
