@@ -35,7 +35,6 @@
         "lightPositionOffset": [0, 0],
         "lightNumber": 1,
         "lightSpacing": 0.5,
-        "light45": false,
         "scan": "kimono 2k",
         "brdfModel": 1,
         "brdfVersion": 2,

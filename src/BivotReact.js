@@ -29,7 +29,9 @@ import AmbientOcclusionControl from './controls/AmbientOcclusionControl';
 import ColorTemperatureControl from './controls/ColorTemperatureControl';
 import HueControl from './controls/HueControl';
 import SaturationControl from './controls/SaturationControl';
+import LightingControl from './controls/LightingControl';
 import ShowSeamsControl from './controls/ShowSeamsControl';
+
 
 import { loadJsonFile } from './utils/jsonLib';
 import { getDelta } from './utils/arrayLib';
@@ -296,7 +298,20 @@ function BivotReact(props) {
     cachedMeshes,
 
     // True to enable key presses which affect the Bivot editor.
+    // (Currently only supported for internal use)
     enableKeypress,
+
+    // An object to control the lighting via the component props.
+    // (Currently only supported for internal use)
+    userLightControl,
+
+    // Whether to use userLightControl or a light control object saved in the material state.
+    // (Currently only supported for internal use)
+    usePersistentLightControl,
+
+    // A callback to pass Bivot operations on the light control back to the caller.
+    // (Currently only supported for internal use)
+    lightControlCallback,
 
   } = props;
 
@@ -310,11 +325,24 @@ function BivotReact(props) {
   const referenceAreaLightWidth = 5;
   const referenceAreaLightHeight = 0.2;
 
+  const defaultLightingControl = {
+    type: 'overhead',
+    mode: 'stationary',
+    persistent: true,
+    anchored: true,
+    moving: [ { x: 0, y: 0 } ],
+    stationary: [ { x: 0, y: 0 } ],
+    moveLightKey: -1,
+  };
+
   const defaultState = {
     exposure: 1.0,
     brightness: 0.5,
     contrast: 0.5,
     lightType: 'point',
+    lightControlPersistent: defaultLightingControl,
+    lightControlTemporary: defaultLightingControl,
+    usePersistentLightControl: true,
     areaLightWidth: referenceAreaLightWidth,
     areaLightHeight: referenceAreaLightHeight,
     meshRotateZDegrees: 0,
@@ -461,6 +489,8 @@ function BivotReact(props) {
   const [stretch, setStretch] = useState(state.stretch);
   const [userScale, setUserScale] = useState(1);
   const [userPixellated, setUserPixellated] = useState(state.pixellated);
+  const [lightControlPersistent, setLightControlPersistent] = useState(state.lightControlPersistent);
+  const [lightControlTemporary, setLightControlTemporary] = useState(state.lightControlTemporary);
   const [camTiltWithMousePos, setCamTiltWithMousePos] = useState(state.camTiltWithMousePos);
   const [camTiltWithDeviceOrient, setCamTiltWithDeviceOrient] = useState(state.camTiltWithDeviceOrient);
   const [lightTiltWithMousePos, setLightTiltWithMousePos] = useState(state.lightTiltWithMousePos);
@@ -488,6 +518,9 @@ function BivotReact(props) {
   state.brightness = brightness;
   state.contrast = contrast;
   state.lightType = lightType;
+  state.lightControlPersistent = lightControlPersistent;
+  state.lightControlTemporary = lightControlTemporary;
+  state.usePersistentLightControl = usePersistentLightControl;
   state.areaLightWidth = areaLightWidth;
   state.areaLightHeight = areaLightHeight;
   state.meshRotateZDegrees = rotation;
@@ -701,6 +734,12 @@ function BivotReact(props) {
     renderFrame(DirtyFlag.Textures);
   }, [pixellated]);
 
+  useEffect(() => {
+    if (userLightControl) {
+      updateLightControl(userLightControl, usePersistentLightControl);
+    }
+  }, [userLightControl, usePersistentLightControl]);
+
   // Watch for full screen change
   useEffect(() => {
     document.addEventListener('fullscreenchange', fullScreenChanged);
@@ -829,6 +868,7 @@ function BivotReact(props) {
       stateLoadCallback,
       loadingCompleteCallback,
       setZoomCallback: setCurrentZoom,
+      lightControlCallback,
       canvasID,
       onClick,
       onGridSelect: userGridOnSelect,
@@ -877,6 +917,7 @@ function BivotReact(props) {
       hue,
       saturation,
       stretch,
+      lightControlPersistent,
     } = stateFields;
 
     updateExposure(exposure);
@@ -903,6 +944,9 @@ function BivotReact(props) {
     updateHue(hue);
     updateSaturation(saturation);
     updateStretch(stretch);
+    if (usePersistentLightControl) {
+      updateLightControl(lightControlPersistent, true);
+    }
 
     // Update initial zoom value after loading state
     zoomInitialVal = zoom;
@@ -980,8 +1024,8 @@ function BivotReact(props) {
       meshOverride, colorTemperature, hue, saturation,
       camTiltWithMousePos, camTiltWithDeviceOrient, camTiltLimitDegrees,
       lightTiltWithMousePos, lightTiltWithDeviceOrient, lightTiltLimitDegrees,
-      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom,
-      cameraPan,
+      autoRotateFps, autoRotateCamFactor, autoRotateLightFactor, bloom, cameraPan,
+      lightControlPersistent,
     }
     // cameraPan is an array in file
     const savedStateFile = { ...savedState, ...{ cameraPan: cameraPanArray } };
@@ -1025,6 +1069,18 @@ function BivotReact(props) {
     setLightType(type);
     setAreaLightWidth(referenceAreaLightWidth * size);
     setAreaLightHeight(referenceAreaLightHeight * size);
+    renderFrame(DirtyFlag.Lighting);
+  }
+
+  function updateLightControl(val, persistent) {
+    state.usePersistentLightControl = persistent;
+    if (val) {
+      if (persistent) {
+        setLightControlPersistent(val);
+      } else {
+        setLightControlTemporary(val);
+      }
+    }
     renderFrame(DirtyFlag.Lighting);
   }
 
@@ -1318,6 +1374,13 @@ function BivotReact(props) {
                       <Grid item xs={1}>{decorators && decorators['aoStrength'] || ''}</Grid>
                       <Grid item xs={11}>
                         <AmbientOcclusionControl value={aoStrengthBivot} onChange={updateAoStrength} />
+                      </Grid>
+                      <Grid item xs={1}>{decorators && decorators['lightControl'] || ''}</Grid>
+                      <Grid item xs={11}>
+                        <LightingControl
+                          value={usePersistentLightControl ? lightControlPersistent : lightControlTemporary}
+                          onChange={(val) => updateLightControl(val, usePersistentLightControl)}
+                        />
                       </Grid>
                       {/* <Grid item xs={1}>{decorators && decorators['showSeams'] || ''}</Grid>
                       <Grid item xs={11}>

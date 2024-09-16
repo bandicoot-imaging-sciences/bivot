@@ -166,6 +166,7 @@ function injectStyle(elem, style) {
 }
 
 const crosshairsCursor = 'https://bandicoot-hosted.s3.ap-southeast-2.amazonaws.com/assets/cursor/Crossdot.cur';
+const lightCursor = 'https://bandicoot-hosted.s3.ap-southeast-2.amazonaws.com/assets/cursor/Light.cur';
 
 // Define dimensions of overlay texture
 const overlayTexW = 2048;
@@ -257,8 +258,19 @@ class bivotJs {
       onGridSelect: null,
       onPointSelect: null,
       onDrawing: null,
+      lightControlCallback: null,
     };
     this.opts = {...defaultOptions, ...options};
+
+    const defaultLightingControl = {
+      type: 'overhead',
+      mode: 'stationary',
+      persistent: true,
+      moveLightKey: -1,
+      anchored: true,
+      moving: [ { x: 0, y: 0 } ],
+      stationary: [ { x: 0, y: 0 } ],
+    };
 
     // Initial state and configuration.  This will likely get overridden by the config file,
     // but if the config can't be loaded, then these are the defaults. Attributes with underscore prefixes are
@@ -280,6 +292,9 @@ class bivotJs {
       toneMapDarkness: 0.04,
       threeJsShader: true,
       lightType: 'point',
+      lightControlPersistent: defaultLightingControl,
+      lightControlTemporary: defaultLightingControl,
+      usePersistentLightControl: true,
       areaLightWidth: 5.0,
       areaLightHeight: 0.2,
       // Control modes are set using lightMotion:
@@ -293,7 +308,6 @@ class bivotJs {
       lightPositionOffset: new THREE.Vector2(0, 0),
       lightNumber: 1,
       lightSpacing: 0.5,
-      light45: false,
       scan: 'kimono 2k',
       meshOverride: false,
       meshesToCache: undefined,
@@ -469,6 +483,8 @@ class bivotJs {
     this.userAgent = undefined;
     this.uaData = undefined;
 
+    this.shiftDown = false;
+
     this.adaptFramerate = {
       // Configuration
       targetFps: 30,          // The target framerate
@@ -492,7 +508,7 @@ class bivotJs {
     this.listeners = [];
     this.elements = [];
 
-    const imagesToPreload = [crosshairsCursor, ];
+    const imagesToPreload = [ crosshairsCursor, lightCursor, ];
     // Preload images
     imagesToPreload.forEach(im => {
       var link = document.createElement('link');
@@ -1713,7 +1729,8 @@ class bivotJs {
           ((viewPortX - rect.left) / (rect.right - rect.left)) * 2 - 1,
           -((viewPortY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
         );
-        _self.updateCamsAndLightsFromXY(xy, _self.state.lightTiltWithMousePos, _self.state.camTiltWithMousePos);
+        const lightSensitivity = _self.shiftDown ? 1.0 : _self.state.lightTiltWithMousePos;
+        _self.updateCamsAndLightsFromXY(xy, lightSensitivity, _self.state.camTiltWithMousePos);
       }
     }
 
@@ -1722,8 +1739,13 @@ class bivotJs {
       if (_self.lights && _self.state.tiltZeroOnMouseOut) {
         _self.state.lightPosition.set(_self.state.lightPositionOffset.x, _self.state.lightPositionOffset.y, 1);
         _self.state.lightPosition.copy(
-          _self.xyTo3dDirection(new THREE.Vector2(0, 0), _self.state.lightPositionOffset, _self.state.lightTiltWithMousePos,
-          _self.state.lightTiltLimitDegrees)
+          _self.xyTo3dDirection(
+            new THREE.Vector2(0, 0),
+            _self.state.lightPositionOffset,
+            _self.state.lightTiltWithMousePos,
+            _self.state.lightTiltLimitDegrees,
+            1
+          )
         );
 
         _self.updateLightingGrid();
@@ -1793,6 +1815,7 @@ class bivotJs {
         return;
       }
 
+      const lightControlKey = _self.lightControl()?.moveLightKey;
       if (_self.mouseInCanvas) {
         switch (event.keyCode) {
           case 17: // Ctrl
@@ -1803,6 +1826,20 @@ class bivotJs {
           case 70: // F
             if (event.ctrlKey) {
               toggleStats();
+            }
+            break;
+          // Put last in the switch statement to avoid overriding built-in keys
+          case lightControlKey:
+            if (!_self.shiftDown) {
+              document.body.style.cursor = `url('${lightCursor}'), auto`;
+              _self.shiftDown = true;
+              _self.prevLightPosition = _self.state.lightPosition.clone();
+              _self.state.lightTiltWithMousePos = 1.0;
+
+              const newLightControl = { ..._self.lightControl(), mode: 'moving' };
+              if (_self.opts.lightControlCallback) {
+                _self.opts.lightControlCallback(newLightControl);
+              }
             }
             break;
         }
@@ -2024,6 +2061,22 @@ class bivotJs {
             }
             break;
         }
+      }
+      const lightControlKey = _self.lightControl()?.moveLightKey;
+      switch(event.keyCode) {
+        // Put last in the switch statement to avoid overriding built-in keys
+        case lightControlKey:
+          if (_self.shiftDown) {
+            document.body.style.cursor = 'auto';
+            _self.state.lightPosition = _self.prevLightPosition;
+            _self.shiftDown = false;
+            if (_self.opts.lightControlCallback) {
+              const newLightControl = { ..._self.lightControl(), mode: 'stationary' };
+              _self.opts.lightControlCallback(newLightControl);
+            }
+            _self.updateLightingGrid();
+          }
+          break;
       }
     }
 
@@ -2533,112 +2586,163 @@ class bivotJs {
             y >= rect.top  && y < rect.bottom);
   }
 
+
+  createLight(intensity, color, upVector, offset) {
+    const distanceLimit = 10;  // Light has no effect more than 10 metres away
+    const decay = 2; // 2 for physical light distance falloff
+
+    if (this.state.lightType == 'area') {
+      let areaFactor = intensity / (Math.atan(this.state.areaLightWidth) * Math.atan(this.state.areaLightHeight));
+      let rectLight = new THREE.RectAreaLight(color, areaFactor, this.state.areaLightWidth, this.state.areaLightHeight);
+      rectLight.position.copy(upVector);
+      rectLight.position.add(offset);
+      return rectLight;
+    } else {
+      let light = new THREE.PointLight(color, intensity, distanceLimit, decay);
+      light.position.copy(upVector);
+      light.position.add(offset);
+      return light;
+    }
+  }
+
+  rotateLights(lights, vec) {
+    const upVectorNorm = new THREE.Vector3(0, 0, 1);
+
+    let lightVectorNorm = vec.clone();
+    lightVectorNorm.normalize();
+
+    let rotationAxis = new THREE.Vector3(0, 0, 0);
+    rotationAxis.crossVectors(upVectorNorm, lightVectorNorm);
+
+    const rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
+
+    lights.rotateOnAxis(rotationAxis, rotationAngle);
+  }
+
+  lightControl() {
+    return this.state.usePersistentLightControl ? this.state.lightControlPersistent : this.state.lightControlTemporary;
+  }
+
   updateLightingGrid() {
-    // FIXME: Ideally we should adjust exisiting lights to match new state, rather than just deleting them all
-    // and starting again. Although if it's fast to reconstruct the whole lighting state, that's actually
-    // safer from a state machine point of view.
+    // FIXME: Consider tradeoff (performance vs safety) between adjusting exisiting
+    // lights to match the new state, vs deleting them all and starting again.
     if (this.lights) {
       this.scene.remove(this.lights);
     }
-    if (this.lights45) {
-      this.scene.remove(this.lights45);
-    }
-    // Our custom shader assumes the light colour is grey or white.
+
+    // The custom shader assumes a grey or white lighting colour
     const color =
         Math.round(0.5 * this.state.lightColor[0]) * 0x10000 +
         Math.round(0.5 * this.state.lightColor[1]) * 0x100 +
         Math.round(0.5 * this.state.lightColor[2]);
     const totalIntensity = 1;
-    let totalLights = this.state.lightNumber ** 2;
-    if (this.state.light45) {
-      totalLights *= 2;
-    }
-    const lightIntensity = totalIntensity / (totalLights) * 2; // Doubled because color is halved (to allow colour range 0..2)
-    const distanceLimit = 10;
-    const decay = 2; // Set this to 2.0 for physical light distance falloff.
 
-    // Create a grid of lights in XY plane at z = length of lightPosition vector.
-    let upVector = new THREE.Vector3(0, 0, this.state.lightPosition.length());
-    let lights = new THREE.Group();
-    // We assume state.lightNumber is an odd integer.
-    let mid = this.state.lightNumber/2 - 0.5;
-    for (let i = 0; i < this.state.lightNumber; i++) {
-      for (let j = 0; j < this.state.lightNumber; j++) {
-        let offset = new THREE.Vector3(
-          (i - mid) * this.state.lightSpacing,
-          (j - mid) * this.state.lightSpacing,
-          0
-        );
-        if (this.state.lightType == 'area') {
-          let areaFactor = lightIntensity / (Math.atan(this.state.areaLightWidth) * Math.atan(this.state.areaLightHeight));
-          let rectLight = new THREE.RectAreaLight(color, areaFactor, this.state.areaLightWidth, this.state.areaLightHeight);
-          rectLight.position.copy(upVector);
-          rectLight.position.add(offset);
-          lights.add(rectLight);
-        } else {
-          let light = new THREE.PointLight(color, lightIntensity, distanceLimit, decay);
-          light.position.copy(upVector);
-          light.position.add(offset);
-          lights.add(light);
+    var lightVectors = [];
+    var numLights = 1;
+    const control = this.lightControl();
+    if (control) {
+      const { mode, stationary, moving } = control;
+      if (mode === 'moving') {
+        lightVectors.push(this.state.lightPosition);
+      } else {
+        numLights = stationary.length;
+        stationary.map(light => {
+          lightVectors.push(
+            this.xyTo3dDirection(
+              light, this.state.lightPositionOffset, 1, this.state.lightTiltLimitDegrees, 1
+            )
+          );
+        });
+      }
+    } else {
+      lightVectors.push(this.state.lightPosition);
+    }
+
+    const gridLen = this.state.lightNumber;
+    const totalLights = numLights * (gridLen ** 2);
+    const lightIntensity = totalIntensity / totalLights * 2; // Doubled because color is halved (to allow colour range 0..2)
+    const upVector = new THREE.Vector3(0, 0, this.state.lightPosition.length());
+    const spacing = this.state.lightSpacing;
+    const mid = (gridLen - 1) / 2;
+
+    var allLights = new THREE.Group();
+    lightVectors.map(vec => {
+      var lights = new THREE.Group();
+      for (let i = 0; i < gridLen; i++) {
+        for (let j = 0; j < gridLen; j++) {
+          const offset = new THREE.Vector3((i - mid) * spacing, (j - mid) * spacing, 0);
+          lights.add(this.createLight(lightIntensity, color, upVector, offset));
         }
       }
-    }
-    let upVectorNorm = upVector.clone();
-    upVectorNorm.normalize();
-    let lightVectorNorm = this.state.lightPosition.clone();
-    lightVectorNorm.normalize();
-    let rotationAxis = new THREE.Vector3(0, 0, 0);
-    rotationAxis.crossVectors(upVectorNorm, lightVectorNorm);
-    let rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
-    lights.rotateOnAxis(rotationAxis, rotationAngle);
-    this.lights = lights;
-    this.scene.add(lights);
+      this.rotateLights(lights, vec);
+      allLights.add(lights);
+    })
 
-    if (this.state.light45) {
-      // Add an extra light at 45 deg elevation for natural viewing on phone or tablet.
-      this.lights45 = lights.clone();
-      let xAxis = new THREE.Vector3(1, 0, 0);
-      this.lights45.rotateOnAxis(xAxis, Math.PI / 4);
-      this.scene.add(this.lights45);
-    } else {
-      this.lights45 = null;
-    }
-
+    this.lights = allLights;
+    this.scene.add(allLights);
     this.requestRender();
   }
 
-  updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
+  updateLightsFromXY(xy, light_sensitivity) {
     if (this.lights && light_sensitivity !== 0.0) {
       this.state.lightPosition.copy(
-        this.xyTo3dDirection(xy, this.state.lightPositionOffset, light_sensitivity, this.state.lightTiltLimitDegrees)
+        this.xyTo3dDirection(
+          xy, this.state.lightPositionOffset, light_sensitivity, this.state.lightTiltLimitDegrees, 1
+        )
       );
       this.updateLightingGrid();
+      if (this.opts.lightControlCallback) {
+        const moving = [ { x: xy.x, y: xy.y }, ];
+        this.opts.lightControlCallback({ ...this.lightControl(), moving });
+      }
     }
+  }
+
+  updateCamsAndLightsFromXY(xy, light_sensitivity, cam_sensitivity) {
+    this.updateLightsFromXY(xy, light_sensitivity);
 
     // Avoid tilt on mouseover if mouse wheel is occurring, otherwise the zoom gets clobbered
     if (this.camera && cam_sensitivity !== 0.0 && !this.wheelInProgress) {
       // Retain existing camera distance
-      let camVec = this.xyTo3dDirection(xy, this.state._camPositionOffset, cam_sensitivity,
-        this.state.camTiltLimitDegrees);
+      let camVec = this.xyTo3dDirection(
+        xy, this.state._camPositionOffset, cam_sensitivity, this.state.camTiltLimitDegrees, 2
+      );
       camVec.multiplyScalar(this.camera.position.length());
       this.controls.setPosition(camVec.x, camVec.y, camVec.z);
       this.requestRender();
     }
   }
 
-  xyTo3dDirection(xy, offset, sensitivity, elevationLimit) {
-    // Convert input XY co-ords in range -1..1 and given sensitivity to a unit 3D direction vector
-    let new_xy = new THREE.Vector2();
-    // Clamp 2D length to elevation angle limit.
-    let qLimit = Math.cos(Math.PI * elevationLimit / 180);
-    new_xy.copy(xy).add(offset).multiplyScalar(sensitivity).clampLength(0.0, qLimit);
-    const z2 = 1 - new_xy.lengthSq();
-    let new_z = 0.0;
-    if (z2 > 0.0) {
-      new_z = Math.sqrt(z2);
+  xyTo3dDirection(xy, offset, sensitivity, elevationLimit, mode) {
+    // Convert input XY co-ords in range -1..1 and given sensitivity to a unit
+    // 3D direction vector.
+    //
+    // Mode = 1: Project the vector downwards onto a disc, meaning marginal
+    // changes to xy values near the origin have a smaller effect than changes
+    // to xy values closer to the edge.
+    // Mode = 2: Linear mapping between xy position and angle, e.g. x = 0.5
+    // with sensitivity of 1 means 45 degrees
+    var new_xy = new THREE.Vector2(xy.x, xy.y).add(offset).multiplyScalar(sensitivity);
+    if (mode === 2) {
+      new_xy.clampLength(0, 1);
+      const phi = Math.min(new_xy.length() * Math.PI / 2, Math.PI * (90 - elevationLimit) / 180);
+      const z = phi < 1e-6 ? 1 : new_xy.length() / Math.tan(phi);
+      console.assert(!isNaN(z));
+      var vector = new THREE.Vector3(new_xy.x, new_xy.y, z);
+      vector.normalize();
+      return vector;
+    } else {
+      // Clamp 2D length to elevation angle limit.
+      const qLimit = Math.cos(Math.PI * elevationLimit / 180);
+      new_xy.clampLength(0.0, qLimit);
+      const z2 = 1 - new_xy.lengthSq();
+      let new_z = 0.0;
+      if (z2 >= 0.0) {
+        new_z = Math.sqrt(z2);
+      }
+      console.assert(!isNaN(new_z));
+      return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
     }
-    console.assert(!isNaN(new_z));
-    return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
   }
 
   meshValToPath(val) {
