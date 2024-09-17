@@ -32,7 +32,7 @@ function LightingControl({ value, onChange }) {
     <Grid item>
       <Tooltip title={'Control the position of the light or lights'}>
         <Typography gutterBottom>
-          Position
+          Light position
         </Typography>
       </Tooltip>
     </Grid>
