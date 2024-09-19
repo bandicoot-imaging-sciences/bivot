@@ -4185,6 +4185,17 @@ class bivotJs {
     }
   }
 
+  getRenderFrame() {
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const pixelBuffer = new Uint8Array(width * height * 4);
+    this.updateUniforms();
+    this.composer.render();
+    const renderTarget = this.composer.renderTarget2 ? this.composer.renderTarget2 : this.composer.renderTarget1;
+    this.renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, pixelBuffer);
+    return pixelBuffer;
+  }
+
   resetCameraAngle() {
     if (this.camera && this.state && this.controls) {
       const target = this.controls.getTarget();
