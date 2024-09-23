@@ -78,6 +78,11 @@ const styles = {
 var zoomIndex = -1; // Index of the current zoom slider being moved
 var zoomInitialVal = [0, 0, 0]; // [min, unused, max] zoom at the beginning of the current slider move
 
+function handleCanvasContextMenu(e) {
+  e.preventDefault();
+  e.stopPropagation();
+};
+
 function BivotReact(props) {
   //
   // Props:
@@ -740,7 +745,6 @@ function BivotReact(props) {
     }
   }, [userLightControl, usePersistentLightControl]);
 
-  // Watch for full screen change
   useEffect(() => {
     document.addEventListener('fullscreenchange', fullScreenChanged);
     return () => {
@@ -1485,7 +1489,16 @@ function BivotReact(props) {
         )}
         <Grid item style={styles.bivotGridCanvas}>
           <div style={styles.progressContainer}>
-            <canvas ref={canvasRef} id={canvasID} />
+            <canvas
+              id={canvasID}
+              ref={(node) => {
+                canvasRef.current = node;
+                if (node) {
+                  // Block context menu on the canvas to avoid popping the menu while panning.
+                  node.addEventListener('contextmenu', handleCanvasContextMenu);
+                }
+              }}
+            />
             {loading && (
               <div style={styles.progressOverlay}>
                 <CircularProgress />
