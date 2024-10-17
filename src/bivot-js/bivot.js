@@ -3623,35 +3623,50 @@ class bivotJs {
         const bxs = box.max.x - box.min.x;
         const bys = box.max.y - box.min.y;
 
-        // Assumption: The UV space of the mesh is ~1 in the long direction,
-        // and less than 1 in the short direction
         var factorX, factorY;   // X and Y scaling factors for precise mapping
         var td;                 // Effective texture dimensions for co-ordinate mapping
-        if (us > vs) {
+        const f0 = (bxs / bys) / (xs / ys);
+        if (us > vs || true) {
+          // Assumption: The UV space of the mesh is ~1 in the X direction, and <1 in Y.
           factorX = us;
-          factorY = factorX * (bxs / bys) / (xs / ys);
+          factorY = factorX * f0;
           td = [
             this.untiledImDims[0] * factorX,
             this.untiledImDims[1] * this.state.texDims[1] / this.state.texDims[0] * factorY
           ];
         } else {
           factorY = vs;
-          factorX = factorY * (bys / bxs) / (ys / xs);
+          factorX = factorY / f0;
           td = [
             this.untiledImDims[0] * this.state.texDims[0] / this.state.texDims[1] * factorX,
             this.untiledImDims[1] * factorY
           ];
         }
 
+        // Handle mesh rotation
+        var pointsRot = points;
+        if (this.state.meshRotateZDegrees !== 0) {
+          pointsRot = [];
+          const s = Math.sin(THREE.MathUtils.degToRad(-this.state.meshRotateZDegrees));
+          const c = Math.cos(THREE.MathUtils.degToRad(-this.state.meshRotateZDegrees));
+          const cx = (this.state.texDims[0] - 1) / 2;
+          const cy = (this.state.texDims[1] - 1) / 2;
+          points.map(p => {
+            pointsRot.push({
+              x: (cx + c * (p.x - cx) - s * (p.y - cy)) * f0,
+              y: (cy + s * (p.x - cx) + c * (p.y - cy)) / f0
+            });
+          });
+        }
+
+        // Map points and return
         const [xR, yR] = this.getTexRepeat();
         const fx = 1 / xR;
         const fy = 1 / yR;
-
-        // Map points and return
         var pMap = [];
-        for (var i = 0; i < points.length; i++) {
-          var x = ((    (points[i].x / td[0])) * xs + x0) * fx;
-          var y = ((1 - (points[i].y / td[1])) * ys + y0) * fy;
+        for (var i = 0; i < pointsRot.length; i++) {
+          var x = ((    (pointsRot[i].x / td[0])) * xs + x0) * fx;
+          var y = ((1 - (pointsRot[i].y / td[1])) * ys + y0) * fy;
           pMap.push({ x, y });
         }
         return pMap;
@@ -3682,7 +3697,15 @@ class bivotJs {
         const pointSelected = (groupSelected && i === selectedPoint);
         ctx.strokeStyle = ((pointSelected ? p.selectedColor : p.color) ?? '#ffffff') + alphaStr;
         ctx.lineWidth = (absLineWidthX + absLineWidthY) / 2;
-        ctx.ellipse(arr[i].x, arr[i].y, ex, ey, 0, 0, 2 * Math.PI);
+        if (p.pointShape == 'square') {
+          ctx.moveTo(arr[i].x - ex, arr[i].y - ey);
+          ctx.lineTo(arr[i].x + ex, arr[i].y - ey);
+          ctx.lineTo(arr[i].x + ex, arr[i].y + ey);
+          ctx.lineTo(arr[i].x - ex, arr[i].y + ey);
+          ctx.lineTo(arr[i].x - ex, arr[i].y - ey);
+         } else {
+          ctx.ellipse(arr[i].x, arr[i].y, ex, ey, 0, 0, 2 * Math.PI);
+        }
         ctx.stroke();
       }
 
@@ -3701,9 +3724,9 @@ class bivotJs {
       }
 
       if (p.lines === 'rect' || (p.lines === 'closed4' && this.dragState.state === 'draggingRect')) {
-        drawPoint(ctx, pMap, 0, this.dragState.point)
+        drawPoint(ctx, pMap, 0, this.dragState.point);
         if (numPoints > 1) {
-          drawPoint(ctx, pMap, 1, this.dragState.point)
+          drawPoint(ctx, pMap, 1, this.dragState.point);
           drawLineSegment(ctx, pMap[0].x, pMap[0].y, pMap[1].x, pMap[0].y, [1, 0]);
           drawLineSegment(ctx, pMap[1].x, pMap[0].y, pMap[1].x, pMap[1].y, [0, 1]);
           drawLineSegment(ctx, pMap[1].x, pMap[1].y, pMap[0].x, pMap[1].y, [1, 0]);
@@ -3711,7 +3734,7 @@ class bivotJs {
         }
       } else if (p.lines === 'closed4') {
         for (var i = 0; i < numPoints; i++) {
-          drawPoint(ctx, pMap, i, this.dragState.point)
+          drawPoint(ctx, pMap, i, this.dragState.point);
         }
         if (p.staggered) {
           if (numPoints >= 2) {
@@ -3779,10 +3802,14 @@ class bivotJs {
         }
       } else if (p.lines === 'pairs') {
         for (var i = 0; i < numPoints; i++) {
-          drawPoint(ctx, pMap, i, this.dragState.point)
+          drawPoint(ctx, pMap, i, this.dragState.point);
         }
         for (var i = 0; i < Math.floor(numPoints / 2); i++) {
           drawLineSegment(ctx, pMap[i * 2].x, pMap[i * 2].y, pMap[i * 2 + 1].x, pMap[i * 2 + 1].y);
+        }
+      } else { // No lines
+        for (var i = 0; i < numPoints; i++) {
+          drawPoint(ctx, pMap, i, this.dragState.point);
         }
       }
     }
@@ -3835,8 +3862,14 @@ class bivotJs {
       this.drawDashedLine(ctx, path, false, stretchFactors, 0.7, '#FF0F');
     }
     if (this.state.pointsControl) {
+      var priorities = [];
       this.state.pointsControl.forEach((p, i) => {
-        const groupSelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state) && this.dragState.group === i;
+        priorities.push({ index: i, priority: (p.z ? p.z : 0) + i / 1000});
+      });
+      priorities.sort((a, b) => a.priority - b.priority);
+      priorities.forEach((pri) => {
+        const p = this.state.pointsControl[pri.index];
+        const groupSelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state) && this.dragState.group === pri.index;
         const anySelected = ['draggingPoint', 'draggingRect', 'selected'].includes(this.dragState.state);
         this.drawPoints(ctx, p, groupSelected, anySelected);
       });
