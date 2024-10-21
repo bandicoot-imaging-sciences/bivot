@@ -59,7 +59,7 @@ import { isEmpty } from '../utils/objLib.js';
 import { getBasePath } from '../utils/pathLib.js';
 import { getDocumentFullScreenElement } from '../utils/displayLib';
 import { jsonToState, copyStatesCloneVectors } from './stateUtils.js';
-import { getWhiteBalanceMatrix } from './colour.js';
+import { getWhiteBalanceMatrix, bufferLinearToSrgb } from './colour.js';
 
 const styles = {
   'bivot-canvas': {
@@ -4219,14 +4219,15 @@ class bivotJs {
   }
 
   getRenderFrame() {
+    // Return a pixel buffer of the current render frame in sRGB
     const width = this.canvas.width;
     const height = this.canvas.height;
     const pixelBuffer = new Uint8Array(width * height * 4);
     this.updateUniforms();
     this.composer.render();
-    const renderTarget = this.composer.renderTarget2 ? this.composer.renderTarget2 : this.composer.renderTarget1;
+    const renderTarget = this.composer.readBuffer;
     this.renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, pixelBuffer);
-    return pixelBuffer;
+    return bufferLinearToSrgb(pixelBuffer);
   }
 
   resetCameraAngle() {

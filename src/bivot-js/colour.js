@@ -2004,3 +2004,15 @@ export function getWhiteBalanceMatrix(cct_src, cct_dst=6500) {
 
   return M;
 }
+
+export function bufferLinearToSrgb(buffer) {
+  // Perform approximate conversion on a linear sRGBA buffer to sRGBA
+  var floatBuffer = new Float32Array(buffer);
+  const gamma = 1 / 2.2;
+  for (var i = 0; i < buffer.length; i += 4) {
+    floatBuffer[i] = Math.pow(buffer[i] / 255, gamma) * 255;
+    floatBuffer[i + 1] = Math.pow(buffer[i + 1] / 255, gamma) * 255;
+    floatBuffer[i + 2] = Math.pow(buffer[i + 2] / 255, gamma) * 255;
+  }
+  return floatBuffer;
+}
