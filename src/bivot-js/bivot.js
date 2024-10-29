@@ -1844,89 +1844,102 @@ class bivotJs {
             break;
         }
       }
+      // If dragState isn't active, jump to the first visible and editable group, if any
+      var group = _self.dragState.group;
+      if (group === null) {
+        for (const [i, pc] of _self.state.pointsControl.entries()) {
+          if (pc.visible && pc.draggable) {
+            group = i;
+            break;
+          }
+        }
+      }
+      const pc = (group !== null) ? _self.state.pointsControl[group] : {};
       switch (event.keyCode) {
         case 188: // Comma - Jump to prev point or point pair
-          if (_self.dragState.state === 'selected') {
-            const group = _self.dragState.group;
-            const points = _self.state.pointsControl[group].points;
-            const p = _self.dragState.point;
-            if (_self.state.pointsControl[group].lines === 'pairs') {
-              if (points.length == 1) {
-                newP = 0;
-              } else {
-                var newP1 = 2 * Math.floor(p / 2) - 2;
-                var newP2 = newP1 + 1;
-                if (newP2 < 0) {
-                  if (points.length % 2 === 1) {
-                    newP1 = points.length - 1;
-                    newP2 = newP1;
+          if (pc.visible) {
+            if (_self.dragState.state === 'selected') {
+              const points = pc.points;
+              const p = _self.dragState.point;
+              if (pc.lines === 'pairs') {
+                if (points.length == 1) {
+                  newP = 0;
+                } else {
+                  var newP1 = 2 * Math.floor(p / 2) - 2;
+                  var newP2 = newP1 + 1;
+                  if (newP2 < 0) {
+                    if (points.length % 2 === 1) {
+                      newP1 = points.length - 1;
+                      newP2 = newP1;
+                    } else {
+                      newP1 = points.length - 2;
+                      newP2 = newP1 + 1;
+                    }
+                  }
+                  if (newP1 < 0) {
+                    newP = newP2;
                   } else {
-                    newP1 = points.length - 2;
-                    newP2 = newP1 + 1;
+                    newP = findNearestPoint(points, p, [newP1, newP2]);
                   }
                 }
-                if (newP1 < 0) {
-                  newP = newP2;
-                } else {
-                  newP = findNearestPoint(points, p, [newP1, newP2]);
-                }
+              } else {
+                newP = (p + points.length - 1) % points.length;
               }
+              _self.dragState.point = newP;
+              jumpToPoint(group, newP);
             } else {
-              newP = (p + points.length - 1) % points.length;
+              tryJumpToFirstPoint(0);
             }
-            _self.dragState.point = newP;
-            jumpToPoint(group, newP);
-          } else {
-            tryJumpToFirstPoint(0);
           }
           break;
 
         case 190: // Full stop - Jump to next point or point pair
-          if (_self.dragState.state === 'selected') {
-            const group = _self.dragState.group;
-            const points = _self.state.pointsControl[group].points;
-            const p = _self.dragState.point;
-            var newP;
-            if (_self.state.pointsControl[group].lines === 'pairs') {
-              if (points.length == 1) {
-                newP = 0;
-              } else {
-                var newP1 = 2 * Math.floor(p / 2) + 2;
-                var newP2 = newP1 + 1;
-                if (newP1 >= points.length) {
-                  newP1 = 0;
-                  newP2 = 1;
-                }
-                if (newP2 >= points.length) {
-                  newP = newP1;
+          if (pc.visible) {
+            if (_self.dragState.state === 'selected') {
+              const points = pc.points;
+              const p = _self.dragState.point;
+              var newP;
+              if (pc.lines === 'pairs') {
+                if (points.length == 1) {
+                  newP = 0;
                 } else {
-                  newP = findNearestPoint(points, p, [newP1, newP2]);
+                  var newP1 = 2 * Math.floor(p / 2) + 2;
+                  var newP2 = newP1 + 1;
+                  if (newP1 >= points.length) {
+                    newP1 = 0;
+                    newP2 = 1;
+                  }
+                  if (newP2 >= points.length) {
+                    newP = newP1;
+                  } else {
+                    newP = findNearestPoint(points, p, [newP1, newP2]);
+                  }
                 }
+              } else {
+                newP = (p + 1) % points.length;
               }
+              _self.dragState.point = newP;
+              jumpToPoint(group, newP);
             } else {
-              newP = (p + 1) % points.length;
+              tryJumpToFirstPoint(0);
             }
-            _self.dragState.point = newP;
-            jumpToPoint(group, newP);
-          } else {
-            tryJumpToFirstPoint(0);
           }
           break;
 
         case 77: // M - Jump to matching pair
-          if (_self.dragState.state === 'selected') {
-            const group = _self.dragState.group;
-            const points = _self.state.pointsControl[group].points;
-            if (_self.state.pointsControl[group].lines === 'pairs') {
-              const p = _self.dragState.point;
-              const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
-              if (newP < points.length) {
-                _self.dragState.point = newP;
-                jumpToPoint(group, newP);
+          if (pc.visible) {
+            if (_self.dragState.state === 'selected') {
+              if (pc.lines === 'pairs') {
+                const p = _self.dragState.point;
+                const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
+                if (newP < pc.points.length) {
+                  _self.dragState.point = newP;
+                  jumpToPoint(group, newP);
+                }
               }
+            } else {
+              tryJumpToFirstPoint(1);
             }
-          } else {
-            tryJumpToFirstPoint(1);
           }
           break;
 
