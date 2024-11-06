@@ -322,6 +322,7 @@ function BivotReact(props) {
 
   const canvasRef = useRef();
   const overlayRef = useRef();
+  const objectMeshRef = useRef(objectMesh);
   const bivot = useRef(null);
   const theme = useTheme();
 
@@ -385,6 +386,8 @@ function BivotReact(props) {
     textureLayer: 0,
     enableKeypress: false,
     overlayRepeats: true,
+    loadingComplete: false,
+    skipLoadedMesh: false,
 
     // State to be saved for the bivot render for which there aren't controls
     camTiltWithMousePos: -0.3,
@@ -670,7 +673,10 @@ function BivotReact(props) {
   }, [fullScreen]);
 
   useEffect(() => {
+    objectMeshRef.current = objectMesh;
     if (objectMesh !== undefined) {
+      // Unless an explicit objectMesh is provided, prevent activation while Bivot is still loading
+      state.skipLoadedMesh = !objectMesh;
       updateMeshOverride(objectMesh);
     }
   }, [objectMesh]);
@@ -969,11 +975,9 @@ function BivotReact(props) {
     copyStateFields(loadedState, checkpointState);
   }
 
-  // Called when bivot finishes loading the material.
+  // Called when bivot finishes loading the material, or a mesh update.
   async function loadingCompleteCallback(shimmerLoaded, meshLoaded) {
     if (bivot.current) {
-      renderFrame(DirtyFlag.Overlay);
-
       console.debug('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
       if (statusCallback !== undefined) {
         statusCallback(2); // Loaded
@@ -985,11 +989,20 @@ function BivotReact(props) {
         } catch(e) {
           console.debug('bivot.current.getDiag() unavailable');
         }
+        state.loadingComplete = true;
+        console.log('Loading complete objectMesh:', objectMeshRef.current)
+        if (shimmerLoaded && objectMeshRef.current !== false) {
+          // Upon completion of Shimmer loading, load the correct mesh according
+          // to the user props
+          updateMeshOverride(objectMeshRef.current);
+        }
         const meshPath = bivot.current.getMeshPathUsed();
         if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
           setMeshOverride(meshPath);
         }
       }
+
+      renderFrame(DirtyFlag.Overlay);
     }
   }
 

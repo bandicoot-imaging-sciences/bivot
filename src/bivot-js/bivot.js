@@ -194,7 +194,7 @@ export const DirtyFlag = {
   Controls:     0x00000800,
   ControlsPan:  0x00001000,
   Displacement: 0x00002000,
-  All:          0x00001FFF
+  All:          0x00003FFF
 };
 
 /*
@@ -2268,7 +2268,15 @@ class bivotJs {
         loadedMeshPath = _self.state.meshOverride;
         loadedMeshPathLow = null;
       }
-      _self.loadMesh(_self, loadedMeshPath, loadedMeshPathLow, loadManager);
+      if (_self.state.skipLoadedMesh && !_self.state.loadingComplete) {
+        // If mesh should be skipped while loading, and Bivot is still loading, then
+        // load the original mesh for immediate use and only load the override mesh
+        // to cache it
+        _self.loadMesh(_self, meshPath, meshPathLow, loadManager);
+        _self.loadMesh(_self, loadedMeshPath, loadedMeshPathLow, loadManager, true);
+      } else {
+        _self.loadMesh(_self, loadedMeshPath, loadedMeshPathLow, loadManager);
+      }
     }
 
     function loadScan() {
@@ -2761,7 +2769,7 @@ class bivotJs {
   meshValToPath(val) {
     var meshPath;
     var meshPathLow = undefined;
-    if (val === null || val === '') {
+    if (val === null || val === undefined || val === '') {
       meshPath = this.meshMaterial;
       meshPathLow = this.meshMaterialLow;
     } else if (val === false) {
@@ -2778,6 +2786,7 @@ class bivotJs {
   updateMesh() {
     // Only update the mesh if the new path is different to the current path in use
     const { meshPath, meshPathLow } = this.meshValToPath(this.state.meshOverride);
+    const cacheOnly = this.state.skipLoadedMesh && !this.state.loadingComplete
     if (this.meshPathUsed !== meshPath) {
       const _self = this;
       function onLoadUpdateMesh() {
@@ -2790,12 +2799,14 @@ class bivotJs {
         }
       };
 
-      // Reset and show progress bar, then load the mesh
-      this.loadingElem.style.display = 'flex';
-      this.progressBarElem.style.transform = 'scaleX(0)';
+      if (!cacheOnly) {
+        // Reset and show progress bar
+        this.loadingElem.style.display = 'flex';
+        this.progressBarElem.style.transform = 'scaleX(0)';
+      }
       const loadManager = new THREE.LoadingManager();
       loadManager.onLoad = onLoadUpdateMesh;
-      this.loadMesh(this, meshPath, meshPathLow, loadManager);
+      this.loadMesh(this, meshPath, meshPathLow, loadManager, cacheOnly);
     }
 
     if (this.state.meshesToCache) {
@@ -3383,6 +3394,13 @@ class bivotJs {
       ctx.moveTo(x0 + phase1 * dx, y0 + phase1 * dy);
       strokeOn = false;
     }
+
+    // Rule out infinite loop
+    if (!step) {
+      console.log('drawDashedSegment(): invalid step')
+      return 0;
+    }
+
     for (i = phase1 * step; i <= 1; i += step) {
       var x = x0 + (x1 - x0) * i;
       var y = y0 + (y1 - y0) * i;
@@ -3584,12 +3602,28 @@ class bivotJs {
       const absLineWidthY = windowFactor * xs * distFactor * lineThicknessFactor * texFactor;
       return [absLineWidthX, absLineWidthY];
     } else {
-      return [0, 0];
+      return [1, 1];
     }
   }
 
   getPointRadii(absLineWidthX, absLineWidthY) {
     return [pointSizeFactor * absLineWidthY, pointSizeFactor * absLineWidthX];
+  }
+
+  getPointRadiiPix(pixels) {
+    const point = {x: pixels, y: pixels};
+    const texPix = this.overlayToTexScale(point);
+    return texPix ? [texPix.x, texPix.y] : [1, 1];
+  }
+
+  overlayToTexScale(point, stretchFactors=[1, 1]) {
+    if (point && this.untiledImDims) {
+      const x = point.x / (this.untiledImDims[0] * stretchFactors[0]) * overlayTexW;
+      const y = point.y / (this.untiledImDims[1] * stretchFactors[1]) * overlayTexH;
+      return { x, y };
+    } else {
+      return null;
+    }
   }
 
   coordsToOverlay(points, stretchFactors=[1, 1]) {
@@ -4044,6 +4078,22 @@ class bivotJs {
     this.uniforms.uAoStrength.value = (this.uniforms.textureLayer.value === 0) ? this.state.aoStrength : 0;
   }
 
+  handleDirtyFlags(depth=0) {
+    if (this.state.dirty !== 0) {
+      Object.values(DirtyFlag).forEach((b, i) => {
+        if (this.state.dirty & b) {
+          this.state.dirty &= ~b;
+          if (i === this.DirtyFlagFuncs.length && depth === 0) {
+            // Recurse once if flags were altered externally while handling the flags
+            this.handleDirtyFlags(depth + 1);
+          } else {
+            this.DirtyFlagFuncs[i]();
+          }
+        }
+      });
+    }
+  }
+
   render(timeMs) {
     if (this.shutdownRequested) {
         this.doShutdown();
@@ -4054,14 +4104,7 @@ class bivotJs {
       const frameStartTimeMs = Date.now();
 
       // Call update functions according to which dirty flag bits are set
-      if (this.state.dirty !== 0) {
-        Object.values(DirtyFlag).forEach((b, i) => {
-          if (this.state.dirty & b) {
-            this.state.dirty &= ~b;
-            this.DirtyFlagFuncs[i]();
-          }
-        });
-      }
+      this.handleDirtyFlags();
 
       this.renderLoopUpdateCanvas();
 
