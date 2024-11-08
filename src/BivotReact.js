@@ -991,10 +991,13 @@ function BivotReact(props) {
         }
         state.loadingComplete = true;
         console.log('Loading complete objectMesh:', objectMeshRef.current)
-        if (shimmerLoaded && objectMeshRef.current !== false) {
-          // Upon completion of Shimmer loading, load the correct mesh according
-          // to the user props
-          updateMeshOverride(objectMeshRef.current);
+        if (shimmerLoaded) {
+          // Upon completion of Shimmer loading, update some config according
+          // to user props: objectMesh, and hoverDisabled
+          if (objectMeshRef.current !== false) {
+            updateMeshOverride(objectMeshRef.current);
+          }
+          updateHoverDisabledOverride(hoverDisabled);
         }
         const meshPath = bivot.current.getMeshPathUsed();
         if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
