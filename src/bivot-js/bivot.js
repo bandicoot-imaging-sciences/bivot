@@ -1169,6 +1169,12 @@ class bivotJs {
           _self.registerEventListener(overlay, 'click', _self.opts.onClick, false);
         }
 
+        document.bivotRightClickStartedInside = false;
+        if (!document.bivotRightClickInitalised) {
+          _self.registerEventListener(document, 'contextmenu', onDocumentContextMenu, false);
+        }
+        document.bivotRightClickInitalised = true;
+
         let loadingDiv = _self.registerElement(document, 'div');
         let progressDiv = _self.registerElement(document, 'div');
         let progressBarDiv = _self.registerElement(document, 'div');
@@ -1608,6 +1614,8 @@ class bivotJs {
             _self.controls.rotateAzimuthTo(_self.controls.azimuthAngle - 2 * Math.PI);
           }
         }
+      } else if (event.button === 2) {  // Secondary button
+        document.bivotRightClickStartedInside = true;
       }
     }
 
@@ -1715,6 +1723,13 @@ class bivotJs {
       } else {
         // Drag is part of regular mouse controls
         _self.requestRender();
+      }
+    }
+
+    function onDocumentContextMenu(event) {
+      if (document.bivotRightClickStartedInside) {
+        event.preventDefault();
+        document.bivotRightClickStartedInside = false;
       }
     }
 

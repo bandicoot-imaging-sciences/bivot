@@ -1509,10 +1509,6 @@ function BivotReact(props) {
               id={canvasID}
               ref={(node) => {
                 canvasRef.current = node;
-                if (node) {
-                  // Block context menu on the canvas to avoid popping the menu while panning.
-                  node.addEventListener('contextmenu', handleCanvasContextMenu);
-                }
               }}
             />
             {loading && (
