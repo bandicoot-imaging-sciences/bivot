@@ -1872,7 +1872,7 @@ class bivotJs {
       const pc = (group !== null) ? _self.state.pointsControl[group] : {};
       switch (event.keyCode) {
         case 188: // Comma - Jump to prev point or point pair
-          if (pc.visible) {
+          if (_self.state.enableKeypress && pc.visible) {
             if (_self.dragState.state === 'selected') {
               const points = pc.points;
               const p = _self.dragState.point;
@@ -1909,7 +1909,7 @@ class bivotJs {
           break;
 
         case 190: // Full stop - Jump to next point or point pair
-          if (pc.visible) {
+          if (_self.state.enableKeypress && pc.visible) {
             if (_self.dragState.state === 'selected') {
               const points = pc.points;
               const p = _self.dragState.point;
@@ -1942,7 +1942,7 @@ class bivotJs {
           break;
 
         case 77: // M - Jump to matching pair
-          if (pc.visible) {
+          if (_self.state.enableKeypress && pc.visible) {
             if (_self.dragState.state === 'selected') {
               if (pc.lines === 'pairs') {
                 const p = _self.dragState.point;
@@ -1959,7 +1959,7 @@ class bivotJs {
           break;
 
         case 38: // Up
-          if (_self.dragState.state === 'selected') {
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
             var unit = 1;
@@ -1982,7 +1982,7 @@ class bivotJs {
           break;
 
         case 40: // Down
-          if (_self.dragState.state === 'selected') {
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
             var unit = 1;
@@ -2005,7 +2005,7 @@ class bivotJs {
           break;
 
         case 37: // Left
-          if (_self.dragState.state === 'selected') {
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
             var unit = 1;
@@ -2028,7 +2028,7 @@ class bivotJs {
           break;
 
         case 39: // Right
-          if (_self.dragState.state === 'selected') {
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
             var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
             var unit = 1;
@@ -2051,30 +2051,29 @@ class bivotJs {
           break;
 
         case 46: // Delete
-          if (_self.state.enableKeypress || true) {
-            if (_self.dragState.state === 'selected') {
-              const group = _self.dragState.group;
-              const point = _self.dragState.point;
-              const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
-              if (newSelection !== null) {
-                _self.dragState.point = newSelection;
-              } else {
-                _self.dragState.state = 'none';
-              }
-              if (_self.opts.onDrawing) {
-                _self.opts.onDrawing(group, point, null, null);
-              }
-              if (_self.opts.onPointSelect && _self.dragState.state !== 'none') {
-                if (_self.dragState.state === 'selected') {
-                  _self.opts.onPointSelect(_self.dragState.group, _self.dragState.point);
-                } else {
-                  _self.opts.onPointSelect(_self.dragState.group, null);
-                }
-              }
-              _self.updateOverlay();
-              _self.requestRender();
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
+            const group = _self.dragState.group;
+            const point = _self.dragState.point;
+            const newSelection = deletePoint(_self.state.pointsControl[group].points, group, point);
+            if (newSelection !== null) {
+              _self.dragState.point = newSelection;
+            } else {
+              _self.dragState.state = 'none';
             }
+            if (_self.opts.onDrawing) {
+              _self.opts.onDrawing(group, point, null, null);
+            }
+            if (_self.opts.onPointSelect && _self.dragState.state !== 'none') {
+              if (_self.dragState.state === 'selected') {
+                _self.opts.onPointSelect(_self.dragState.group, _self.dragState.point);
+              } else {
+                _self.opts.onPointSelect(_self.dragState.group, null);
+              }
+            }
+            _self.updateOverlay();
+            _self.requestRender();
           }
+          break;
       }
     }
 
