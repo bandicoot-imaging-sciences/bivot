@@ -597,7 +597,12 @@ function BivotReact(props) {
       }
       setDiag(undefined);
       setMeshScaling(1.0);
-      setExposureBivot(1.0);
+
+      // Upon changing material, reset any state values which are also props
+      // which may be undefined in the new material
+      setExposureBivot(defaultState.exposure);
+      setAoStrengthBivot(defaultState.ao);
+      setBackgroundColorBivot(defaultState.backgroundColor);
     }
     onChangeMaterial();
   }, [material]);
@@ -718,7 +723,7 @@ function BivotReact(props) {
   }, [sizeBivot]);
 
   useEffect(() => {
-    updateBackgroundColor({ hex: backgroundColorBivot });
+    renderFrame(DirtyFlag.Background);
   }, [backgroundColorBivot]);
 
   useEffect(() => {
