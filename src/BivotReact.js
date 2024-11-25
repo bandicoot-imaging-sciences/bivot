@@ -594,9 +594,10 @@ function BivotReact(props) {
         setIsShuttingDown(true);
         setIsLoadPending(true);
         bivot.current.shutdown(shutdownCompleteCallback);
-        setDiag(undefined);
-        setMeshScaling(1.0);
       }
+      setDiag(undefined);
+      setMeshScaling(1.0);
+      setExposureBivot(1.0);
     }
     onChangeMaterial();
   }, [material]);
