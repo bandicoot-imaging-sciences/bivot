@@ -599,10 +599,12 @@ function BivotReact(props) {
       setMeshScaling(1.0);
 
       // Upon changing material, reset any state values which are also props
-      // which may be undefined in the new material
-      setExposureBivot(defaultState.exposure);
-      setAoStrengthBivot(defaultState.ao);
-      setBackgroundColorBivot(defaultState.backgroundColor);
+      // which may be undefined in the new material.
+      // NOTE - this should be done in the component using Bivot to reset the
+      // state at the time the material changes, rather than slightly after
+      //setExposureBivot(defaultState.exposure);
+      //setAoStrengthBivot(defaultState.ao);
+      //setBackgroundColorBivot(defaultState.backgroundColor);
     }
     onChangeMaterial();
   }, [material]);
