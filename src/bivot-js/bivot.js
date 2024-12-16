@@ -259,7 +259,6 @@ class bivotJs {
       onPointSelect: null,
       onDrawing: null,
       lightControlCallback: null,
-      disableAlpha: false,
     };
     this.opts = {...defaultOptions, ...options};
 
@@ -284,6 +283,7 @@ class bivotJs {
       diffuse: 1.0,
       specular: 1.0,
       roughness: 1.0,
+      alpha: 1.0,
       tint: true,
       fresnel: false,
       ambient: 1.0,
@@ -845,7 +845,7 @@ class bivotJs {
       } else {
         _self.useDispMap = false;
       }
-      if (_self.brdfTextures.get('alpha') !== undefined && !_self.opts.disableAlpha) {
+      if (_self.brdfTextures.get('alpha') !== undefined) {
         _self.useAlphaMap = true;
         _self.uniforms.alphaMap.value = _self.brdfTextures.get('alpha');
       } else {
@@ -4060,6 +4060,7 @@ class bivotJs {
     this.uniforms.uDiffuse.value = this.state.diffuse;
     this.uniforms.uSpecular.value = this.state.specular;
     this.uniforms.uRoughness.value = this.state.roughness;
+    this.uniforms.uAlpha.value = this.state.alpha;
     this.uniforms.uTint.value = this.state.tint;
     this.uniforms.uFresnel.value = this.state.fresnel;
     this.uniforms.uColorTransform.value = this.state.colorTransform;

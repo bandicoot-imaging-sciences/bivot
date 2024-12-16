@@ -20,6 +20,7 @@ export default function getShaders() {
         'uDiffuse': {value: 1.0},
         'uSpecular': {value: 1.0},
         'uRoughness': {value: 1.0},
+        'uAlpha': {value: 1.0},
         'uTint': {value: true},
         'uFresnel': {value: false},
         'uAoStrength': {value: 1.0},
@@ -102,6 +103,7 @@ export default function getShaders() {
     uniform float uDiffuse;
     uniform float uSpecular;
     uniform float uRoughness;
+    uniform float uAlpha;
     uniform bool  uTint;
     uniform bool  uFresnel;
     uniform float uAoStrength;
@@ -428,7 +430,7 @@ export default function getShaders() {
         vec3 diffuseFactor = uDiffuse * (reflectedLight.directDiffuse + reflectedLight.indirectDiffuse);
         vec3 specularFactor = uSpecular * (reflectedLight.directSpecular + reflectedLight.indirectSpecular);
         vec3 outgoingLight = white_L * uExposure * (diffuseFactor + specularFactor);
-        float alpha = max(overlaySurface.a, diffuseColor.a);
+        float alpha = max(overlaySurface.a, (1.0 - uAlpha) + (uAlpha * diffuseColor.a));
         gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, alpha);
       } else {
         vec3 macroNormal = normalize(vNormal);
