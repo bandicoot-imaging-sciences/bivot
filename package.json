@@ -1,6 +1,6 @@
 {
   "name": "@bandicoot/bivot",
-  "version": "3.32.11",
+  "version": "3.32.12",
   "description": "Viewer for Bandicoot Shimmer View images",
   "homepage": "https://github.com/bandicoot-imaging-sciences/bivot",
   "author": "dkarlov",
