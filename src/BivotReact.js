@@ -323,6 +323,7 @@ function BivotReact(props) {
   const canvasRef = useRef();
   const overlayRef = useRef();
   const objectMeshRef = useRef(objectMesh);
+  const hoverDisabledRef = useRef(hoverDisabled);
   const bivot = useRef(null);
   const theme = useTheme();
 
@@ -737,6 +738,7 @@ function BivotReact(props) {
   }, [displacementScale]);
 
   useEffect(() => {
+    hoverDisabledRef.current = hoverDisabled;
     updateHoverDisabledOverride(hoverDisabled);
   }, [hoverDisabled]);
 
@@ -1005,7 +1007,7 @@ function BivotReact(props) {
           if (objectMeshRef.current !== false) {
             updateMeshOverride(objectMeshRef.current);
           }
-          updateHoverDisabledOverride(hoverDisabled);
+          updateHoverDisabledOverride(hoverDisabledRef.current);
         }
         const meshPath = bivot.current.getMeshPathUsed();
         if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
