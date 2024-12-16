@@ -259,6 +259,7 @@ class bivotJs {
       onPointSelect: null,
       onDrawing: null,
       lightControlCallback: null,
+      disableAlpha: false,
     };
     this.opts = {...defaultOptions, ...options};
 
@@ -844,7 +845,7 @@ class bivotJs {
       } else {
         _self.useDispMap = false;
       }
-      if (_self.brdfTextures.get('alpha') !== undefined) {
+      if (_self.brdfTextures.get('alpha') !== undefined && !_self.opts.disableAlpha) {
         _self.useAlphaMap = true;
         _self.uniforms.alphaMap.value = _self.brdfTextures.get('alpha');
       } else {
