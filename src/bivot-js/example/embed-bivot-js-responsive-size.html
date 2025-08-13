@@ -39,7 +39,7 @@
     <p>
       Enim diam vulputate ut pharetra sit. Nunc sed velit dignissim sodales ut eu sem integer. Pretium nibh ipsum consequat nisl vel pretium lectus quam id. Enim ut sem viverra aliquet. Sagittis orci a scelerisque purus semper eget duis. Sem nulla pharetra diam sit amet nisl. Nisl nunc mi ipsum faucibus vitae. Tortor aliquam nulla facilisi cras fermentum odio eu feugiat pretium. Pellentesque adipiscing commodo elit at. Consectetur adipiscing elit duis tristique sollicitudin. Dis parturient montes nascetur ridiculus. Orci nulla pellentesque dignissim enim sit amet venenatis urna cursus. Hendrerit dolor magna eget est lorem ipsum dolor sit amet.
     </p>
-    <p>      
+    <p>
       Sed egestas egestas fringilla phasellus faucibus scelerisque. Dolor sit amet consectetur adipiscing elit. Viverra vitae congue eu consequat ac felis. Erat imperdiet sed euismod nisi porta lorem mollis aliquam. Ut tortor pretium viverra suspendisse potenti. Rutrum quisque non tellus orci ac auctor augue. Ut porttitor leo a diam sollicitudin. Sit amet justo donec enim diam. Interdum consectetur libero id faucibus nisl tincidunt eget nullam. In mollis nunc sed id semper risus in. Tristique senectus et netus et. Orci ac auctor augue mauris augue neque gravida in fermentum. Fames ac turpis egestas integer eget aliquet. Molestie a iaculis at erat pellentesque adipiscing. Bibendum arcu vitae elementum curabitur vitae nunc.
     </p>
     <p>
@@ -54,7 +54,7 @@
     <p>
       Enim diam vulputate ut pharetra sit. Nunc sed velit dignissim sodales ut eu sem integer. Pretium nibh ipsum consequat nisl vel pretium lectus quam id. Enim ut sem viverra aliquet. Sagittis orci a scelerisque purus semper eget duis. Sem nulla pharetra diam sit amet nisl. Nisl nunc mi ipsum faucibus vitae. Tortor aliquam nulla facilisi cras fermentum odio eu feugiat pretium. Pellentesque adipiscing commodo elit at. Consectetur adipiscing elit duis tristique sollicitudin. Dis parturient montes nascetur ridiculus. Orci nulla pellentesque dignissim enim sit amet venenatis urna cursus. Hendrerit dolor magna eget est lorem ipsum dolor sit amet.
     </p>
-    <p>      
+    <p>
       Sed egestas egestas fringilla phasellus faucibus scelerisque. Dolor sit amet consectetur adipiscing elit. Viverra vitae congue eu consequat ac felis. Erat imperdiet sed euismod nisi porta lorem mollis aliquam. Ut tortor pretium viverra suspendisse potenti. Rutrum quisque non tellus orci ac auctor augue. Ut porttitor leo a diam sollicitudin. Sit amet justo donec enim diam. Interdum consectetur libero id faucibus nisl tincidunt eget nullam. In mollis nunc sed id semper risus in. Tristique senectus et netus et. Orci ac auctor augue mauris augue neque gravida in fermentum. Fames ac turpis egestas integer eget aliquet. Molestie a iaculis at erat pellentesque adipiscing. Bibendum arcu vitae elementum curabitur vitae nunc.
     </p>
     <p>
@@ -69,13 +69,13 @@
     <p>
       Enim diam vulputate ut pharetra sit. Nunc sed velit dignissim sodales ut eu sem integer. Pretium nibh ipsum consequat nisl vel pretium lectus quam id. Enim ut sem viverra aliquet. Sagittis orci a scelerisque purus semper eget duis. Sem nulla pharetra diam sit amet nisl. Nisl nunc mi ipsum faucibus vitae. Tortor aliquam nulla facilisi cras fermentum odio eu feugiat pretium. Pellentesque adipiscing commodo elit at. Consectetur adipiscing elit duis tristique sollicitudin. Dis parturient montes nascetur ridiculus. Orci nulla pellentesque dignissim enim sit amet venenatis urna cursus. Hendrerit dolor magna eget est lorem ipsum dolor sit amet.
     </p>
-    <p>      
+    <p>
       Sed egestas egestas fringilla phasellus faucibus scelerisque. Dolor sit amet consectetur adipiscing elit. Viverra vitae congue eu consequat ac felis. Erat imperdiet sed euismod nisi porta lorem mollis aliquam. Ut tortor pretium viverra suspendisse potenti. Rutrum quisque non tellus orci ac auctor augue. Ut porttitor leo a diam sollicitudin. Sit amet justo donec enim diam. Interdum consectetur libero id faucibus nisl tincidunt eget nullam. In mollis nunc sed id semper risus in. Tristique senectus et netus et. Orci ac auctor augue mauris augue neque gravida in fermentum. Fames ac turpis egestas integer eget aliquet. Molestie a iaculis at erat pellentesque adipiscing. Bibendum arcu vitae elementum curabitur vitae nunc.
     </p>
   </body>
   <!-- Import and start Bivot, pegged to the specified version -->
   <!-- <script type="module">
-    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.19.21/src/bivot-js/dist/index.js";
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.33.0/src/bivot-js/dist/index.js";
     // const bivSrc = "../dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
@@ -88,19 +88,19 @@
   </script> -->
 <canvas id="bivot-canvas"></canvas>
 <script type="module">
-  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@v3.19.21/src/bivot-js/dist/index.js';
+  const bivSrc = 'https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.33.0/src/bivot-js/dist/index.js';
   // const bivSrc = "../dist/index.js";
   const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
   const stateUpdate = {
     size: [1000, 200],
   };
   import(bivSrc).then(module => {
-    const bivot = new module.newBivot({ materialSet }); 
+    const bivot = new module.newBivot({ materialSet });
     bivot.opts.loadingCompleteCallback = () => {
       bivot.state = { ...bivot.state, ...stateUpdate };
       bivot.requestRender();
     };
-    bivot.checkWebGL(); 
+    bivot.checkWebGL();
     bivot.startRender();
   });
 </script>

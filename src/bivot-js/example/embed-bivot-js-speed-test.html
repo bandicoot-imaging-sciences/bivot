@@ -3,7 +3,7 @@
 <!-- Copyright (C) Bandicoot Imaging Sciences 2020 -->
 
 <!-- Embed example with responsive layout control for speed testing. -->
-<!-- 
+<!--
   Open this page with this query string to get an FPS counter:
   ?bivotFps=1
 -->
@@ -79,7 +79,7 @@
   </body>
   <!-- Import and start Bivot, pegged to the specified version -->
   <!-- <script type="module">
-    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.19.21/src/bivot-js/dist/index.js";
+    const bivSrc = "https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@3.33.0/src/bivot-js/dist/index.js";
     // const bivSrc = "../dist/index.js";
     // Specify the material to view.  Can be any material set file, local or remote
     const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
@@ -92,7 +92,7 @@
   </script> -->
 <canvas id="bivot-canvas"></canvas>
 <script type="module">
-  const bivVersion = 'v3.19.21';
+  const bivVersion = '3.33.0';
   const bivSrc = `https://cdn.jsdelivr.net/gh/bandicoot-imaging-sciences/bivot@${bivVersion}/src/bivot-js/dist/index.js`;
   // const bivSrc = "../dist/index.js";
   const materialSet = 'https://publish.bandicootimaging.com.au/b1ec2d90/biv_gallery/material-set.json';
@@ -112,12 +112,12 @@
   const targetFps = 200;
 
   import(bivSrc).then(module => {
-    const bivot = new module.newBivot(bivOptions); 
+    const bivot = new module.newBivot(bivOptions);
     bivot.opts.loadingCompleteCallback = () => {
       bivot.adaptFramerate['targetFps'] = targetFps;
       bivot.state = { ...bivot.state, ...stateUpdate };
     };
-    bivot.checkWebGL(); 
+    bivot.checkWebGL();
     bivot.startRender();
   });
   document.getElementById('headline').innerHTML += ` ${bivVersion}`;
