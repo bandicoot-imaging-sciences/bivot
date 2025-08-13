@@ -22,8 +22,8 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "microbundle       --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
-    "watch": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs",
+    "build": "microbundle       --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs --jsx React.createElement",
+    "watch": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs --jsx React.createElement",
     "prepare": "run-s build",
     "debug:example": "run-s build && cp dist/index.js example/node_modules/@bandicoot/bivot/dist && cp package.json example/node_modules/@bandicoot/bivot && rm -rf example/.next/cache",
     "watch:example": "watch 'pnpm run debug:example' src --ignoreDotFiles",
