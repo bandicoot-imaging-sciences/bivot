@@ -1212,7 +1212,7 @@ function BivotReact(props) {
 
   function updateUserScale(val) {
     setUserScale(val);
-    renderFrame(DirtyFlag.Stretch | DirtyFlag.Overlay);
+    renderFrame(DirtyFlag.Stretch | DirtyFlag.Overlay | DirtyFlag.Displacement);
   }
 
   function updateAutoRotate(val) {

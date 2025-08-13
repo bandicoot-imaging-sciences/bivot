@@ -205,24 +205,24 @@ export const DirtyFlag = {
     texturePath: relative or absolute URL for the folder containing the texture folders
 */
 class bivotJs {
-  DirtyFlagFuncs = [
-    this.updateBackground.bind(this),
-    this.updateLightingGrid.bind(this),
-    this.updateMeshRotation.bind(this),
-    this.updateMesh.bind(this),
-    this.updateCanvas.bind(this),
-    this.updateZoom.bind(this),
-    this.updateColor.bind(this),
-    this.updateOverlay.bind(this),
-    this.updateStretch.bind(this),
-    this.updateTextureLayer.bind(this),
-    this.updateTextures.bind(this),
-    this.updateControls.bind(this),
-    this.updateControlsPan.bind(this),
-    this.updateDisplacementUnits.bind(this),
-  ];
-
   constructor(options) {
+    this.DirtyFlagFuncs = [
+      this.updateBackground.bind(this),
+      this.updateLightingGrid.bind(this),
+      this.updateMeshRotation.bind(this),
+      this.updateMesh.bind(this),
+      this.updateCanvas.bind(this),
+      this.updateZoom.bind(this),
+      this.updateColor.bind(this),
+      this.updateOverlay.bind(this),
+      this.updateStretch.bind(this),
+      this.updateTextureLayer.bind(this),
+      this.updateTextures.bind(this),
+      this.updateControls.bind(this),
+      this.updateControlsPan.bind(this),
+      this.updateDisplacementUnits.bind(this),
+    ];
+
     this.controlModes = {
       FULL: 'full',
       QA: 'qa',
@@ -4213,8 +4213,9 @@ class bivotJs {
 
   updateDisplacementUnits() {
     // Note that BIS displacementOffset is not the same as three.js displacementBias, so it is converted here
-    this.uniforms.displacementScale.value = this.state.displacementUnits;
-    this.uniforms.displacementBias.value = -this.state.displacementOffset * this.state.displacementUnits;
+    const userScale = this.state.userScale || 1;
+    this.uniforms.displacementScale.value = this.state.displacementUnits / userScale;
+    this.uniforms.displacementBias.value = -this.state.displacementOffset * this.state.displacementUnits / userScale;
   }
 
   updateGrid(selection, round=false) {
