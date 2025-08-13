@@ -13,7 +13,7 @@
     "deploy": "aws s3 sync build/. s3://open-bivot-example/br-example/ --acl public-read --delete"
   },
   "dependencies": {
-    "@bandicoot/bivot": "^3.33.0",
+    "@bandicoot/bivot": "^3.33.1",
     "@material-ui/core": "^4.12.4",
     "clsx": "^2.1.0"
   },
