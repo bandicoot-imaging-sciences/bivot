@@ -37,6 +37,7 @@ import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import WebGL from 'three/examples/jsm/capabilities/WebGL.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -2793,7 +2794,11 @@ class bivotJs {
     } else {
       // New custom mesh
       meshPath = val;
-      meshPathLow = val.replace('.obj', '_low.obj');
+      if (val.toLowerCase().endsWith('.glb')) {
+        meshPathLow = val.replace(/\.glb$/i, '_low.glb');
+      } else {
+        meshPathLow = val.replace('.obj', '_low.obj');
+      }
     }
     return { meshPath, meshPathLow };
   }
@@ -2841,6 +2846,45 @@ class bivotJs {
       }
     });
     return meshElem;
+  }
+
+  getFileExtension(filePath) {
+    // Handle URLs by extracting the pathname first
+    let path = filePath;
+    try {
+      // If it's a URL, extract just the pathname
+      const url = new URL(filePath);
+      path = url.pathname;
+    } catch (e) {
+      // Not a URL, use as-is (local file path)
+      path = filePath;
+    }
+    return path.toLowerCase().split('.').pop();
+  }
+
+  loadMeshByExtension(meshPath, loadManager, onSuccess, onProgress, onError) {
+    const extension = this.getFileExtension(meshPath);
+
+    if (extension === 'glb' || extension === 'gltf') {
+      const gltfLoader = new GLTFLoader(loadManager);
+      gltfLoader.load(meshPath,
+        function(gltf) {
+          onSuccess(gltf.scene, true); // Pass gltf.scene, true indicates this is a GLTF object
+        },
+        onProgress,
+        onError
+      );
+    } else {
+      // Default to OBJ loader for .obj files and unknown extensions
+      const objLoader = new OBJLoader(loadManager);
+      objLoader.load(meshPath,
+        function(object) {
+          onSuccess(object, false); // false indicates this is an OBJ object
+        },
+        onProgress,
+        onError
+      );
+    }
   }
 
   loadMesh(_self, meshPath, meshPathLow, loadManager, cacheOnly=false) {
@@ -2915,10 +2959,9 @@ class bivotJs {
         // Mesh has already been cached
         return;
       }
-      var objLoader = new OBJLoader(loadManager);
-      objLoader.load(tryMeshPath,
-        function(object) {
-          const meshElem = _self.getMeshElemFromObject(object);
+      _self.loadMeshByExtension(tryMeshPath, loadManager,
+        function(loadedObject, isGLTF) {
+          const meshElem = _self.getMeshElemFromObject(loadedObject);
           _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
         },
         function (xhr) {},
@@ -2941,10 +2984,9 @@ class bivotJs {
         loadManager.onLoad();
       } else {
         // Mesh cache miss.  Load the mesh from the given path.
-        var objLoader = new OBJLoader(loadManager);
-        objLoader.load(tryMeshPath,
-          function(object) {
-            const meshElem = _self.getMeshElemFromObject(object);
+        _self.loadMeshByExtension(tryMeshPath, loadManager,
+          function(loadedObject, isGLTF) {
+            const meshElem = _self.getMeshElemFromObject(loadedObject);
             _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
             _self.changeMesh(meshElem);
 
