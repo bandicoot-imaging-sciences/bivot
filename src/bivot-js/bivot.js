@@ -463,7 +463,7 @@ class bivotJs {
     if (this.opts.state) {
       // Merge in to state only the keys provided in the options; use defaults for others
       for (var k in this.state) {
-        if (!this.opts.state.hasOwnProperty(k)) {
+        if (!(k in this.opts.state)) {
           this.opts.state[k] = this.state[k];
         }
       }
@@ -668,7 +668,7 @@ class bivotJs {
       processUrlFlags();
 
       // Backward compatibility for deprecated load* flags.
-      console.assert(((this.config.loadExr || 0) + (this.config.loadPng || 0) + (this.config.loadJpeg || 0)) <= 1);
+      console.assert(((this.config.loadExr ?? 0) + (this.config.loadPng ?? 0) + (this.config.loadJpeg ?? 0)) <= 1);
       if (this.config.loadExr) {
         this.config.textureFormat = 'EXR';
       } else if (this.config.loadPng) {
@@ -676,7 +676,7 @@ class bivotJs {
       } else if (this.config.loadJpeg) {
         this.config.textureFormat = 'JPG';
       }
-      if (this.config.hasOwnProperty('textureFormat') && typeof this.config.textureFormat === 'string') {
+      if ((this.config.textureFormat) && typeof this.config.textureFormat === 'string') {
         this.config.textureFormat = this.config.textureFormat.toUpperCase();
       }
 
@@ -769,7 +769,7 @@ class bivotJs {
         var img = document.createElement('img');
 
         const aspectRatio = _self.state.size[0] / _self.state.size[1];
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = window.devicePixelRatio ?? 1;
 
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
@@ -852,7 +852,7 @@ class bivotJs {
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
       convertLegacyState(_self.scans);
-      if (_self.opts.hasOwnProperty('show')) {
+      if (('show' in _self.opts)) {
         var s = _self.opts.show;
         const n = Number(s);
         if (Number.isInteger(n)) {
@@ -866,7 +866,7 @@ class bivotJs {
         _self.scan = s;
       }
       // Use the first scan in the list if no valid starting scan has been provided
-      if (!_self.scans.hasOwnProperty(_self.scan)) {
+      if (!(_self.scan in _self.scans)) {
         _self.scan = Object.keys(_self.scans)[0];
       }
     }
@@ -989,7 +989,7 @@ class bivotJs {
             const render = galleryMat.config.renders[galleryMat.name];
             var bivotMat = {};
             for (var key in galleryMat) {
-              if (key != 'config' && galleryMat.hasOwnProperty(key)) {
+              if (key != 'config' && (key in galleryMat)) {
                 bivotMat[key] = galleryMat[key];
               }
             }
@@ -1002,7 +1002,7 @@ class bivotJs {
             };
             const bivotMatRender = bivotMat.config.renders[galleryMat.name];
             for (var key in render) {
-              if (key != 'state' && render.hasOwnProperty(key)) {
+              if (key != 'state' && (key in render)) {
                 bivotMatRender[key] = render[key];
               }
             }
@@ -1010,9 +1010,9 @@ class bivotJs {
             // Handle the case where the material set file has no state.zoom field
             // but it does have zoom settings in config
             if (!render['state'].zoom &&
-              bivotMatRender.hasOwnProperty('cameraPositionZ') &&
-              bivotMatRender.hasOwnProperty('controlsMinDistance') &&
-              bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
+              ('cameraPositionZ' in bivotMatRender) &&
+              ('controlsMinDistance' in bivotMatRender) &&
+              ('controlsMaxDistance' in bivotMatRender)) {
               render['state'].zoom = [
                 bivotMatRender['controlsMinDistance'],
                 bivotMatRender['controlsMaxDistance'],
@@ -1078,7 +1078,7 @@ class bivotJs {
           console.debug(`Loaded ${renderFilename}:`, JSON.parse(JSON.stringify(jsonRender)));
           if (urlFlags.showcase == 1) {
             for (let r in jsonRender.renders) {
-              if (jsonRender.renders.hasOwnProperty(r)) {
+              if ((r in jsonRender.renders)) {
                 if (jsonRender.renders[r].showcase > 0) {
                   scans[r] = jsonRender.renders[r];
                 }
@@ -1133,7 +1133,7 @@ class bivotJs {
 
       for (const [key, value] of parsedUrl.searchParams) {
         const decodeValue = decodeURI(value)
-        if (validFlags.hasOwnProperty(key)) {
+        if ((key in validFlags)) {
           const validValues = validFlags[key];
           if (Array.isArray(validValues)) {
             if (validValues.includes(decodeValue)) {
@@ -1173,16 +1173,16 @@ class bivotJs {
     }
 
     function processUrlFlags() {
-      if (urlFlags.hasOwnProperty('show')) {
+      if (('show' in urlFlags)) {
         _self.scan = urlFlags.show;
       }
-      if (urlFlags.hasOwnProperty('textureFormat')) {
+      if (('textureFormat' in urlFlags)) {
         _self.config.textureFormat = urlFlags.textureFormat;
       }
-      if (urlFlags.hasOwnProperty('bivotFps')) {
+      if (('bivotFps' in urlFlags)) {
         showStats(true);
       }
-      if (urlFlags.hasOwnProperty('adaptFps')) {
+      if (('adaptFps' in urlFlags)) {
         if (urlFlags['adaptFps'] == 0) {
           // Disable adaptive FPS
           _self.adaptFramerate['measuring'] = false;
@@ -1272,7 +1272,7 @@ class bivotJs {
       if (!_self.state.adaptiveToneMap) {
         // Set tone mapping type on renderer
         _self.renderer.toneMapping = LinearToneMapping;
-        _self.renderer.toneMappingExposure = _self.state.toneMapDarkness || 1.0;
+        _self.renderer.toneMappingExposure = _self.state.toneMapDarkness ?? 1.0;
       } else {
         // Use adaptive tone mapping (ACESFilmic is often a good choice)
         _self.renderer.toneMapping = ACESFilmicToneMapping;
@@ -2203,7 +2203,7 @@ class bivotJs {
 
     function getOrientation(event) {
       // Update lights and camera using the device tilt rotation
-      let orient = window.orientation || 0;
+      let orient = window.orientation ?? 0;
       let rotation = new Vector2();
       if (orient == 0 || orient == 180) {
         // Portrait
@@ -2468,13 +2468,13 @@ class bivotJs {
 
       let scanState = [];
       const metadata = material.config.renders[_self.scan];
-      if (metadata.hasOwnProperty('state')) {
+      if (('state' in metadata)) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
-      if (metadata.hasOwnProperty('version')) {
+      if (('version' in metadata)) {
         scanState.brdfVersion = metadata.version;
       }
-      if (metadata.hasOwnProperty('brdfModel')) {
+      if (('brdfModel' in metadata)) {
         scanState.brdfModel = metadata.brdfModel;
       }
 
@@ -2514,13 +2514,13 @@ class bivotJs {
               console.debug('Loaded metadata from ' + jsonFilename + ':', metadata);
 
               // Read valid render.json parameters, if present
-              if (metadata.hasOwnProperty('state')) {
+              if (('state' in metadata)) {
                 jsonToState(metadata.state, scanState);
               }
-              if (metadata.hasOwnProperty('version')) {
+              if (('version' in metadata)) {
                 scanState.brdfVersion = metadata.version;
               }
-              if (metadata.hasOwnProperty('brdfModel')) {
+              if (('brdfModel' in metadata)) {
                 scanState.brdfModel = metadata.brdfModel;
               }
             } catch(e) {
@@ -2543,27 +2543,27 @@ class bivotJs {
       // Read valid bivot-renders.json parameters, if present
       const curScan = _self.scans[_self.scan];
       var curPosition = _self.camera.position.clone();
-      if (curScan.hasOwnProperty('cameraPositionX')) {
+      if (('cameraPositionX' in curScan)) {
         curPosition.x = curScan.cameraPositionX;
       }
-      if (curScan.hasOwnProperty('cameraPositionY')) {
+      if (('cameraPositionY' in curScan)) {
         curPosition.y = curScan.cameraPositionY;
       }
-      if (curScan.hasOwnProperty('cameraPositionZ')) {
+      if (('cameraPositionZ' in curScan)) {
         curPosition.z = curScan.cameraPositionZ;
       }
       _self.controls.setPosition(curPosition.x, curPosition.y, curPosition.z);
 
-      if (curScan.hasOwnProperty('controlsMinDistance')) {
+      if (('controlsMinDistance' in curScan)) {
         _self.controls.minDistance = curScan.controlsMinDistance;
       }
-      if (curScan.hasOwnProperty('controlsMaxDistance')) {
+      if (('controlsMaxDistance' in curScan)) {
         _self.controls.maxDistance = curScan.controlsMaxDistance;
       }
-      if (curScan.hasOwnProperty('state')) {
+      if (('state' in curScan)) {
         jsonToState(curScan.state, bivotState, _self.vectorKeys);
       }
-      if (curScan.hasOwnProperty('version')) {
+      if (('version' in curScan)) {
         bivotState.brdfVersion = curScan.version;
       }
 
@@ -2682,7 +2682,7 @@ class bivotJs {
       w = width;
       h = height;
     }
-    const pixelRatio = window.devicePixelRatio || 1;
+    const pixelRatio = window.devicePixelRatio ?? 1;
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
@@ -3070,7 +3070,7 @@ class bivotJs {
       tryingLowMesh = false;
     }
     if (cacheOnly) {
-      if (_self.meshCache.hasOwnProperty(meshPath)) {
+      if ((meshPath in _self.meshCache)) {
         // Mesh has already been cached
         return;
       }
@@ -3092,7 +3092,7 @@ class bivotJs {
       );
     } else {
       _self.meshPathUsed = meshPath;
-      if (_self.meshCache.hasOwnProperty(meshPath)) {
+      if ((meshPath in _self.meshCache)) {
         // Mesh cache hit.  Switch to the requested mesh which is already loaded.
         _self.meshPathUsed = meshPath;
         _self.changeMesh(_self.meshCache[meshPath]);
@@ -3155,7 +3155,7 @@ class bivotJs {
 
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
-    if (!geom.attributes.hasOwnProperty('normal')) {
+    if (!('normal' in geom.attributes)) {
       console.debug('Computing vertex normals...');
       geom.computeVertexNormals();
     }
@@ -3450,7 +3450,7 @@ class bivotJs {
   getClientSize() {
     // Get the size of the container to render within, or a hard-coded size if specified.
     var pixelWidth, pixelHeight;
-    const pixelRatio = window.devicePixelRatio || 1;
+    const pixelRatio = window.devicePixelRatio ?? 1;
     if (this.opts.responsive) {
       const aspectRatio = this.state.size[0] / this.state.size[1];
       pixelWidth = this.canvas.clientWidth * pixelRatio;
@@ -4560,7 +4560,7 @@ class bivotJs {
 
   updateDisplacementUnits() {
     // Note that BIS displacementOffset is not the same as three.js displacementBias, so it is converted here
-    const userScale = this.state.userScale || 1;
+    const userScale = this.state.userScale ?? 1;
     this.uniforms.displacementScale.value = this.state.displacementUnits / userScale;
     this.uniforms.displacementBias.value = -this.state.displacementOffset * this.state.displacementUnits / userScale;
   }
