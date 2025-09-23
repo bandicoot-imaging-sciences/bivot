@@ -3,11 +3,11 @@
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-import * as THREE from 'three';
+import { UniformsUtils, UniformsLib, Vector2, Matrix3 } from 'three';
 
 export default function getShaders() {
-  const uniforms = THREE.UniformsUtils.merge([
-      THREE.UniformsLib.lights,
+  const uniforms = UniformsUtils.merge([
+      UniformsLib.lights,
       {
         // Set textures to null here and assign later to avoid duplicating texture data.
         'diffuseMap': {value: null},
@@ -15,7 +15,7 @@ export default function getShaders() {
         'specularMap': {value: null},
         'overlayMap': {value: null},
         'textureLayer': {value: 0},
-        'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
+        'normalScale': { value: new Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
         'uExposure': {value: 1.0},
         'uDiffuse': {value: 1.0},
         'uSpecular': {value: 1.0},
@@ -38,12 +38,12 @@ export default function getShaders() {
         'uContrast': {value: 0.5},
         'uHue': {value: 0.0},
         'uSaturation': {value: 0.0},
-        'uColorTransform': { value: new THREE.Matrix3() }, // Default: Identity matrix
+        'uColorTransform': { value: new Matrix3() }, // Default: Identity matrix
         'displacementMap': {value: null},
         'displacementScale': {value: 0.05},
         'displacementBias': {value: 0.0},
         'alphaMap': {value: null},
-        'uvTransform': {value: new THREE.Matrix3()},
+        'uvTransform': {value: new Matrix3()},
       }
     ]);
 

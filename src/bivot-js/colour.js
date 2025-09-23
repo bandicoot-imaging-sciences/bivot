@@ -1,6 +1,6 @@
 // Copyright (C) Bandicoot Imaging Sciences 2021
 
-import * as THREE from 'three';
+import { Matrix3, Vector3 } from 'three';
 
 // sRGB to XYZ matrix
 const lsrgbToXyz = [
@@ -1937,7 +1937,7 @@ const cctToXyLut = [
 
 function loadMatFromArray(array) {
   // Load a matrix from an array, and transpose
-  var mat = new THREE.Matrix3();
+  var mat = new Matrix3();
   mat.fromArray(array);
   mat.transpose();
   return mat;
@@ -1963,19 +1963,19 @@ export function cctToXyz(cct) {
 }
 
 export function getCatMatrix(src_xyz, dst_xyz) {
-  var M = new THREE.Matrix3();
+  var M = new Matrix3();
   var bMat = loadMatFromArray(bradford);
   var bMatInv = loadMatFromArray(bradfordInv);
 
-  var src_working = new THREE.Vector3();
+  var src_working = new Vector3();
   src_working.fromArray(src_xyz);
-  var dst_working = new THREE.Vector3();
+  var dst_working = new Vector3();
   dst_working.fromArray(dst_xyz);
   src_working.applyMatrix3(bMat);
   dst_working.applyMatrix3(bMat);
   dst_working.divide(src_working);
 
-  var diagMat = new THREE.Matrix3();
+  var diagMat = new Matrix3();
   diagMat.fromArray([
     dst_working.x, 0, 0,
     0, dst_working.y, 0,
@@ -1997,7 +1997,7 @@ export function getWhiteBalanceMatrix(cct_src, cct_dst=6500) {
   const chroma_dst = cctToXyz(cct_dst);
   const cat = getCatMatrix(chroma_src, chroma_dst);
 
-  var M = new THREE.Matrix3();
+  var M = new Matrix3();
   M.copy(xyzToLsrgbMat);
   M.multiply(cat);
   M.multiply(lsrgbToXyzMat);

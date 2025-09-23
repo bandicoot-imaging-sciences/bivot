@@ -27,8 +27,8 @@
     "not op_mini all"
   ],
   "dependencies": {
-    "camera-controls": "^1.36.2",
-    "three": "^0.149.0",
+    "camera-controls": "^3.1.0",
+    "three": "^0.180.0",
     "ua-parser-js": "^1.0.33"
   }
 }

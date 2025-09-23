@@ -1,12 +1,12 @@
 // Copyright (C) Bandicoot Imaging Sciences 2020
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
-import * as THREE from 'three';
+import { Vector2, Vector3, Color } from 'three';
 
 function arrayToVector(input, vecType) {
-  // If the input is an Array, convert it to the specified vector type (either THREE.Vector2,
-  // THREE.Vector3, or THREE.Color).
-  console.assert(vecType == THREE.Vector2 || vecType == THREE.Vector3 || vecType == THREE.Color);
+  // If the input is an Array, convert it to the specified vector type (either Vector2,
+  // Vector3, or Color).
+  console.assert(vecType == Vector2 || vecType == Vector3 || vecType == Color);
   var output;
   if (Array.isArray(input)) {
     output = new vecType();
@@ -21,9 +21,9 @@ function arrayToVector(input, vecType) {
 export function jsonToState(inDict, outDict, vectorKeys=null) {
   if (vectorKeys == null) {
     vectorKeys = {
-      "lightPosition": THREE.Vector3,
-      "lightPositionOffset": THREE.Vector2,
-      "cameraPan": THREE.Vector3,
+      "lightPosition": Vector3,
+      "lightPositionOffset": Vector2,
+      "cameraPan": Vector3,
     };
   }
   for (var key in inDict) {

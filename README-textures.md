@@ -41,8 +41,8 @@ For other file formats, the filenames are in the following forms:
 Each texture folder also contains a `render.json` file, which includes key parameters from texture generation,
 including:
 
-* `brdfModel`: BRDF model (integer: `1` for metal/roughness)
-* `brdfVersion`: version of model (integer)
+* `brdfModel`: BRDF model (integer: `0` for BIS, `1` for metal/roughness, `2` for PBR)
+* `brdfVersion`: version of model (float)
 * `illumL`: detected scan illumination level in sensor counts (float)
 * `yFlip`: y-axis flipping (boolean, default is `false`)
 
@@ -51,4 +51,3 @@ including:
 
 [1] B. Burley, "Physically-Based Shading at Disney", SIGGRAPH course, 2012.
 https://disney-animation.s3.amazonaws.com/library/s2012_pbs_disney_brdf_notes_v2.pdf
-

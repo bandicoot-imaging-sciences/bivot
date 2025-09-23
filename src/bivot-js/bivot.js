@@ -32,25 +32,86 @@ import ResizeObserver from 'resize-observer-polyfill';
 
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
-import * as THREE from 'three';
+import {
+  ACESFilmicToneMapping,
+  AmbientLight,
+  Box3,
+  ClampToEdgeWrapping,
+  Clock,
+  Color,
+  DoubleSide,
+  FrontSide,
+  Group,
+  LinearFilter,
+  LinearMipMapLinearFilter,
+  LinearToneMapping,
+  LoadingManager,
+  MOUSE,
+  MathUtils,
+  Matrix3,
+  Matrix4,
+  Mesh,
+  NearestFilter,
+  PerspectiveCamera,
+  PlaneGeometry,
+  PointLight,
+  Quaternion,
+  RGBAFormat,
+  Raycaster,
+  RectAreaLight,
+  RepeatWrapping,
+  Scene,
+  ShaderMaterial,
+  Sphere,
+  Spherical,
+  TOUCH,
+  Texture,
+  TextureLoader,
+  UniformsLib,
+  Vector2,
+  Vector3,
+  Vector4,
+  WebGLRenderer
+} from 'three';
 
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import WebGL from 'three/examples/jsm/capabilities/WebGL.js';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { AdaptiveToneMappingPass } from 'three/examples/jsm/postprocessing/AdaptiveToneMappingPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
-import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { MeshPhysicalNodeMaterial, TSL } from 'three/webgpu';
+
+// Extract TSL functions we need
+const { texture, normalMap, float } = TSL;
 //import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
+// Import CameraControls
 import CameraControls from 'camera-controls';
-CameraControls.install({ THREE: THREE });
+
+// Create THREE object with only the components needed by CameraControls
+const THREE = {
+  MOUSE,
+  TOUCH,
+  Vector2,
+  Vector3,
+  Vector4,
+  Quaternion,
+  Matrix4,
+  Spherical,
+  Box3,
+  Sphere,
+  Raycaster,
+  MathUtils
+};
+
+CameraControls.install({ THREE });
 
 import UAParser from 'ua-parser-js';
 
@@ -305,15 +366,16 @@ class bivotJs {
       // animate - automated control (auto rotate always on)
       lightMotion: 'mouse',
       lightColor: [255, 255, 255],
-      lightPosition: new THREE.Vector3(0, 0, 1),
+      lightPosition: new Vector3(0, 0, 1),
       // Offset light controls by this vector. In screen co-ords: x-axis points right and y-axis points up.
-      lightPositionOffset: new THREE.Vector2(0, 0),
+      lightPositionOffset: new Vector2(0, 0),
       lightNumber: 1,
       lightSpacing: 0.5,
       scan: 'kimono 2k',
       meshOverride: false,
       meshesToCache: undefined,
       brdfModel: 1,
+      brdfModelVariant: 'metalRoughness', // 'metalRoughness' or 'specularGloss' (only used when brdfModel === 2)
       brdfVersion: 2,
       displacementOffset: 0.0,
       displacementUnits: 0.0,
@@ -321,7 +383,7 @@ class bivotJs {
       tileBoundary: undefined,
       aoStrength: 1.0,
       colorTemperature: 6500,
-      colorTransform: new THREE.Matrix3(),
+      colorTransform: new Matrix3(),
       hue: 0.0,
       saturation: 0.0,
       yFlip: true,          // Legacy field
@@ -356,8 +418,8 @@ class bivotJs {
       enableKeypress: false,
       textureLayer: 0,
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
-      cameraPan: new THREE.Vector3(0.0, 0.0, 0.0),
-      _camPositionOffset: new THREE.Vector2(0, 0),
+      cameraPan: new Vector3(0.0, 0.0, 0.0),
+      _camPositionOffset: new Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
     };
@@ -412,9 +474,9 @@ class bivotJs {
 
     // Define the keys in state which are vectors, and their type
     this.vectorKeys = {
-      "lightPosition": THREE.Vector3,
-      "lightPositionOffset": THREE.Vector2,
-      "cameraPan": THREE.Vector3,
+      "lightPosition": Vector3,
+      "lightPositionOffset": Vector2,
+      "cameraPan": Vector3,
     };
 
     // Store initial state in the config
@@ -436,8 +498,8 @@ class bivotJs {
     this.materials = {};
     this.exposureGain = 1/10000; // Texture intensities in camera count scale (e.g. 14 bit).
     this.renderRequested = false;
-    this.scene = new THREE.Scene();
-    this.clock = new THREE.Clock();
+    this.scene = new Scene();
+    this.clock = new Clock();
     this.camera = null;
     this.lights = null;
     this.lights45 = null;
@@ -544,7 +606,7 @@ class bivotJs {
     let ambientLight = null;
     let gyroDetected = false;
     let touchDetected = detectTouch();
-    let baselineTilt = new THREE.Vector2(0, 0);
+    let baselineTilt = new Vector2(0, 0);
     let baselineTiltSet = false;
     let loader = null;
     let gui = null;
@@ -552,7 +614,7 @@ class bivotJs {
     let subtitleElem = null;
     let subtitleTextElem = null;
 
-    let raycaster = new THREE.Raycaster();
+    let raycaster = new Raycaster();
 
     // Device orientation events require user permission for iOS > 13.
     // We use a feature detector for tilt permission in case Android picks up the same API.
@@ -1205,21 +1267,28 @@ class bivotJs {
     }
 
     function updateToneMapParams() {
+      // AdaptiveToneMappingPass was removed in newer Three.js versions
+      // Use renderer's built-in tone mapping instead
       if (!_self.state.adaptiveToneMap) {
-        _self.toneMappingPass.setAdaptive(false);
-        _self.toneMappingPass.setAverageLuminance(_self.state.toneMapDarkness);
+        // Set tone mapping type on renderer
+        _self.renderer.toneMapping = LinearToneMapping;
+        _self.renderer.toneMappingExposure = _self.state.toneMapDarkness || 1.0;
+      } else {
+        // Use adaptive tone mapping (ACESFilmic is often a good choice)
+        _self.renderer.toneMapping = ACESFilmicToneMapping;
+        _self.renderer.toneMappingExposure = 1.0;
       }
     }
 
     function initialiseLighting(background, scene) {
-      scene.background = new THREE.Color(background);
+      scene.background = new Color(background);
 
       _self.updateLightingGrid();
       updateLightMotion();
 
       const ambientColour = 0xFFFFFF;
       const ambientIntensity = 1.0;
-      ambientLight = new THREE.AmbientLight(ambientColour, ambientIntensity);
+      ambientLight = new AmbientLight(ambientColour, ambientIntensity);
       scene.add(ambientLight);
     }
 
@@ -1230,7 +1299,7 @@ class bivotJs {
       const aspect = 2;  // the canvas default
       const near = 0.01;
       const far = 50;
-      var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+      var camera = new PerspectiveCamera(fov, aspect, near, far);
       return camera;
     }
 
@@ -1742,7 +1811,7 @@ class bivotJs {
       const viewPortY = event.clientY;
       if (_self.isViewPortCoordInCanvas(viewPortX, viewPortY)) {
         const rect = _self.canvas.getBoundingClientRect();
-        const xy = new THREE.Vector2(
+        const xy = new Vector2(
           ((viewPortX - rect.left) / (rect.right - rect.left)) * 2 - 1,
           -((viewPortY - rect.top) / (rect.bottom - rect.top)) * 2 + 1
         );
@@ -1757,7 +1826,7 @@ class bivotJs {
         _self.state.lightPosition.set(_self.state.lightPositionOffset.x, _self.state.lightPositionOffset.y, 1);
         _self.state.lightPosition.copy(
           _self.xyTo3dDirection(
-            new THREE.Vector2(0, 0),
+            new Vector2(0, 0),
             _self.state.lightPositionOffset,
             _self.state.lightTiltWithMousePos,
             _self.state.lightTiltLimitDegrees,
@@ -1832,7 +1901,8 @@ class bivotJs {
         return;
       }
 
-      const lightControlKey = _self.lightControl()?.moveLightKey;
+      const lightControl = _self.lightControl();
+      const lightControlKey = lightControl?.moveLightKey;
       if (_self.mouseInCanvas) {
         switch (event.keyCode) {
           case 17: // Ctrl
@@ -2091,7 +2161,8 @@ class bivotJs {
             break;
         }
       }
-      const lightControlKey = _self.lightControl()?.moveLightKey;
+      const lightControl = _self.lightControl();
+      const lightControlKey = lightControl ? lightControl.moveLightKey : null;
       switch(event.keyCode) {
         // Put last in the switch statement to avoid overriding built-in keys
         case lightControlKey:
@@ -2133,7 +2204,7 @@ class bivotJs {
     function getOrientation(event) {
       // Update lights and camera using the device tilt rotation
       let orient = window.orientation || 0;
-      let rotation = new THREE.Vector2();
+      let rotation = new Vector2();
       if (orient == 0 || orient == 180) {
         // Portrait
         rotation.set(event.beta, event.gamma);
@@ -2160,12 +2231,12 @@ class bivotJs {
         baselineTiltSet = true;
       }
       const deltaTilt = currentTilt.clone().sub(baselineTilt);
-      const xy = new THREE.Vector2(
-        Math.sin(THREE.MathUtils.degToRad(deltaTilt.y)),
-        Math.sin(THREE.MathUtils.degToRad(deltaTilt.x))
+      const xy = new Vector2(
+        Math.sin(MathUtils.degToRad(deltaTilt.y)),
+        Math.sin(MathUtils.degToRad(deltaTilt.x))
       );
       const elevationLimit = Math.max(_self.state.camTiltLimitDegrees, _self.state.lightTiltLimitDegrees);
-      const qLimit = Math.cos(THREE.MathUtils.degToRad(elevationLimit));
+      const qLimit = Math.cos(MathUtils.degToRad(elevationLimit));
       if (xy.length() > qLimit) {
         const surplus = xy.length() - xy.clone().clampLength(0.0, qLimit).length();
         baselineTilt.addScaledVector(deltaTilt, surplus * _self.state.tiltDriftSpeed);
@@ -2192,7 +2263,7 @@ class bivotJs {
       if (_self.config.textureFormat == 'EXR') {
         loader = new EXRLoader(loadManager);
       } else{
-        loader = new THREE.TextureLoader(loadManager);
+        loader = new TextureLoader(loadManager);
       }
       onProgress('', 0, 1);
 
@@ -2232,15 +2303,15 @@ class bivotJs {
                 // OES_texture_float_linear
                 // or the equivalent for half-float textures. However, when I tried this I got a blank render and
                 // console errors (see notes on extension loading above).
-                texture.minFilter = THREE.LinearFilter;
-                texture.magFilter = THREE.LinearFilter;
+                texture.minFilter = LinearFilter;
+                texture.magFilter = LinearFilter;
               } else {
-                texture.minFilter = THREE.LinearMipMapLinearFilter;
-                texture.magFilter = THREE.LinearFilter;
+                texture.minFilter = LinearMipMapLinearFilter;
+                texture.magFilter = LinearFilter;
               }
             } else {
-              texture.minFilter = THREE.NearestFilter;
-              texture.magFilter = THREE.NearestFilter;
+              texture.minFilter = NearestFilter;
+              texture.magFilter = NearestFilter;
             }
 
             texture.name = key;
@@ -2296,7 +2367,7 @@ class bivotJs {
     }
 
     function loadScan() {
-      const loadManager = new THREE.LoadingManager();
+      const loadManager = new LoadingManager();
       loadManager.onLoad = onLoad;
       loadManager.onProgress = onProgress;
       loadManager.onStart = onStart;
@@ -2347,14 +2418,52 @@ class bivotJs {
 
     function loadScanFromTextures(loadManager, textures, material, keys) {
       let paths = new Map();
-      paths.set('diffuse', {path: textures.basecolor, format: THREE.RGBAFormat});
-      paths.set('normals', {path: textures.normals, format: THREE.RGBAFormat});
-      paths.set('specular', {path: textures.specular, format: THREE.RGBAFormat});
+      paths.set('diffuse', {path: textures.basecolor, format: RGBAFormat});
+      paths.set('normals', {path: textures.normals, format: RGBAFormat});
+      paths.set('specular', {path: textures.specular, format: RGBAFormat});
       if (textures.displacement) {
-        paths.set('displacement', {path: textures.displacement, format: THREE.RGBAFormat});
+        paths.set('displacement', {path: textures.displacement, format: RGBAFormat});
       }
       if (textures.alpha) {
-        paths.set('alpha', {path: textures.alpha, format: THREE.RGBAFormat});
+        paths.set('alpha', {path: textures.alpha, format: RGBAFormat});
+      }
+
+      // Add additional PBR textures directly from textures object if available
+      if (textures.roughness) {
+        paths.set('roughness', {path: textures.roughness, format: RGBAFormat});
+      }
+      if (textures.metallic) {
+        paths.set('metallic', {path: textures.metallic, format: RGBAFormat});
+      }
+      if (textures.ambientOcclusion) {
+        paths.set('aomap', {path: textures.ambientOcclusion, format: RGBAFormat});
+      }
+      if (textures.emissive) {
+        paths.set('emissive', {path: textures.emissive, format: RGBAFormat});
+      }
+      if (textures.clearcoat) {
+        paths.set('clearcoat', {path: textures.clearcoat, format: RGBAFormat});
+      }
+      if (textures.clearcoatRoughness) {
+        paths.set('clearcoatRoughness', {path: textures.clearcoatRoughness, format: RGBAFormat});
+      }
+      if (textures.clearcoatNormal) {
+        paths.set('clearcoatNormal', {path: textures.clearcoatNormal, format: RGBAFormat});
+      }
+      if (textures.transmission) {
+        paths.set('transmission', {path: textures.transmission, format: RGBAFormat});
+      }
+      if (textures.thickness) {
+        paths.set('thickness', {path: textures.thickness, format: RGBAFormat});
+      }
+      if (textures.ior) {
+        paths.set('ior', {path: textures.ior, format: RGBAFormat});
+      }
+      if (textures.sheenColor) {
+        paths.set('sheen', {path: textures.sheenColor, format: RGBAFormat});
+      }
+      if (textures.sheenRoughness) {
+        paths.set('sheenRoughness', {path: textures.sheenRoughness, format: RGBAFormat});
       }
 
       let scanState = [];
@@ -2364,6 +2473,9 @@ class bivotJs {
       }
       if (metadata.hasOwnProperty('version')) {
         scanState.brdfVersion = metadata.version;
+      }
+      if (metadata.hasOwnProperty('brdfModel')) {
+        scanState.brdfModel = metadata.brdfModel;
       }
 
       var overrideSize = null;
@@ -2407,6 +2519,9 @@ class bivotJs {
               }
               if (metadata.hasOwnProperty('version')) {
                 scanState.brdfVersion = metadata.version;
+              }
+              if (metadata.hasOwnProperty('brdfModel')) {
+                scanState.brdfModel = metadata.brdfModel;
               }
             } catch(e) {
               err = 1;
@@ -2479,30 +2594,30 @@ class bivotJs {
       let paths = new Map();
       console.assert(['JPG', 'PNG', 'EXR'].includes(_self.config.textureFormat));
       if (_self.config.textureFormat == 'EXR') {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:THREE.RGBAFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:THREE.RGBAFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: THREE.RGBAFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: THREE.RGBAFormat});
-        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropf16.exr', format: THREE.RGBAFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropf16.exr', format:RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropf16.exr', format:RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropf16.exr', format: RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropf16.exr', format: RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropf16.exr', format: RGBAFormat});
       }
       else if (_self.config.textureFormat == 'JPG') {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:THREE.RGBAFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
-        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.jpg', format: THREE.RGBAFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.jpg', format:RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.jpg', format:RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.jpg', format: RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.jpg', format: RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.jpg', format: RGBAFormat});
       } else {
-        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:THREE.RGBAFormat});
-        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:THREE.RGBAFormat});
-        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: THREE.RGBAFormat});
-        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: THREE.RGBAFormat});
-        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.png', format: THREE.RGBAFormat});
+        paths.set('diffuse', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_hi.png', format:RGBAFormat});
+        paths.set('normals', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_hi.png', format:RGBAFormat});
+        paths.set('specular', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_hi.png', format: RGBAFormat});
+        paths.set('displacement', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_hi.png', format: RGBAFormat});
+        paths.set('alpha', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_hi.png', format: RGBAFormat});
         if (_self.config.dual8Bit) {
-          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:THREE.RGBAFormat});
-          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:THREE.RGBAFormat});
-          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: THREE.RGBAFormat});
-          paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: THREE.RGBAFormat});
-          paths.set('alpha_low', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_lo.png', format: THREE.RGBAFormat});
+          paths.set('diffuse_low', {path: texDir + 'brdf-' + texNames.get('diffuse') + '_cropu8_lo.png', format:RGBAFormat});
+          paths.set('normals_low', {path: texDir + 'brdf-' + texNames.get('normals') + '_cropu8_lo.png', format:RGBAFormat});
+          paths.set('specular_low', {path: texDir + 'brdf-' + texNames.get('specular') + '_cropu8_lo.png', format: RGBAFormat});
+          paths.set('displacement_low', {path: texDir + 'brdf-' + texNames.get('displacement') + '_cropu8_lo.png', format: RGBAFormat});
+          paths.set('alpha_low', {path: texDir + 'brdf-' + texNames.get('alpha') + '_cropu8_lo.png', format: RGBAFormat});
         }
       }
 
@@ -2511,7 +2626,7 @@ class bivotJs {
 
     function onStart(url, itemsLoaded, itemsTotal) {
       //console.debug('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
-    };
+    }
 
     function onProgress(url, itemsLoaded, itemsTotal) {
       if (itemsLoaded > 0) {
@@ -2578,7 +2693,7 @@ class bivotJs {
   }
 
   initialiseRenderer() {
-    var renderer = new THREE.WebGLRenderer({ canvas: this.canvas, preserveDrawingBuffer: true });
+    var renderer = new WebGLRenderer({ canvas: this.canvas, preserveDrawingBuffer: true });
     renderer.physicallyCorrectLights = true;
 
     return renderer;
@@ -2591,7 +2706,7 @@ class bivotJs {
     composer.addPass(this.renderPass);
 
     this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      new Vector2(window.innerWidth, window.innerHeight),
       this.state.bloom, // strength
       0.4, // radius
       0.99 // threshold
@@ -2602,9 +2717,9 @@ class bivotJs {
     this.setFxaaResolution();
     composer.addPass(this.fxaaPass);
 
-    this.toneMappingPass = new AdaptiveToneMappingPass(true, 256);
-    updateToneMapParams();
-    composer.addPass(this.toneMappingPass);
+    // Note: AdaptiveToneMappingPass was removed in newer Three.js versions
+    // Tone mapping is now handled by the renderer's toneMapping property
+    updateToneMapParams(); // Updated to work with renderer tone mapping
 
     // The effective gamma is hard-coded by the linear to sRGB mapping inside GammaCorrectionShader.
     // To implement adjustable gamma, we could implement our own GammaCorrectionShader.
@@ -2630,12 +2745,12 @@ class bivotJs {
 
     if (this.state.lightType == 'area') {
       let areaFactor = intensity / (Math.atan(this.state.areaLightWidth) * Math.atan(this.state.areaLightHeight));
-      let rectLight = new THREE.RectAreaLight(color, areaFactor, this.state.areaLightWidth, this.state.areaLightHeight);
+      let rectLight = new RectAreaLight(color, areaFactor, this.state.areaLightWidth, this.state.areaLightHeight);
       rectLight.position.copy(upVector);
       rectLight.position.add(offset);
       return rectLight;
     } else {
-      let light = new THREE.PointLight(color, intensity, distanceLimit, decay);
+      let light = new PointLight(color, intensity, distanceLimit, decay);
       light.position.copy(upVector);
       light.position.add(offset);
       return light;
@@ -2643,12 +2758,12 @@ class bivotJs {
   }
 
   rotateLights(lights, vec) {
-    const upVectorNorm = new THREE.Vector3(0, 0, 1);
+    const upVectorNorm = new Vector3(0, 0, 1);
 
     let lightVectorNorm = vec.clone();
     lightVectorNorm.normalize();
 
-    let rotationAxis = new THREE.Vector3(0, 0, 0);
+    let rotationAxis = new Vector3(0, 0, 0);
     rotationAxis.crossVectors(upVectorNorm, lightVectorNorm);
 
     const rotationAngle = Math.acos(upVectorNorm.dot(lightVectorNorm));
@@ -2698,16 +2813,16 @@ class bivotJs {
     const gridLen = this.state.lightNumber;
     const totalLights = numLights * (gridLen ** 2);
     const lightIntensity = totalIntensity / totalLights * 2; // Doubled because color is halved (to allow colour range 0..2)
-    const upVector = new THREE.Vector3(0, 0, this.state.lightPosition.length());
+    const upVector = new Vector3(0, 0, this.state.lightPosition.length());
     const spacing = this.state.lightSpacing;
     const mid = (gridLen - 1) / 2;
 
-    var allLights = new THREE.Group();
+    var allLights = new Group();
     lightVectors.map(vec => {
-      var lights = new THREE.Group();
+      var lights = new Group();
       for (let i = 0; i < gridLen; i++) {
         for (let j = 0; j < gridLen; j++) {
-          const offset = new THREE.Vector3((i - mid) * spacing, (j - mid) * spacing, 0);
+          const offset = new Vector3((i - mid) * spacing, (j - mid) * spacing, 0);
           lights.add(this.createLight(lightIntensity, color, upVector, offset));
         }
       }
@@ -2759,13 +2874,13 @@ class bivotJs {
     // to xy values closer to the edge.
     // Mode = 2: Linear mapping between xy position and angle, e.g. x = 0.5
     // with sensitivity of 1 means 45 degrees
-    var new_xy = new THREE.Vector2(xy.x, xy.y).add(offset).multiplyScalar(sensitivity);
+    var new_xy = new Vector2(xy.x, xy.y).add(offset).multiplyScalar(sensitivity);
     if (mode === 2) {
       new_xy.clampLength(0, 1);
       const phi = Math.min(new_xy.length() * Math.PI / 2, Math.PI * (90 - elevationLimit) / 180);
       const z = phi < 1e-6 ? 1 : new_xy.length() / Math.tan(phi);
       console.assert(!isNaN(z));
-      var vector = new THREE.Vector3(new_xy.x, new_xy.y, z);
+      var vector = new Vector3(new_xy.x, new_xy.y, z);
       vector.normalize();
       return vector;
     } else {
@@ -2778,7 +2893,7 @@ class bivotJs {
         new_z = Math.sqrt(z2);
       }
       console.assert(!isNaN(new_z));
-      return new THREE.Vector3(new_xy.x, new_xy.y, new_z);
+      return new Vector3(new_xy.x, new_xy.y, new_z);
     }
   }
 
@@ -2824,13 +2939,13 @@ class bivotJs {
         this.loadingElem.style.display = 'flex';
         this.progressBarElem.style.transform = 'scaleX(0)';
       }
-      const loadManager = new THREE.LoadingManager();
+      const loadManager = new LoadingManager();
       loadManager.onLoad = onLoadUpdateMesh;
       this.loadMesh(this, meshPath, meshPathLow, loadManager, cacheOnly);
     }
 
     if (this.state.meshesToCache) {
-      const loadManager = new THREE.LoadingManager();
+      const loadManager = new LoadingManager();
       this.state.meshesToCache.forEach(val => {
         const { meshPath, meshPathLow } = this.meshValToPath(val);
         this.loadMesh(this, meshPath, meshPathLow, loadManager, true);
@@ -2841,7 +2956,7 @@ class bivotJs {
   getMeshElemFromObject(object) {
     var meshElem = null;
     object.traverse(function(child) {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof Mesh) {
         meshElem = child;
       }
     });
@@ -3027,7 +3142,7 @@ class bivotJs {
   activateLoadedMesh(_self) {
     if (_self.mesh === null) {
       console.warn('Mesh unavailable; using planar geometry');
-      _self.mesh = new THREE.Mesh(_self.getPlaneGeometry());
+      _self.mesh = new Mesh(_self.getPlaneGeometry());
       // Use mesh cache purely to register for disposal (we never retrieve this mesh from the cache)
       _self.meshCache[`plane-${_self.mesh.uuid}`] = _self.mesh;
     }
@@ -3056,39 +3171,229 @@ class bivotJs {
     _self.setDiag(); // Calculate diag after setting geometry
 
     // Set up the material and attach it to the mesh
-    let material = new THREE.ShaderMaterial(
-      {
-        fragmentShader: _self.fragmentShader,
-        vertexShader: _self.vertexShader,
-        uniforms: _self.uniforms,
-        lights: true
-      }
-    );
-    material.defines = {
-      USE_NORMALMAP: 1,
-      COLOR_TRANSFORM: 1,
-      HUE_SATURATION: 1,
-    };
-    if (_self.useDispMap) {
-      console.debug('Displacement map enabled');
-      material.defines['USE_DISPLACEMENTMAP'] = 1;
-      material.defines['TANGENTSPACE_NORMALMAP'] = 1;
-      // TODO: Define when tangents can be computed in the geometry
-      //       (which requires loading a mesh with indexed geometry)
-      //material.defines['USE_TANGENT'] = 1;
-    } else {
-      material.defines['OBJECTSPACE_NORMALMAP'] = 1;
-    }
-    if (_self.useAlphaMap) {
-      console.debug('Alpha map enabled');
-      material.defines['USE_ALPHAMAP'] = 1;
-      material.transparent = true;
-      material.side = THREE.DoubleSide;
-    }
+    let material;
 
-    material.extensions.derivatives = true;
+    // Use Three.js built-in MeshPhysicalMaterial for PBR mode (brdfModel === 2)
+    if (_self.state.brdfModel === 2) {
+      console.debug('Using MeshPhysicalMaterial for PBR mode with variant:', _self.state.brdfModelVariant);
+
+      // Check if we need to use specular-gloss variant
+      const useSpecularGloss = _self.state.brdfModelVariant === 'specularGloss';
+
+      if (useSpecularGloss) {
+        // Use TSL Node Material for specular-gloss workflow
+        material = new MeshPhysicalNodeMaterial();
+
+        // Basic properties
+        if (_self.brdfTextures.has('diffuse')) {
+          material.colorNode = texture(_self.brdfTextures.get('diffuse'));
+        }
+
+        if (_self.brdfTextures.has('normals')) {
+          material.normalNode = normalMap(texture(_self.brdfTextures.get('normals')));
+        }
+
+        // Specular-Gloss workflow using TSL nodes
+        if (_self.brdfTextures.has('specular') && _self.brdfTextures.has('gloss')) {
+          const specularTex = texture(_self.brdfTextures.get('specular'));
+          const glossTex = texture(_self.brdfTextures.get('gloss'));
+
+          // Convert specular-gloss to metallic-roughness for Three.js compatibility
+          // This is a simplified conversion - you might want to use more sophisticated conversion
+          material.metalnessNode = float(0.0); // Specular workflow typically has low metalness
+          material.roughnessNode = float(1.0).sub(glossTex.r); // Roughness = 1 - Gloss
+
+          // Use specular color to modulate the base color
+          material.colorNode = material.colorNode ?
+            material.colorNode.mul(specularTex) :
+            specularTex;
+        } else {
+          // Fallback to default values
+          material.metalness = 0.0;
+          material.roughness = 1.0;
+        }
+
+        // Set other basic properties
+        material.transparent = false;
+        material.side = FrontSide;
+
+      } else {
+        // Use standard metallic-roughness workflow
+        console.debug('Using metallic-roughness workflow');
+
+        // Create PBR material using Three.js built-in shaders
+        const materialParams = {
+          // Basic properties
+          map: _self.brdfTextures.get('diffuse'),
+          normalMap: _self.brdfTextures.get('normals'),
+
+          // Set default values
+          roughness: 1.0,
+          metalness: 0.0,
+
+          // Enable features
+          transparent: false,
+          side: FrontSide,
+        };
+
+        // Add PBR texture maps if available
+        if (_self.brdfTextures.has('roughness')) {
+          materialParams.roughnessMap = _self.brdfTextures.get('roughness');
+        } else if (_self.brdfTextures.has('specular')) {
+          // Use the specular texture which contains roughness-metallic data
+          materialParams.roughnessMap = _self.brdfTextures.get('specular');
+        }
+
+        if (_self.brdfTextures.has('metallic')) {
+          materialParams.metalnessMap = _self.brdfTextures.get('metallic');
+        } else if (_self.brdfTextures.has('specular')) {
+          // Use the specular texture which contains roughness-metallic data
+          materialParams.metalnessMap = _self.brdfTextures.get('specular');
+        }
+
+        material = new MeshPhysicalMaterial(materialParams);
+      }
+
+      // Common properties for both variants
+      // Add shared texture maps if available
+      if (_self.brdfTextures.has('aomap')) {
+        if (useSpecularGloss) {
+          // For node material, we need to use TSL nodes
+          material.aoNode = texture(_self.brdfTextures.get('aomap'));
+        } else {
+          material.aoMap = _self.brdfTextures.get('aomap');
+          material.aoMapIntensity = 1.0;
+        }
+      }
+
+      // Handle additional texture maps for both variants
+      if (_self.brdfTextures.has('emissive')) {
+        if (useSpecularGloss) {
+          material.emissiveNode = texture(_self.brdfTextures.get('emissive'));
+        } else {
+          material.emissiveMap = _self.brdfTextures.get('emissive');
+          material.emissive = new Color(1, 1, 1);
+        }
+      }
+
+      if (_self.brdfTextures.has('clearcoat')) {
+        if (useSpecularGloss) {
+          material.clearcoatNode = texture(_self.brdfTextures.get('clearcoat'));
+        } else {
+          material.clearcoatMap = _self.brdfTextures.get('clearcoat');
+          material.clearcoat = 1.0;
+        }
+      }
+
+      if (_self.brdfTextures.has('clearcoatRoughness')) {
+        if (useSpecularGloss) {
+          material.clearcoatRoughnessNode = texture(_self.brdfTextures.get('clearcoatRoughness'));
+        } else {
+          material.clearcoatRoughnessMap = _self.brdfTextures.get('clearcoatRoughness');
+          material.clearcoatRoughness = 1.0;
+        }
+      }
+
+      if (_self.brdfTextures.has('clearcoatNormal')) {
+        if (useSpecularGloss) {
+          material.clearcoatNormalNode = normalMap(texture(_self.brdfTextures.get('clearcoatNormal')));
+        } else {
+          material.clearcoatNormalMap = _self.brdfTextures.get('clearcoatNormal');
+        }
+      }
+
+      if (_self.brdfTextures.has('transmission')) {
+        if (useSpecularGloss) {
+          material.transmissionNode = texture(_self.brdfTextures.get('transmission'));
+        } else {
+          material.transmissionMap = _self.brdfTextures.get('transmission');
+          material.transmission = 1.0;
+        }
+      }
+
+      if (_self.brdfTextures.has('thickness')) {
+        if (useSpecularGloss) {
+          material.thicknessNode = texture(_self.brdfTextures.get('thickness'));
+        } else {
+          material.thicknessMap = _self.brdfTextures.get('thickness');
+          material.thickness = 1.0;
+        }
+      }
+
+      if (_self.brdfTextures.has('ior')) {
+        // IOR is typically a scalar value for both variants
+        material.ior = 1.5; // Default glass IOR
+      }
+
+      if (_self.brdfTextures.has('sheen')) {
+        if (useSpecularGloss) {
+          material.sheenColorNode = texture(_self.brdfTextures.get('sheen'));
+        } else {
+          material.sheenColorMap = _self.brdfTextures.get('sheen');
+          material.sheenColor = new Color(1, 1, 1);
+        }
+      }
+
+      if (_self.brdfTextures.has('sheenRoughness')) {
+        if (useSpecularGloss) {
+          material.sheenRoughnessNode = texture(_self.brdfTextures.get('sheenRoughness'));
+        } else {
+          material.sheenRoughnessMap = _self.brdfTextures.get('sheenRoughness');
+          material.sheenRoughness = 1.0;
+        }
+      }
+
+      // Handle displacement mapping if available
+      if (_self.useDispMap) {
+        console.debug('Displacement map enabled for PBR material');
+        material.displacementMap = _self.brdfTextures.get('displacement');
+        material.displacementScale = 0.05;
+        material.displacementBias = 0.0;
+      }
+
+      // Handle alpha mapping if available
+      if (_self.useAlphaMap) {
+        console.debug('Alpha map enabled for PBR material');
+        material.alphaMap = _self.brdfTextures.get('alpha');
+        material.transparent = true;
+        material.side = DoubleSide;
+      }
+    } else {
+      // Use custom ShaderMaterial for BIS and MR modes
+      material = new ShaderMaterial(
+        {
+          fragmentShader: _self.fragmentShader,
+          vertexShader: _self.vertexShader,
+          uniforms: _self.uniforms,
+          lights: true
+        }
+      );
+      material.defines = {
+        USE_NORMALMAP: 1,
+        COLOR_TRANSFORM: 1,
+        HUE_SATURATION: 1,
+      };
+      if (_self.useDispMap) {
+        console.debug('Displacement map enabled');
+        material.defines['USE_DISPLACEMENTMAP'] = 1;
+        material.defines['TANGENTSPACE_NORMALMAP'] = 1;
+        // TODO: Define when tangents can be computed in the geometry
+        //       (which requires loading a mesh with indexed geometry)
+        //material.defines['USE_TANGENT'] = 1;
+      } else {
+        material.defines['OBJECTSPACE_NORMALMAP'] = 1;
+      }
+      if (_self.useAlphaMap) {
+        console.debug('Alpha map enabled');
+        material.defines['USE_ALPHAMAP'] = 1;
+        material.transparent = true;
+        material.side = DoubleSide;
+      }
+
+      material.extensions.derivatives = true;
+    }
     _self.mesh.traverse(function(child) {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof Mesh) {
         child.material = material;
       }
     });
@@ -3210,7 +3515,7 @@ class bivotJs {
 
   updateBackground() {
     // Convert to linear sRGB to cancel out the shader adding sRGB gamma back in again
-    this.scene.background = new THREE.Color(this.getBgColorFromState(this.state)).convertSRGBToLinear();
+    this.scene.background = new Color(this.getBgColorFromState(this.state)).convertSRGBToLinear();
     this.requestRender();
   }
 
@@ -3276,7 +3581,7 @@ class bivotJs {
     const textureHeightPixels = 2048;
     const planeWidth = textureWidthPixels / pixelsPerMetre;
     const planeHeight = textureHeightPixels / pixelsPerMetre;
-    return new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+    return new PlaneGeometry(planeWidth, planeHeight);
   }
 
   updateAnimation(timeMs, frameElapsedMs) {
@@ -3340,7 +3645,7 @@ class bivotJs {
       this.timeouts.push(
         setTimeout(
           () => {
-            var xy = new THREE.Vector2(0, 0);
+            var xy = new Vector2(0, 0);
             if (this.state.autoRotatePeriodMs) {
               const loopValue = (timeMs % this.state.autoRotatePeriodMs) / this.state.autoRotatePeriodMs;
               const angle = 2 * Math.PI * loopValue;
@@ -3418,7 +3723,7 @@ class bivotJs {
   }
 
   updateTextures() {
-    const magFilter = this.state.pixellated ? THREE.NearestFilter : THREE.LinearFilter;
+    const magFilter = this.state.pixellated ? NearestFilter : LinearFilter;
     if (this.brdfTextures) {
       for (const tex of this.brdfTextures.values()) {
         if (tex.magFilter !== magFilter) {
@@ -3751,8 +4056,8 @@ class bivotJs {
         var pointsRot = points;
         if (this.state.meshRotateZDegrees !== 0) {
           pointsRot = [];
-          const s = Math.sin(THREE.MathUtils.degToRad(-this.state.meshRotateZDegrees));
-          const c = Math.cos(THREE.MathUtils.degToRad(-this.state.meshRotateZDegrees));
+          const s = Math.sin(MathUtils.degToRad(-this.state.meshRotateZDegrees));
+          const c = Math.cos(MathUtils.degToRad(-this.state.meshRotateZDegrees));
           const cx = (this.state.texDims[0] - 1) / 2;
           const cy = (this.state.texDims[1] - 1) / 2;
           points.map(p => {
@@ -3982,10 +4287,10 @@ class bivotJs {
       this.clearEdge(ctx, showGridSelection ? 0.6 : 0.0);
     }
 
-    const canvasTexture = new THREE.Texture(canvas);
+    const canvasTexture = new Texture(canvas);
     canvasTexture.flipX = false;
     canvasTexture.flipY = true;
-    const wrapMode = this.state.overlayRepeats ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+    const wrapMode = this.state.overlayRepeats ? RepeatWrapping : ClampToEdgeWrapping;
     canvasTexture.wrapS = wrapMode;
     canvasTexture.wrapT = wrapMode;
     canvasTexture.needsUpdate = true;
@@ -4089,8 +4394,8 @@ class bivotJs {
       const [xs, ys] = this.getTexRepeat();
       texture.repeat.set(xs, ys);
       texture.offset.set((1 - xs) / 2, (1 - ys) / 2);
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
       texture.updateMatrix();
     }
   }
@@ -4121,10 +4426,10 @@ class bivotJs {
       // OES_texture_half_float_linear, then we can grab LTC_HALF_[1|2] here instead
       // of full floats.  Currently no such devices are known; previously iOS 14 had
       // this problem.
-      this.uniforms.ltc_1.value = THREE.UniformsLib.LTC_FLOAT_1;
-      this.uniforms.ltc_2.value = THREE.UniformsLib.LTC_FLOAT_2;
-      THREE.UniformsLib.LTC_FLOAT_1.needsUpdate = true;
-      THREE.UniformsLib.LTC_FLOAT_2.needsUpdate = true;
+      this.uniforms.ltc_1.value = UniformsLib.LTC_FLOAT_1;
+      this.uniforms.ltc_2.value = UniformsLib.LTC_FLOAT_2;
+      UniformsLib.LTC_FLOAT_1.needsUpdate = true;
+      UniformsLib.LTC_FLOAT_2.needsUpdate = true;
       this.areaLightSetupDone = true;
     }
 
@@ -4410,7 +4715,7 @@ class bivotJs {
     if (this.mesh) {
       this.mesh.traverse(
         function(child) {
-          if (child instanceof THREE.Mesh) {
+          if (child instanceof Mesh) {
             child.geometry.dispose();
             child.material.dispose();
           }
