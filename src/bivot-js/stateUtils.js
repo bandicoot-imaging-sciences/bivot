@@ -63,7 +63,7 @@ export function copyStatesCloneVectors(src, dst, vectorKeys) {
 export function copyStateFields(src, dst) {
   //console.log('copyStateFields: ', src, dst);
   for (var k in src) {
-    if (typeof(k) == 'array') {
+    if (Array.isArray(src[k])) {
       dst[k] = src[k].slice();
     } else {
       dst[k] = src[k];
