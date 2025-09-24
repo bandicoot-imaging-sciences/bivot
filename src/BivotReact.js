@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Paper, Grid, CircularProgress, makeStyles } from '@material-ui/core';
+import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
-import { AppBar, Tabs, Tab, Tooltip, Typography } from '@material-ui/core';
+import { AppBar, Tabs, Tab, Tooltip } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
 import LightingIcon from '@material-ui/icons/WbSunny';
 import ColourIcon from '@material-ui/icons/Palette';
 import LayoutIcon from '@material-ui/icons/SquareFoot';
 
 import Bivot, { defaultSize, initialRepeatFactorX, DirtyFlag } from './bivot-js/bivot';
-import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
+import { copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
 import BrightnessControl from './controls/BrightnessControl';
@@ -30,7 +30,6 @@ import ColorTemperatureControl from './controls/ColorTemperatureControl';
 import HueControl from './controls/HueControl';
 import SaturationControl from './controls/SaturationControl';
 import LightingControl from './controls/LightingControl';
-import ShowSeamsControl from './controls/ShowSeamsControl';
 
 
 import { loadJsonFile } from './utils/jsonLib';
@@ -77,11 +76,6 @@ const styles = {
 
 var zoomIndex = -1; // Index of the current zoom slider being moved
 var zoomInitialVal = [0, 0, 0]; // [min, unused, max] zoom at the beginning of the current slider move
-
-function handleCanvasContextMenu(e) {
-  e.preventDefault();
-  e.stopPropagation();
-};
 
 function BivotReact(props) {
   //
@@ -406,8 +400,8 @@ function BivotReact(props) {
     metresPerPixelTextures: undefined,
   };
 
-  const [state, _setState] = useState({ ...defaultState });
-  const [checkpointState, _setCheckpointState] = useState({});
+  const [state] = useState({ ...defaultState });
+  const [checkpointState] = useState({});
 
   function updateAutoRotateOverride(val) {
     if (val === true) {
@@ -446,7 +440,6 @@ function BivotReact(props) {
   // // If autoRotate is set in props, then override state
   // updateAutoRotateOverride(autoRotate);
 
-  const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
@@ -492,7 +485,7 @@ function BivotReact(props) {
   const [showGrid, setShowGrid] = useState(state.showGrid);
   const [showGridSelection, setShowGridSelection] = useState(state.showGridSelection);
   const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
-  const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
+  const [onSelectGrid] = useState(state.onSelectGrid);
   const [pointsControl, setPointsControl] = useState(state.pointsControl);
   const [userEnableKeypress, setUserEnableKeypress] = useState(state.enableKeypress);
   const [stretch, setStretch] = useState(state.stretch);
@@ -510,7 +503,7 @@ function BivotReact(props) {
   const [exposureLocal, setExposureLocal] = useState(state.exposure);
   const [aoStrengthLocal, setAoStrengthLocal] = useState(state.aoStrength);
   const [backgroundColorLocal, setBackgroundColorLocal] = useState(state.backgroundColor);
-  const [displacementScaleLocal, setDisplacementScaleLocal] = useState(state.displacementScale);
+  const [displacementScaleLocal] = useState(state.displacementScale);
 
   // Switching between local and caller-provided synchronisation props
   var sizeBivot = size ?? sizeLocal;
@@ -776,10 +769,6 @@ function BivotReact(props) {
     return null;
   }
 
-  function getIdFromMatSet(materialSet, materialIndex=0) {
-    return materialSet.materials[materialIndex].materialId;
-  }
-
   async function fetchFilesWrapper(paths, context) {
     if (fetchFiles) {
       return await fetchFiles(paths, context);
@@ -831,14 +820,14 @@ function BivotReact(props) {
           context = userId;
         } else {
           // General materialUserPath with material assumed to be in same directory as material set
-          var parts = materialUserPath.split('/');
+          const parts = materialUserPath.split('/');
           parts.pop();
           basePath = parts.join('/');
           filename = url['ms'];
           context = userId;
         }
       } else if (materialSet) {
-        var parts = materialSet.split('/');
+        const parts = materialSet.split('/');
         parts.pop();
         basePath = parts.join('/');
         filename = materialSet;
@@ -930,7 +919,6 @@ function BivotReact(props) {
       dragControlsRotation,
       dragControlsPanning,
       camTiltLimitDegrees,
-      lightTiltLimitDegrees,
       meshOverride,
       aoStrength,
       colorTemperature,
