@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem, ThemeProvider } from '@material-ui/core';
+import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem } from '@material-ui/core';
 import { CropLandscape, CropSquare, CropPortrait } from '@material-ui/icons';
 
 const aspects = {
