@@ -30,8 +30,6 @@ Parts adapted from Threejsfundamentals:
 // Polyfills
 import ResizeObserver from 'resize-observer-polyfill';
 
-// The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
-
 import {
   ACESFilmicToneMapping,
   AmbientLight,
@@ -40,7 +38,6 @@ import {
   Clock,
   Color,
   DoubleSide,
-  FrontSide,
   Group,
   LinearFilter,
   LinearMipMapLinearFilter,
@@ -51,7 +48,6 @@ import {
   Matrix3,
   Matrix4,
   Mesh,
-  MeshPhysicalMaterial,
   NearestFilter,
   PerspectiveCamera,
   PlaneGeometry,
@@ -87,10 +83,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
-import { MeshPhysicalNodeMaterial, TSL } from 'three/webgpu';
-
-// Extract TSL functions we need
-const { texture, normalMap, float } = TSL;
+import { createTslPbrMaterial } from './tslPbrMaterial.js';
 //import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Import CameraControls
@@ -417,7 +410,7 @@ class bivotJs {
       stretch: null,
       userScale: null,
       enableKeypress: false,
-      textureLayer: 0,
+      textureLayer: 0, // Integer index of the texture layer to pass-through (0=render, 1-25=individual textures), use 0 for the actual render
       // zoom: [0.4, 0.9, 2.0],  // No default, to allow legacy galleries to keep working
       cameraPan: new Vector3(0.0, 0.0, 0.0),
       _camPositionOffset: new Vector2(0, 0),
@@ -3174,171 +3167,8 @@ class bivotJs {
     if (_self.state.brdfModel === 2) {
       console.debug('Using MeshPhysicalMaterial for PBR mode with variant:', _self.state.brdfModelVariant);
 
-      // Check if we need to use specular-gloss variant
-      const useSpecularGloss = _self.state.brdfModelVariant === 'specularGloss';
-
-      if (useSpecularGloss) {
-        // Use TSL Node Material for specular-gloss workflow
-        material = new MeshPhysicalNodeMaterial();
-
-        // Basic properties
-        if (_self.brdfTextures.has('diffuse')) {
-          material.colorNode = texture(_self.brdfTextures.get('diffuse'));
-        }
-
-        if (_self.brdfTextures.has('normals')) {
-          material.normalNode = normalMap(texture(_self.brdfTextures.get('normals')));
-        }
-
-        // Specular-Gloss workflow using TSL nodes
-        if (_self.brdfTextures.has('specular') && _self.brdfTextures.has('gloss')) {
-          const specularTex = texture(_self.brdfTextures.get('specular'));
-          const glossTex = texture(_self.brdfTextures.get('gloss'));
-
-          // Convert specular-gloss to metallic-roughness for Three.js compatibility
-          // This is a simplified conversion - you might want to use more sophisticated conversion
-          material.metalnessNode = float(0.0); // Specular workflow typically has low metalness
-          material.roughnessNode = float(1.0).sub(glossTex.r); // Roughness = 1 - Gloss
-
-          // Use specular color to modulate the base color
-          material.colorNode = material.colorNode ?
-            material.colorNode.mul(specularTex) :
-            specularTex;
-        } else {
-          // Fallback to default values
-          material.metalness = 0.0;
-          material.roughness = 1.0;
-        }
-
-        // Set other basic properties
-        material.transparent = false;
-        material.side = FrontSide;
-
-      } else {
-        // Use standard metallic-roughness workflow
-        console.debug('Using metallic-roughness workflow');
-
-        // Create PBR material using Three.js built-in shaders
-        const materialParams = {
-          // Basic properties
-          map: _self.brdfTextures.get('diffuse'),
-          normalMap: _self.brdfTextures.get('normals'),
-
-          // Set default values
-          roughness: 1.0,
-          metalness: 0.0,
-
-          // Enable features
-          transparent: false,
-          side: FrontSide,
-        };
-
-        // Add PBR texture maps if available
-        if (_self.brdfTextures.has('roughness')) {
-          materialParams.roughnessMap = _self.brdfTextures.get('roughness');
-        } else if (_self.brdfTextures.has('specular')) {
-          // Use the specular texture which contains roughness-metallic data
-          materialParams.roughnessMap = _self.brdfTextures.get('specular');
-        }
-
-        if (_self.brdfTextures.has('metallic')) {
-          materialParams.metalnessMap = _self.brdfTextures.get('metallic');
-        } else if (_self.brdfTextures.has('specular')) {
-          // Use the specular texture which contains roughness-metallic data
-          materialParams.metalnessMap = _self.brdfTextures.get('specular');
-        }
-
-        material = new MeshPhysicalMaterial(materialParams);
-      }
-
-      // Common properties for both variants
-      // Add shared texture maps if available
-      if (_self.brdfTextures.has('aomap')) {
-        if (useSpecularGloss) {
-          // For node material, we need to use TSL nodes
-          material.aoNode = texture(_self.brdfTextures.get('aomap'));
-        } else {
-          material.aoMap = _self.brdfTextures.get('aomap');
-          material.aoMapIntensity = 1.0;
-        }
-      }
-
-      // Handle additional texture maps for both variants
-      if (_self.brdfTextures.has('emissive')) {
-        if (useSpecularGloss) {
-          material.emissiveNode = texture(_self.brdfTextures.get('emissive'));
-        } else {
-          material.emissiveMap = _self.brdfTextures.get('emissive');
-          material.emissive = new Color(1, 1, 1);
-        }
-      }
-
-      if (_self.brdfTextures.has('clearcoat')) {
-        if (useSpecularGloss) {
-          material.clearcoatNode = texture(_self.brdfTextures.get('clearcoat'));
-        } else {
-          material.clearcoatMap = _self.brdfTextures.get('clearcoat');
-          material.clearcoat = 1.0;
-        }
-      }
-
-      if (_self.brdfTextures.has('clearcoatRoughness')) {
-        if (useSpecularGloss) {
-          material.clearcoatRoughnessNode = texture(_self.brdfTextures.get('clearcoatRoughness'));
-        } else {
-          material.clearcoatRoughnessMap = _self.brdfTextures.get('clearcoatRoughness');
-          material.clearcoatRoughness = 1.0;
-        }
-      }
-
-      if (_self.brdfTextures.has('clearcoatNormal')) {
-        if (useSpecularGloss) {
-          material.clearcoatNormalNode = normalMap(texture(_self.brdfTextures.get('clearcoatNormal')));
-        } else {
-          material.clearcoatNormalMap = _self.brdfTextures.get('clearcoatNormal');
-        }
-      }
-
-      if (_self.brdfTextures.has('transmission')) {
-        if (useSpecularGloss) {
-          material.transmissionNode = texture(_self.brdfTextures.get('transmission'));
-        } else {
-          material.transmissionMap = _self.brdfTextures.get('transmission');
-          material.transmission = 1.0;
-        }
-      }
-
-      if (_self.brdfTextures.has('thickness')) {
-        if (useSpecularGloss) {
-          material.thicknessNode = texture(_self.brdfTextures.get('thickness'));
-        } else {
-          material.thicknessMap = _self.brdfTextures.get('thickness');
-          material.thickness = 1.0;
-        }
-      }
-
-      if (_self.brdfTextures.has('ior')) {
-        // IOR is typically a scalar value for both variants
-        material.ior = 1.5; // Default glass IOR
-      }
-
-      if (_self.brdfTextures.has('sheen')) {
-        if (useSpecularGloss) {
-          material.sheenColorNode = texture(_self.brdfTextures.get('sheen'));
-        } else {
-          material.sheenColorMap = _self.brdfTextures.get('sheen');
-          material.sheenColor = new Color(1, 1, 1);
-        }
-      }
-
-      if (_self.brdfTextures.has('sheenRoughness')) {
-        if (useSpecularGloss) {
-          material.sheenRoughnessNode = texture(_self.brdfTextures.get('sheenRoughness'));
-        } else {
-          material.sheenRoughnessMap = _self.brdfTextures.get('sheenRoughness');
-          material.sheenRoughness = 1.0;
-        }
-      }
+      // Use the new TSL PBR material utility which handles textureLayer support
+      material = createTslPbrMaterial(_self.brdfTextures, _self.state.brdfModelVariant, _self.state);
 
       // Handle displacement mapping if available
       if (_self.useDispMap) {

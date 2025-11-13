@@ -1,6 +1,5 @@
 // Copyright (C) Bandicoot Imaging Sciences 2020
 
-// The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 import { Vector2, Vector3, Color } from 'three';
 
 function arrayToVector(input, vecType) {

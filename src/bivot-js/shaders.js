@@ -1,9 +1,9 @@
 // Copyright (C) Bandicoot Imaging Sciences 2019
 'use strict';
 
-// The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
-
 import { UniformsUtils, UniformsLib, Vector2, Matrix3 } from 'three';
+
+import { TEXTURE_LAYER_INDICES } from './textureLayerConstants.js';
 
 export default function getShaders() {
   const uniforms = UniformsUtils.merge([
@@ -370,20 +370,23 @@ export default function getShaders() {
         // Perform a direct pass-through render for any individual texture layer.
         // Textures other than basecolor need conversion to sRGB, to cancel out
         // the sRGB to linear shader pass that is always applied.
+        //
+        // Texture layer pass-through for brdfModel 1 (shader-based rendering)
+        // Uses interpolated constants from TEXTURE_LAYER_INDICES (see textureLayerConstants.js)
         vec3 col;
         bool needsSrgb = true;
-        if (textureLayer == 1) {
+        if (textureLayer == ${TEXTURE_LAYER_INDICES.BASECOLOR}) {
           col = diffuseSurface.rgb;
           needsSrgb = false;
-        } else if (textureLayer == 2) {
+        } else if (textureLayer == ${TEXTURE_LAYER_INDICES.ROUGHNESS}) {
           col = vec3(roughnessSurface);
-        } else if (textureLayer == 3) {
+        } else if (textureLayer == ${TEXTURE_LAYER_INDICES.METALLIC}) {
           col = vec3(metallicSurface);
-        } else if (textureLayer == 4) {
+        } else if (textureLayer == ${TEXTURE_LAYER_INDICES.NORMAL}) {
           col = normalSurface.xyz;
-        } else if (textureLayer == 5) {
+        } else if (textureLayer == ${TEXTURE_LAYER_INDICES.DISPLACEMENT}) {
           col = displacementSurface.xyz;
-        } else if (textureLayer == 6) {
+        } else if (textureLayer == ${TEXTURE_LAYER_INDICES.ALPHA}) {
           col = vec3(alphaSurface);
         } else {
           // Unknown texture layer requested
