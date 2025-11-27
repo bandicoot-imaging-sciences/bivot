@@ -318,6 +318,10 @@ function BivotReact(props) {
     // (Currently only supported for internal use)
     lightControlCallback,
 
+    // Textures loaded state of the live Shimmer View.
+    texturesLoaded,
+    setTexturesLoaded,
+
   } = props;
 
   const canvasRef = useRef();
@@ -511,6 +515,7 @@ function BivotReact(props) {
   const [aoStrengthLocal, setAoStrengthLocal] = useState(state.aoStrength);
   const [backgroundColorLocal, setBackgroundColorLocal] = useState(state.backgroundColor);
   const [displacementScaleLocal, setDisplacementScaleLocal] = useState(state.displacementScale);
+  const [texturesLoadedLocal, setTexturesLoadedLocal] = useState(false);
 
   // Switching between local and caller-provided synchronisation props
   var sizeBivot = size ?? sizeLocal;
@@ -522,6 +527,8 @@ function BivotReact(props) {
   var backgroundColorBivot = backgroundColor ?? backgroundColorLocal;
   var setBackgroundColorBivot = setBackgroundColor ?? setBackgroundColorLocal;
   var displacementScaleBivot = displacementScale ?? displacementScaleLocal;
+  var texturesLoadedBivot = texturesLoaded ?? texturesLoadedLocal;
+  var setTexturesLoadedBivot = setTexturesLoaded ?? setTexturesLoadedLocal;
 
   // Hook up state, used in bivotJs, so that it updates when our useState values update
   state.brightness = brightness;
@@ -606,6 +613,7 @@ function BivotReact(props) {
       //setExposureBivot(defaultState.exposure);
       //setAoStrengthBivot(defaultState.ao);
       //setBackgroundColorBivot(defaultState.backgroundColor);
+      setTexturesLoadedBivot(false);
     }
     onChangeMaterial();
   }, [material]);
@@ -887,6 +895,7 @@ function BivotReact(props) {
       adaptFps,
       stateLoadCallback,
       loadingCompleteCallback,
+      texturesLoadedCallback,
       setZoomCallback: setCurrentZoom,
       lightControlCallback,
       canvasID,
@@ -983,6 +992,11 @@ function BivotReact(props) {
   async function stateLoadCallback(loadedState) {
     updateStateFields(loadedState);
     copyStateFields(loadedState, checkpointState);
+  }
+
+  // Called when bivot finishes loading textures
+  async function texturesLoadedCallback() {
+    setTexturesLoadedBivot(true);
   }
 
   // Called when bivot finishes loading the material, or a mesh update.

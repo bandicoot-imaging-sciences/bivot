@@ -254,6 +254,7 @@ class bivotJs {
       state: null,
       stateLoadCallback: null,
       loadingCompleteCallback: null,
+      texturesLoadedCallback: null,
       setZoomCallback: null,
       onClick: null,
       onGridSelect: null,
@@ -867,6 +868,14 @@ class bivotJs {
 
       // Run post-mesh-load operations
       _self.activateLoadedMesh(_self);
+
+      // Call textures loaded callback after a short delay to allow GPU upload to complete
+      // and avoid blocking the UI thread
+      if (_self.opts.texturesLoadedCallback) {
+        setTimeout(() => {
+          _self.opts.texturesLoadedCallback();
+        }, 0);
+      }
 
       // Call loading complete callback, if provided
       if (_self.opts.loadingCompleteCallback) {
@@ -2191,8 +2200,17 @@ class bivotJs {
 
       if (_self.config.textureFormat == 'EXR') {
         loader = new EXRLoader(loadManager);
-      } else{
-        loader = new THREE.TextureLoader(loadManager);
+      } else {
+        // Use ImageBitmapLoader for async off-main-thread decoding if supported (Safari 15+, Chrome, Firefox)
+        // Fall back to TextureLoader for older browsers (Safari < 15)
+        if (typeof createImageBitmap !== 'undefined') {
+          loader = new THREE.ImageBitmapLoader(loadManager);
+          loader.setOptions({ imageOrientation: 'flipY' });
+          console.debug('Using ImageBitmapLoader for off-thread texture decoding');
+        } else {
+          loader = new THREE.TextureLoader(loadManager);
+          console.debug('ImageBitmap not supported, using TextureLoader');
+        }
       }
       onProgress('', 0, 1);
 
@@ -2215,8 +2233,18 @@ class bivotJs {
       //console.debug(JSON.parse(JSON.stringify(brdfTexturePaths)));
       for (let [key, value] of brdfTexturePaths) {
         loader.load(value.path,
-          function (texture, textureData) {
+          function (textureOrBitmap, textureData) {
             // Run after each texture is loaded.
+            // ImageBitmapLoader returns an ImageBitmap, while TextureLoader and EXRLoader return a Texture
+            let texture;
+            if (textureOrBitmap instanceof ImageBitmap) {
+              // Create a texture from the ImageBitmap
+              texture = new THREE.CanvasTexture(textureOrBitmap);
+              texture.needsUpdate = true;
+            } else {
+              // Already a texture (from TextureLoader or EXRLoader)
+              texture = textureOrBitmap;
+            }
 
             // Both LinearFilter and NearestFilter work on Chrome for Windows and Safari for iOS 12.3.1. In
             // principle, for most surfaces, LinearFilter should reduce shimmer caused by anti-aliasing.
