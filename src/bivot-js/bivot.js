@@ -1854,6 +1854,14 @@ class bivotJs {
               toggleStats();
             }
             break;
+          case 79: // O - Move camera overhead
+            if (_self.controls) {
+              event.preventDefault();
+              _self.controls.rotatePolarTo(Math.PI/2, true);
+              _self.controls.rotateAzimuthTo(0, true);
+              _self.requestRender();
+            }
+            break;
           // Put last in the switch statement to avoid overriding built-in keys
           case lightControlKey:
             if (!_self.shiftDown) {
