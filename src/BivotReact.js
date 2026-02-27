@@ -1014,7 +1014,6 @@ function BivotReact(props) {
           console.debug('bivot.current.getDiag() unavailable');
         }
         state.loadingComplete = true;
-        console.log('Loading complete objectMesh:', objectMeshRef.current)
         if (shimmerLoaded) {
           // Upon completion of Shimmer loading, update some config according
           // to user props: objectMesh, and hoverDisabled
