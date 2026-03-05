@@ -1798,6 +1798,7 @@ class bivotJs {
     function jumpToPoint(group, point) {
       const points = _self.state.pointsControl[group].points;
       const pMap = _self.coordsToWorld([points[point]]);
+
       _self.controls.setPosition(pMap[0].x, pMap[0].y, _self.camera.position.z);
       _self.controls.setTarget(pMap[0].x, pMap[0].y, 0);
       _self.updateOverlay();
@@ -3741,7 +3742,7 @@ class bivotJs {
       const coords = this.mesh.geometry.getAttribute('position');
       if (box && uv && coords) {
         const i0 = 0;             // First UV index (assuming has minimum X,Y and U,V)
-        const i1 = uv.count - 1;  // Final UV index (assuming has minimum X,Y and U,V)
+        const i1 = uv.count - 1;  // Final UV index (assuming has maximum X,Y and U,V)
 
         // UV min, max, and lengths
         const u0 = uv.array[i0 * uv.itemSize];
@@ -3762,26 +3763,7 @@ class bivotJs {
         // Three.js computed bounding box lengths
         const bxs = box.max.x - box.min.x;
         const bys = box.max.y - box.min.y;
-
-        var factorX, factorY;   // X and Y scaling factors for precise mapping
-        var td;                 // Effective texture dimensions for co-ordinate mapping
         const f0 = (bxs / bys) / (xs / ys);
-        if (us > vs || true) {
-          // Assumption: The UV space of the mesh is ~1 in the X direction, and <1 in Y.
-          factorX = us;
-          factorY = factorX * f0;
-          td = [
-            this.untiledImDims[0] * factorX,
-            this.untiledImDims[1] * this.state.texDims[1] / this.state.texDims[0] * factorY
-          ];
-        } else {
-          factorY = vs;
-          factorX = factorY / f0;
-          td = [
-            this.untiledImDims[0] * this.state.texDims[0] / this.state.texDims[1] * factorX,
-            this.untiledImDims[1] * factorY
-          ];
-        }
 
         // Handle mesh rotation
         var pointsRot = points;
@@ -3803,10 +3785,12 @@ class bivotJs {
         const [xR, yR] = this.getTexRepeat();
         const fx = 1 / xR;
         const fy = 1 / yR;
+
         var pMap = [];
         for (var i = 0; i < pointsRot.length; i++) {
-          var x = ((    (pointsRot[i].x / td[0])) * xs + x0) * fx;
-          var y = ((1 - (pointsRot[i].y / td[1])) * ys + y0) * fy;
+          // Texture coordinates are in texDims space; normalize and map to mesh position
+          var x = ((    (pointsRot[i].x / this.state.texDims[0])) * xs + x0) * fx;
+          var y = ((1 - (pointsRot[i].y / this.state.texDims[1])) * ys + y0) * fy;
           pMap.push({ x, y });
         }
         return pMap;
