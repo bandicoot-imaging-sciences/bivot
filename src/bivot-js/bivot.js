@@ -1602,6 +1602,9 @@ class bivotJs {
                   } else {
                     // Deselect any currently selected point
                     _self.dragState.state = 'none';
+                    if (_self.opts.onPointSelect) {
+                      _self.opts.onPointSelect(null, null);
+                    }
                     _self.updateOverlay();
                     _self.requestRender();
                   }
@@ -1891,89 +1894,245 @@ class bivotJs {
       }
       const pc = (group !== null) ? _self.state.pointsControl[group] : {};
       switch (event.keyCode) {
-        case 188: // Comma - Jump to prev point or point pair
-          if (_self.state.enableKeypress && pc.visible) {
-            if (_self.dragState.state === 'selected') {
-              const points = pc.points;
-              const p = _self.dragState.point;
-              if (pc.lines === 'pairs') {
-                if (points.length == 1) {
-                  newP = 0;
-                } else {
-                  var newP1 = 2 * Math.floor(p / 2) - 2;
-                  var newP2 = newP1 + 1;
-                  if (newP2 < 0) {
-                    if (points.length % 2 === 1) {
-                      newP1 = points.length - 1;
-                      newP2 = newP1;
-                    } else {
-                      newP1 = points.length - 2;
-                      newP2 = newP1 + 1;
-                    }
-                  }
-                  if (newP1 < 0) {
-                    newP = newP2;
-                  } else {
-                    newP = findNearestPoint(points, p, [newP1, newP2]);
-                  }
-                }
-              } else {
-                newP = (p + points.length - 1) % points.length;
+        case 188: // Comma
+          if (_self.state.enableKeypress) {
+            // Shift+Comma: always jump to first pt in last control pair
+            if (event.shiftKey) {
+              if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                  _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                const points1 = _self.state.pointsControl[1].points;
+                const lastPairStart = points1.length % 2 === 0 ? points1.length - 2 : points1.length - 1;
+                _self.dragState.group = 1;
+                _self.dragState.point = lastPairStart;
+                _self.dragState.state = 'selected';
+                jumpToPoint(1, lastPairStart);
               }
-              _self.dragState.point = newP;
-              jumpToPoint(group, newP);
-            } else {
-              tryJumpToFirstPoint(0);
-            }
-          }
-          break;
-
-        case 190: // Full stop - Jump to next point or point pair
-          if (_self.state.enableKeypress && pc.visible) {
-            if (_self.dragState.state === 'selected') {
-              const points = pc.points;
-              const p = _self.dragState.point;
-              var newP;
-              if (pc.lines === 'pairs') {
-                if (points.length == 1) {
-                  newP = 0;
-                } else {
-                  var newP1 = 2 * Math.floor(p / 2) + 2;
-                  var newP2 = newP1 + 1;
-                  if (newP1 >= points.length) {
-                    newP1 = 0;
-                    newP2 = 1;
-                  }
-                  if (newP2 >= points.length) {
-                    newP = newP1;
-                  } else {
-                    newP = findNearestPoint(points, p, [newP1, newP2]);
-                  }
-                }
-              } else {
-                newP = (p + 1) % points.length;
-              }
-              _self.dragState.point = newP;
-              jumpToPoint(group, newP);
-            } else {
-              tryJumpToFirstPoint(0);
-            }
-          }
-          break;
-
-        case 77: // M - Jump to matching pair
-          if (_self.state.enableKeypress && pc.visible) {
-            if (_self.dragState.state === 'selected') {
-              if (pc.lines === 'pairs') {
+            } else if (pc.visible) {
+              if (_self.dragState.state === 'selected') {
+                const points = pc.points;
                 const p = _self.dragState.point;
-                const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
-                if (newP < pc.points.length) {
+                // If corner is active, jump to last control pair
+                if (group === 0) {
+                  if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                      _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                    const points1 = _self.state.pointsControl[1].points;
+                    const lastPairStart = points1.length % 2 === 0 ? points1.length - 2 : points1.length - 1;
+                    _self.dragState.group = 1;
+                    _self.dragState.point = lastPairStart;
+                    jumpToPoint(1, lastPairStart);
+                  }
+                } else if (pc.lines === 'pairs') {
+                  // Control points: check if at first pair, if so jump to 1st corner
+                  const currentPairIndex = Math.floor(p / 2);
+                  if (currentPairIndex === 0) {
+                    // Jump to 1st corner
+                    if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                        _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                      _self.dragState.group = 0;
+                      _self.dragState.point = 0;
+                      jumpToPoint(0, 0);
+                    }
+                  } else {
+                    // Jump to prev pair
+                    var newP;
+                    if (points.length == 1) {
+                      newP = 0;
+                    } else {
+                      var newP1 = 2 * Math.floor(p / 2) - 2;
+                      var newP2 = newP1 + 1;
+                      // Find nearest point in the previous pair
+                      if (newP1 < 0) {
+                        newP = newP2;
+                      } else {
+                        newP = findNearestPoint(points, p, [newP1, newP2]);
+                      }
+                    }
+                    _self.dragState.point = newP;
+                    jumpToPoint(group, newP);
+                  }
+                } else {
+                  // Other groups: jump to prev point
+                  newP = (p + points.length - 1) % points.length;
                   _self.dragState.point = newP;
                   jumpToPoint(group, newP);
                 }
+              } else {
+                // No point active: jump to first pt in last control pair (same as Shift+Comma)
+                if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                    _self.state.pointsControl[1].draggable &&
+                    _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                  const points1 = _self.state.pointsControl[1].points;
+                  const lastPairStart = points1.length % 2 === 0 ? points1.length - 2 : points1.length - 1;
+                  _self.dragState.group = 1;
+                  _self.dragState.point = lastPairStart;
+                  _self.dragState.state = 'selected';
+                  jumpToPoint(1, lastPairStart);
+                }
               }
-            } else {
-              tryJumpToFirstPoint(1);
+            }
+          }
+          break;
+
+        case 190: // Period
+          if (_self.state.enableKeypress) {
+            // Shift+Period: always jump to first pt in first control pair
+            if (event.shiftKey) {
+              if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                  _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                _self.dragState.group = 1;
+                _self.dragState.point = 0;
+                _self.dragState.state = 'selected';
+                jumpToPoint(1, 0);
+              }
+            } else if (pc.visible) {
+              if (_self.dragState.state === 'selected') {
+                const points = pc.points;
+                const p = _self.dragState.point;
+                // If corner is active, jump to first control pair
+                if (group === 0) {
+                  if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                      _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                    _self.dragState.group = 1;
+                    _self.dragState.point = 0;
+                    jumpToPoint(1, 0);
+                  }
+                } else if (pc.lines === 'pairs') {
+                  // Control points: check if at last pair, if so jump to 1st corner
+                  const lastPairStart = points.length % 2 === 0 ? points.length - 2 : points.length - 1;
+                  const isAtLastPair = Math.floor(p / 2) === Math.floor(lastPairStart / 2);
+                  if (isAtLastPair) {
+                    // Jump to 1st corner
+                    if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                        _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                      _self.dragState.group = 0;
+                      _self.dragState.point = 0;
+                      jumpToPoint(0, 0);
+                    }
+                  } else {
+                    // Jump to next pair (we're not at last pair, so next pair exists)
+                    var newP;
+                    if (points.length == 1) {
+                      newP = 0;
+                    } else {
+                      var newP1 = 2 * Math.floor(p / 2) + 2;
+                      var newP2 = newP1 + 1;
+                      // Find nearest point in the next pair
+                      if (newP2 >= points.length) {
+                        newP = newP1;
+                      } else {
+                        newP = findNearestPoint(points, p, [newP1, newP2]);
+                      }
+                    }
+                    _self.dragState.point = newP;
+                    jumpToPoint(group, newP);
+                  }
+                } else {
+                  // Other groups: jump to next point
+                  var newP = (p + 1) % points.length;
+                  _self.dragState.point = newP;
+                  jumpToPoint(group, newP);
+                }
+              } else {
+                // No point active: jump to first pt in first control pair (same as Shift+Period)
+                if (_self.state.pointsControl[1] && _self.state.pointsControl[1].visible &&
+                    _self.state.pointsControl[1].draggable &&
+                    _self.state.pointsControl[1].points && _self.state.pointsControl[1].points.length > 0) {
+                  _self.dragState.group = 1;
+                  _self.dragState.point = 0;
+                  _self.dragState.state = 'selected';
+                  jumpToPoint(1, 0);
+                }
+              }
+            }
+          }
+          break;
+
+        case 77: // M
+          if (_self.state.enableKeypress) {
+            // Shift+M: always jump to first corner
+            if (event.shiftKey) {
+              if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                  _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                _self.dragState.group = 0;
+                _self.dragState.point = 0;
+                _self.dragState.state = 'selected';
+                jumpToPoint(0, 0);
+              }
+            } else if (pc.visible) {
+              if (_self.dragState.state === 'selected') {
+                if (pc.lines === 'pairs') {
+                  // Control points: jump to matching pair
+                  const p = _self.dragState.point;
+                  const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
+                  if (newP < pc.points.length) {
+                    _self.dragState.point = newP;
+                    jumpToPoint(group, newP);
+                  }
+                } else if (group === 0) {
+                  // Corners: jump to next corner
+                  const points = pc.points;
+                  const p = _self.dragState.point;
+                  const newP = (p + 1) % points.length;
+                  _self.dragState.point = newP;
+                  jumpToPoint(group, newP);
+                }
+              } else {
+                // No point active: jump to first corner (same as Shift+M)
+                if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                    _self.state.pointsControl[0].draggable &&
+                    _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                  _self.dragState.group = 0;
+                  _self.dragState.point = 0;
+                  _self.dragState.state = 'selected';
+                  jumpToPoint(0, 0);
+                }
+              }
+            }
+          }
+          break;
+
+        case 78: // N
+          if (_self.state.enableKeypress) {
+            // Shift+N: always jump to last corner
+            if (event.shiftKey) {
+              if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                  _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                const points0 = _self.state.pointsControl[0].points;
+                _self.dragState.group = 0;
+                _self.dragState.point = points0.length - 1;
+                _self.dragState.state = 'selected';
+                jumpToPoint(0, points0.length - 1);
+              }
+            } else if (pc.visible) {
+              if (_self.dragState.state === 'selected') {
+                if (pc.lines === 'pairs') {
+                  // Control points: jump to matching pair (same as M)
+                  const p = _self.dragState.point;
+                  const newP = 2 * Math.floor(p / 2) + (1 - p % 2);
+                  if (newP < pc.points.length) {
+                    _self.dragState.point = newP;
+                    jumpToPoint(group, newP);
+                  }
+                } else if (group === 0) {
+                  // Corners: jump to prev corner
+                  const points = pc.points;
+                  const p = _self.dragState.point;
+                  const newP = (p + points.length - 1) % points.length;
+                  _self.dragState.point = newP;
+                  jumpToPoint(group, newP);
+                }
+              } else {
+                // No point active: jump to last corner (same as Shift+N)
+                if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
+                    _self.state.pointsControl[0].draggable &&
+                    _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                  const points0 = _self.state.pointsControl[0].points;
+                  _self.dragState.group = 0;
+                  _self.dragState.point = points0.length - 1;
+                  _self.dragState.state = 'selected';
+                  jumpToPoint(0, points0.length - 1);
+                }
+              }
             }
           }
           break;
@@ -2089,6 +2248,18 @@ class bivotJs {
               } else {
                 _self.opts.onPointSelect(_self.dragState.group, null);
               }
+            }
+            _self.updateOverlay();
+            _self.requestRender();
+          }
+          break;
+
+        case 27: // Escape
+          if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
+            // Clear selection
+            _self.dragState.state = 'none';
+            if (_self.opts.onPointSelect) {
+              _self.opts.onPointSelect(null, null);
             }
             _self.updateOverlay();
             _self.requestRender();
