@@ -3856,7 +3856,7 @@ class bivotJs {
     const diag = this.getDiag();
     if (this.camera && diag) {
       const windowFactor = 2048 / window.innerWidth;
-      const distFactor = 2.5 * Math.sqrt(this.camera.position.length() / diag);
+      const distFactor = 2.5 * Math.sqrt(Math.abs(this.camera.position.z) / diag);
       const [xs, ys] = this.getTexRepeat();
       var texFactor = 1;
       if (this.state.texDims) {
