@@ -1496,6 +1496,7 @@ class bivotJs {
       }
 
       const length = points.length;
+      // FIXME: works in practice but violates React spec — mutates state.pointsControl directly, bypassing BivotReact's setter.
       points.splice(point, 1);
 
       if (length === 1) {
@@ -1717,6 +1718,7 @@ class bivotJs {
           }
 
           if (!cancelDrag) {
+            // FIXME: works in practice but violates React spec — mutates state.pointsControl directly, bypassing BivotReact's setter.
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = { 'x': uv[0], 'y': uv[1] };
             const pos0 = _self.dragState.clickPos;
             if (_self.dragState.addingNew === 0 && _self.dragState.point === 0 && pos0) {
