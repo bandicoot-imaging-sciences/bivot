@@ -33,3 +33,6 @@ yarn-error.log*
 
 # textures used for testing
 /src/bivot-js/example/ladybug
+
+# temporary files
+/tmp

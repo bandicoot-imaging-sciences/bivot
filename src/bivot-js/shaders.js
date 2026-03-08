@@ -4,6 +4,7 @@
 // The Three.js import paths in bivot.js, shaders.js and stateUtils.js need to match.
 
 import * as THREE from 'three';
+import overlayShaderGlsl from './overlay-shader.js';
 
 export default function getShaders() {
   const uniforms = THREE.UniformsUtils.merge([
@@ -15,6 +16,17 @@ export default function getShaders() {
         'specularMap': {value: null},
         'overlayMap': {value: null},
         'textureLayer': {value: 0},
+        'uSegTex':     {value: null},
+        'uCircleTex':  {value: null},
+        'uGridTex':    {value: null},
+        'uTileHeaderTex': {value: null},
+        'uTileIndexTex':  {value: null},
+        'uNumSegs':    {value: 0},
+        'uNumCircles': {value: 0},
+        'uNumGrids':   {value: 0},
+        'uSegTexW':    {value: 0.0},
+        'uCircleTexW': {value: 0.0},
+        'uGridTexW':   {value: 0.0},
         'normalScale': { value: new THREE.Vector2( 1, 1 ) }, // Three.js shader chunks: scaling for xy normals.
         'uExposure': {value: 1.0},
         'uDiffuse': {value: 1.0},
@@ -47,7 +59,8 @@ export default function getShaders() {
       }
     ]);
 
-  const glsl = x => x.toString(); // No-op to trigger GLSL syntax highlighting in VS Code with glsl-literal extension.
+  // Properly handles template interpolations while still enabling GLSL syntax highlighting.
+  const glsl = (strings, ...values) => strings.reduce((acc, str, i) => acc + (values[i - 1] ?? '') + str);
   const vertexShader = glsl`
     varying vec3 vNormal;
     varying vec2 vUv;
@@ -97,6 +110,18 @@ export default function getShaders() {
     uniform sampler2D overlayMap;
     uniform int textureLayer;
 
+    uniform sampler2D uSegTex;
+    uniform sampler2D uCircleTex;
+    uniform sampler2D uGridTex;
+    uniform sampler2D uTileHeaderTex;
+    uniform sampler2D uTileIndexTex;
+    uniform int uNumSegs;
+    uniform int uNumCircles;
+    uniform int uNumGrids;
+    uniform float uSegTexW;
+    uniform float uCircleTexW;
+    uniform float uGridTexW;
+
     uniform float uExposure;
     uniform float uBrightness;
     uniform float uContrast;
@@ -122,6 +147,8 @@ export default function getShaders() {
     varying vec3 vBitangent;
     varying vec2 vUv;
     varying vec3 vViewPosition;
+
+    ${overlayShaderGlsl}
 
     float pi = 3.14159265359;
 
@@ -365,6 +392,9 @@ export default function getShaders() {
       #endif
 
       vec4 overlaySurface = texture2D(overlayMap, vUv);
+      // Canvas overlay is drawn with sRGB hex colours; convert to linear so it composites
+      // correctly in the linear framebuffer before GammaCorrectionShader converts to sRGB.
+      overlaySurface.rgb = srgbToLinearSrgb(overlaySurface.rgb);
 
       if (textureLayer > 0) {
         // Perform a direct pass-through render for any individual texture layer.
@@ -395,6 +425,9 @@ export default function getShaders() {
         // Composite overlay surface onto pass-through output
         col = mix(col, overlaySurface.rgb, overlaySurface.a);
         gl_FragColor = vec4(col, 1.0);
+        #ifdef USE_SHADER_OVERLAY
+          applyShaderOverlay(gl_FragColor);
+        #endif
         return;
       }
 
@@ -498,6 +531,10 @@ export default function getShaders() {
 
         gl_FragColor = vec4((uContrast * (outgoingLight * 2.0 - 1.0) + 0.5) + 2.0 * uBrightness - 1.0, 1.0);
       }
+
+      #ifdef USE_SHADER_OVERLAY
+        applyShaderOverlay(gl_FragColor);
+      #endif
     }
   `;
 

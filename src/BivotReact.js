@@ -1275,11 +1275,13 @@ function BivotReact(props) {
 
   function updateBoundary(path) {
     setBoundary(path);
+    state.boundary = path;  // Update immediately for bivot (before React re-renders)
     renderFrame(DirtyFlag.Overlay);
   }
 
   function updateSubBoundary(path) {
     setSubBoundary(path);
+    state.subBoundary = path;  // Update immediately for bivot (before React re-renders)
     renderFrame(DirtyFlag.Overlay);
   }
 

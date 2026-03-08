@@ -55,6 +55,10 @@ CameraControls.install({ THREE: THREE });
 import UAParser from 'ua-parser-js';
 
 import getShaders from './shaders.js';
+import {
+  OVERLAY_MAX_SEGS, OVERLAY_MAX_CIRCLES, OVERLAY_MAX_GRIDS,
+  OVERLAY_INIT_SEG_CAP, OVERLAY_INIT_CIRCLE_CAP, OVERLAY_INIT_GRID_CAP,
+} from './overlay-shader.js';
 import { loadJsonFile } from '../utils/jsonLib.js';
 import { isEmpty } from '../utils/objLib.js';
 import { getBasePath } from '../utils/pathLib.js';
@@ -197,6 +201,45 @@ export const DirtyFlag = {
   Displacement: 0x00002000,
   All:          0x00003FFF
 };
+
+/**
+ * Convert a single sRGB color component [0, 1] to linear RGB.
+ */
+function srgbToLinear(c) {
+  // Standard sRGB to linear conversion
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * Parse #RGB, #RGBA, #RRGGBB, or #RRGGBBAA hex color string to [r, g, b, a] floats in [0, 1].
+ * Returns sRGB-encoded values (as they appear in CSS).
+ */
+function hexColorToRGBA(hex) {
+  if (!hex || hex[0] !== '#') return [1, 1, 1, 1];
+  const h = hex.slice(1);
+  let r, g, b, a;
+  if (h.length === 3 || h.length === 4) {
+    r = parseInt(h[0] + h[0], 16) / 255;
+    g = parseInt(h[1] + h[1], 16) / 255;
+    b = parseInt(h[2] + h[2], 16) / 255;
+    a = h.length === 4 ? parseInt(h[3] + h[3], 16) / 255 : 1.0;
+  } else {
+    r = parseInt(h.slice(0, 2), 16) / 255;
+    g = parseInt(h.slice(2, 4), 16) / 255;
+    b = parseInt(h.slice(4, 6), 16) / 255;
+    a = h.length >= 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1.0;
+  }
+  return [r, g, b, a];
+}
+
+/**
+ * Parse hex color and convert RGB to linear space for shader overlay.
+ * Alpha is kept as-is (it's not gamma-encoded).
+ */
+function hexColorToLinearRGBA(hex) {
+  const [r, g, b, a] = hexColorToRGBA(hex);
+  return [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b), a];
+}
 
 /*
   The options object is optional and can include the following:
@@ -361,6 +404,7 @@ class bivotJs {
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
+      useShaderOverlay: true,
     };
 
     this.config = {
@@ -471,6 +515,10 @@ class bivotJs {
     this.seamsShowing = false;
     this.gridShowing = false;
     this.gridSelectionShowing = false;
+    this.boundaryShowing = false;
+    this.subBoundaryShowing = false;
+    this._canvasOverlayNeedsRebuild = false;
+    this._overlayNeedsRebuild = false;
     this.diag = null;
     this.untiledImDims = [1, 1]; // Texture image dimensions derived from texDims
     this.areaLightSetupDone = false;
@@ -639,6 +687,7 @@ class bivotJs {
       loadScan();
 
       this.renderer = this.initialiseRenderer();
+      this.initShaderOverlay();
       RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
@@ -1208,6 +1257,27 @@ class bivotJs {
         subtitleElem = subtitleDiv;
         subtitleTextElem = subtitleTextP;
 
+        // Shader overlay mode indicator — staff-only, only when showInterface is true
+        if (_self.config.showInterface) {
+          const shaderDot = _self.registerElement(document, 'div');
+          shaderDot.title = 'Overlay mode — Shift+V to toggle';
+          injectStyle(shaderDot, {
+            'position': 'absolute',
+            'top': '6px',
+            'right': '6px',
+            'width': '8px',
+            'height': '8px',
+            'border-radius': '50%',
+            'background': '#ff9900',
+            'opacity': '0.85',
+            'pointer-events': 'none',
+            'display': 'none',
+            'z-index': '10',
+          });
+          overlay.appendChild(shaderDot);
+          _self.shaderIndicatorElem = shaderDot;
+        }
+
         _self.intersectionObserver = new IntersectionObserver(onIntersection, {});
         _self.intersectionObserver.observe(overlay);
       }
@@ -1461,19 +1531,32 @@ class bivotJs {
     }
 
     function findNearestDraggablePoint(u, v) {
-      const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
-      const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
       const td = _self.untiledImDims;
-      const maxDim = Math.max(td[0], td[1]);
-      const sx = overlayTexW / maxDim;
-      const sy = overlayTexH / maxDim;
+      // Compute the inverse hit-radius scale factors for pointsDist (dist < 1 = hit).
+      // Shader overlay: circles are drawn at a fixed 15-texel rawUV radius (circleR = 15/im[0]),
+      // which equals 15 texDims pixels in x and 15*(td[1]/td[0]) in y — constant regardless of zoom.
+      // Canvas overlay: radius varies with camera distance via getLineWidths / getPointRadii.
+      let scaleX, scaleY;
+      if (_self.state.useShaderOverlay && _self.segTex) {
+        // hitRadX = 15 texDims pixels, hitRadY = 15 * (td[1]/td[0]) texDims pixels
+        scaleX = 1 / 15;
+        scaleY = td[0] / (15 * td[1]);
+      } else {
+        const [absLineWidthX, absLineWidthY] = _self.getLineWidths();
+        const [ex, ey] = _self.getPointRadii(absLineWidthX, absLineWidthY);
+        const maxDim = Math.max(td[0], td[1]);
+        const sx = overlayTexW / maxDim;
+        const sy = overlayTexH / maxDim;
+        scaleX = sx / ex;
+        scaleY = sy / ey;
+      }
       var minDist = null;
       var minHitGroup = null;
       var minHitPoint = null;
       _self.state.pointsControl.forEach((pc, gi) => {
         if (pc.draggable) {
           pc.points.forEach((p, pi) => {
-            const dist = _self.pointsDist(u, v, p.x, p.y, sx / ex, sy / ey);
+            const dist = _self.pointsDist(u, v, p.x, p.y, scaleX, scaleY);
             if (minDist === null || dist < minDist) {
               minDist = dist;
               minHitGroup = gi;
@@ -2136,6 +2219,12 @@ class bivotJs {
                 }
               }
             }
+          }
+          break;
+
+        case 86: // V
+          if (_self.state.enableKeypress && event.shiftKey && _self.segTex) {
+            _self.toggleOverlayMode();
           }
           break;
 
@@ -3279,6 +3368,9 @@ class bivotJs {
       COLOR_TRANSFORM: 1,
       HUE_SATURATION: 1,
     };
+    if (_self.state.useShaderOverlay) {
+      material.defines['USE_SHADER_OVERLAY'] = 1;
+    }
     if (_self.useDispMap) {
       console.debug('Displacement map enabled');
       material.defines['USE_DISPLACEMENTMAP'] = 1;
@@ -3297,6 +3389,7 @@ class bivotJs {
     }
 
     material.extensions.derivatives = true;
+    _self.material = material;
     _self.mesh.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
         child.material = material;
@@ -3572,24 +3665,751 @@ class bivotJs {
   }
 
   updateOverlay() {
+    if (this.state.useShaderOverlay && this.segTex) {
+      this.updateOverlayShader();
+    } else {
+      this.updateOverlayCanvas();
+    }
+  }
+
+  updateOverlayCanvas() {
     // Only update the texture if seams are already showing or need to be shown
     const update = (
       (this.state.showSeams || this.seamsShowing) ||
       (this.state.showGrid || this.gridShowing) ||
       (this.state.showGridSelection || this.gridSelectionShowing) ||
+      (this.state.boundary || this.boundaryShowing) ||
+      (this.state.subBoundary || this.subBoundaryShowing) ||
       (this.state.pointsControl)
     );
+    // Defer the expensive createOverlayTexture to render() so rapid drag events
+    // at mouse-polling rate are coalesced to once per animation frame.
     if (update) {
-      const prevTexture = this.uniforms.overlayMap.value;
-      this.uniforms.overlayMap.value = this.createOverlayTexture(this.state.showSeams, this.state.showGrid, this.state.showGridSelection);
-      if (prevTexture) {
-        prevTexture.dispose();
-      }
+      this._canvasOverlayNeedsRebuild = true;
     }
+  }
+
+  _flushCanvasOverlay() {
+    if (!this._canvasOverlayNeedsRebuild) return;
+    this._canvasOverlayNeedsRebuild = false;
+    const prevTexture = this.uniforms.overlayMap.value;
+    this.uniforms.overlayMap.value = this.createOverlayTexture(
+      this.state.showSeams, this.state.showGrid, this.state.showGridSelection
+    );
+    if (prevTexture) prevTexture.dispose();
     this.overlayTexture = this.uniforms.overlayMap.value;
     this.seamsShowing = this.state.showSeams;
     this.gridShowing = this.state.showGrid;
     this.gridSelectionShowing = this.state.showGridSelection;
+    this.boundaryShowing = Boolean(this.state.boundary);
+    this.subBoundaryShowing = Boolean(this.state.subBoundary);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shader overlay initialisation — called once after renderer is created.
+  // ---------------------------------------------------------------------------
+  initShaderOverlay() {
+    if (!this.state.useShaderOverlay) return;
+    if (this.segTex) return; // already initialised — idempotent
+
+    // Float textures are a WebGL2 core feature; in WebGL1 they require OES_texture_float.
+    const hasFloat = this.renderer.capabilities.isWebGL2
+      || !!this.renderer.extensions.get('OES_texture_float');
+    if (!hasFloat) {
+      console.warn('bivot: float textures not available — falling back to canvas overlay');
+      this.state.useShaderOverlay = false;
+      return;
+    }
+
+    // Overlay buffer capacities — grow dynamically (see _growOverlayBuffer).
+    this.segCapacity    = OVERLAY_INIT_SEG_CAP;
+    this.circleCapacity = OVERLAY_INIT_CIRCLE_CAP;
+    this.gridCapacity   = OVERLAY_INIT_GRID_CAP;
+
+    // Pre-allocate Float32Array backing stores (4 floats per RGBA texel).
+    this.segData    = new Float32Array(this.segCapacity    * 3 * 4);
+    this.circleData = new Float32Array(this.circleCapacity * 2 * 4);
+    this.gridData   = new Float32Array(this.gridCapacity   * 3 * 4);
+
+    // Create RGBA float DataTextures (width × 1 rows).
+    // NearestFilter is essential so texel reads are exact.
+    this.segTex = new THREE.DataTexture(
+      this.segData, this.segCapacity * 3, 1, THREE.RGBAFormat, THREE.FloatType
+    );
+    this.segTex.minFilter = THREE.NearestFilter;
+    this.segTex.magFilter = THREE.NearestFilter;
+
+    this.circleTex = new THREE.DataTexture(
+      this.circleData, this.circleCapacity * 2, 1, THREE.RGBAFormat, THREE.FloatType
+    );
+    this.circleTex.minFilter = THREE.NearestFilter;
+    this.circleTex.magFilter = THREE.NearestFilter;
+
+    this.gridTex = new THREE.DataTexture(
+      this.gridData, this.gridCapacity * 3, 1, THREE.RGBAFormat, THREE.FloatType
+    );
+    this.gridTex.minFilter = THREE.NearestFilter;
+    this.gridTex.magFilter = THREE.NearestFilter;
+
+    // A 1×1 transparent texture used as a stub for overlayMap in shader mode
+    // so the sampler still has a valid binding even though we never read it.
+    this.overlayStubTex = new THREE.DataTexture(
+      new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType
+    );
+    this.overlayStubTex.needsUpdate = true;
+
+    // Wire up uniforms so they're ready when the material is compiled.
+    this.uniforms.uSegTex.value    = this.segTex;
+    this.uniforms.uCircleTex.value = this.circleTex;
+    this.uniforms.uGridTex.value   = this.gridTex;
+    this.uniforms.uSegTexW.value    = this.segCapacity    * 3;
+    this.uniforms.uCircleTexW.value = this.circleCapacity * 2;
+    this.uniforms.uGridTexW.value   = this.gridCapacity   * 3;
+    this.uniforms.overlayMap.value = this.overlayStubTex;
+    this._updateShaderIndicator();
+
+    // Ensure the material has the shader overlay define and recompile if needed
+    if (this.material && !this.material.defines['USE_SHADER_OVERLAY']) {
+      this.material.defines['USE_SHADER_OVERLAY'] = 1;
+      this.material.needsUpdate = true;
+    }
+
+    // Force an initial rebuild if overlay state is already populated.
+    if (this.state.showSeams || this.state.boundary || this.state.subBoundary ||
+        this.state.showGrid || this.state.showGridSelection || this.state.pointsControl) {
+      this._overlayNeedsRebuild = true;
+      this.requestRender();
+    }
+
+    // If overlay state is already present at init time, schedule the first build.
+  }
+
+  // ---------------------------------------------------------------------------
+  // Grow one of the three overlay DataTextures by doubling its capacity.
+  // Returns true if grown, false if already at ceiling.
+  // After growing, the caller should set _overlayNeedsRebuild = true so the
+  // next frame re-fills into the larger buffer.
+  // ---------------------------------------------------------------------------
+  _growOverlayBuffer(kind) {
+    const maxCap  = { seg: OVERLAY_MAX_SEGS,    circle: OVERLAY_MAX_CIRCLES,   grid: OVERLAY_MAX_GRIDS    };
+    const texPer  = { seg: 3,                   circle: 2,                     grid: 3                    };
+    const texUni  = { seg: 'uSegTex',           circle: 'uCircleTex',          grid: 'uGridTex'           };
+    const texWUni = { seg: 'uSegTexW',          circle: 'uCircleTexW',         grid: 'uGridTexW'          };
+    const capKey  = `${kind}Capacity`;
+    const dataKey = `${kind}Data`;
+    const texKey  = `${kind}Tex`;
+
+    const oldCap = this[capKey];
+    const newCap = Math.min(oldCap * 2, maxCap[kind]);
+    if (newCap <= oldCap) return false; // already at ceiling
+
+    const newTexW = newCap * texPer[kind];
+    const newData = new Float32Array(newTexW * 4);
+    const newTex  = new THREE.DataTexture(newData, newTexW, 1, THREE.RGBAFormat, THREE.FloatType);
+    newTex.minFilter = THREE.NearestFilter;
+    newTex.magFilter = THREE.NearestFilter;
+
+    const oldTex = this[texKey];
+    if (oldTex) oldTex.dispose();
+
+    this[capKey]  = newCap;
+    this[dataKey] = newData;
+    this[texKey]  = newTex;
+    this.uniforms[texUni[kind]].value  = newTex;
+    this.uniforms[texWUni[kind]].value = newTexW;
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Toggle between shader-SDF overlay and legacy canvas-texture overlay.
+  // Bound to Shift+V in the keydown handler.
+  // ---------------------------------------------------------------------------
+  toggleOverlayMode() {
+    this.state.useShaderOverlay = !this.state.useShaderOverlay;
+    if (this.state.useShaderOverlay) {
+      // Lazily initialise shader overlay if it was never set up at startup.
+      this.initShaderOverlay();
+    }
+    if (this.material) {
+      if (this.state.useShaderOverlay) {
+        this.material.defines['USE_SHADER_OVERLAY'] = 1;
+        this.uniforms.overlayMap.value = this.overlayStubTex;
+      } else {
+        delete this.material.defines['USE_SHADER_OVERLAY'];
+        // Restore canvas texture (will be rebuilt on next Overlay dirty flag)
+        this.uniforms.overlayMap.value = null;
+      }
+      this.material.needsUpdate = true; // triggers shader recompile
+    }
+    this.state.dirty |= DirtyFlag.Overlay;
+    this._updateShaderIndicator();
+    this.requestRender();
+  }
+
+  _updateShaderIndicator() {
+    if (this.shaderIndicatorElem) {
+      const canvasMode = !this.state.useShaderOverlay;
+      this.shaderIndicatorElem.style.display = canvasMode ? 'block' : 'none';
+      if (canvasMode) {
+        this.shaderIndicatorElem.title = 'Canvas texture overlay active — Shift+V to toggle';
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shader-path overlay update: mark dirty so render() rebuilds once per frame.
+  // Called on every drag event; the actual buildVectorPrimitives() is deferred
+  // to render() to avoid redundant rebuilds at mouse-polling rate (>60 Hz).
+  // ---------------------------------------------------------------------------
+  updateOverlayShader() {
+    this._overlayNeedsRebuild = true;
+    // Ensure the stub overlayMap is still bound (canvas path may have replaced it)
+    if (this.overlayStubTex) {
+      this.uniforms.overlayMap.value = this.overlayStubTex;
+    }
+    this.requestRender();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Walk state and write all vector primitives into the DataTexture arrays.
+  // Returns { numSegs, numCircles, numGrids }.
+  // ---------------------------------------------------------------------------
+  buildVectorPrimitives() {
+    const sd = this.segData;
+    const cd = this.circleData;
+    const gd = this.gridData;
+
+    sd.fill(0);
+    cd.fill(0);
+    gd.fill(0);
+
+    let numSegs    = 0;
+    let numCircles = 0;
+    let numGrids   = 0;
+    let overflowSeg    = false;
+    let overflowCircle = false;
+    let overflowGrid   = false;
+
+    const td = this.state.texDims    || [1, 1];
+    const im = this.untiledImDims    || [1, 1];
+
+    // Convert texture-pixel-space point to rawUV [0,1]² (matches ovRawUV in GLSL).
+    // rawUV.y is flipped because canvas is top-down, UV is bottom-up (flipY=true).
+    const ptToUV = (x, y) => [
+      (x - td[0] / 2) / im[0] + 0.5,
+      0.5 - (y - td[1] / 2) / im[1],
+    ];
+
+    // Write a line segment to the segment DataTexture.
+    // trimA / trimB: optional UV-space amounts to shorten the a-end and b-end respectively
+    // (used to stop segments at circle/square handle boundaries).
+    // When called with a single trim value (9th arg), both ends are trimmed equally.
+    // seamBypass: when true, the segment is rendered even at UV seam/discontinuity fragments
+    // (needed for boundary and subBoundary which lie at or near the texture edge seam).
+    // halfPeriodPx: dash half-period in screen pixels (0 = solid).
+    // phaseOffsetUV: cumulative UV arc length from polyline start, used to maintain
+    //   dash phase continuity across segments.  0 is fine for isolated segments.
+    const addSeg = (ax, ay, bx, by, rgba, halfWidthPx, trimA = 0, trimB = trimA, seamBypass = false, halfPeriodPx = 0, phaseOffsetUV = 0) => {
+      if (numSegs >= this.segCapacity) { overflowSeg = true; return; }
+      let [au, av] = ptToUV(ax, ay);
+      let [bu, bv] = ptToUV(bx, by);
+      if (trimA > 0 || trimB > 0) {
+        const du = bu - au, dv = bv - av;
+        const len = Math.sqrt(du * du + dv * dv);
+        if (len < trimA + trimB + 1e-10) return; // segment shorter than both caps — skip
+        const nu = du / len, nv = dv / len;
+        if (trimA > 0) { au += nu * trimA;  av += nv * trimA; }
+        if (trimB > 0) { bu -= nu * trimB;  bv -= nv * trimB; }
+      }
+      const [r, g, b, a] = rgba;
+      const base = numSegs * 3 * 4; // 3 texels × 4 floats
+      sd[base + 0] = au;          sd[base + 1] = av;
+      sd[base + 2] = bu;          sd[base + 3] = bv;
+      sd[base + 4] = r;           sd[base + 5] = g;
+      sd[base + 6] = b;           sd[base + 7] = a;
+      sd[base + 8] = halfWidthPx;
+      sd[base + 9] = halfPeriodPx;   // t2.g — dash half-period in rawUV units; 0 = solid
+      sd[base + 10] = phaseOffsetUV; // t2.b — cumulative UV arc length for phase continuity
+      sd[base + 11] = seamBypass ? 1.0 : 0.0;
+      numSegs++;
+    };
+
+    // Write a line segment directly in rawUV space (no ptToUV conversion).
+    // seamBypass/halfPeriodPx/phaseOffsetUV: same meaning as in addSeg above.
+    const addSegRaw = (au, av, bu, bv, rgba, halfWidthPx, seamBypass = false, halfPeriodPx = 0, phaseOffsetUV = 0) => {
+      if (numSegs >= this.segCapacity) { overflowSeg = true; return; }
+      const [r, g, b, a] = rgba;
+      const base = numSegs * 3 * 4;
+      sd[base + 0] = au;          sd[base + 1] = av;
+      sd[base + 2] = bu;          sd[base + 3] = bv;
+      sd[base + 4] = r;           sd[base + 5] = g;
+      sd[base + 6] = b;           sd[base + 7] = a;
+      sd[base + 8] = halfWidthPx;
+      sd[base + 9] = halfPeriodPx;   // t2.g — dash half-period in rawUV units; 0 = solid
+      sd[base + 10] = phaseOffsetUV; // t2.b — cumulative UV arc length for phase continuity
+      sd[base + 11] = seamBypass ? 1.0 : 0.0;
+      numSegs++;
+    };
+
+    // Write a circle outline (ring) to the circle DataTexture.
+    const addCircle = (cx, cy, radiusUV, halfWidthPx, rgba) => {
+      if (numCircles >= this.circleCapacity) { overflowCircle = true; return; }
+      const [cu, cv] = ptToUV(cx, cy);
+      const [r, g, b, a] = rgba;
+      const base = numCircles * 2 * 4; // 2 texels × 4 floats
+      cd[base + 0] = cu;           cd[base + 1] = cv;
+      cd[base + 2] = radiusUV;     cd[base + 3] = halfWidthPx;  // positive → circle
+      cd[base + 4] = r;            cd[base + 5] = g;
+      cd[base + 6] = b;            cd[base + 7] = a;
+      numCircles++;
+    };
+
+    // Write a screen-axis-aligned square outline to the circle DataTexture.
+    // halfSideUV: half-side length in rawUV space (same scale as circle radius).
+    // Encoding: c0.z stored as -halfSideUV so the GLSL can distinguish circle (>0) from square (<0).
+    const addSquare = (cx, cy, halfSideUV, halfWidthPx, rgba) => {
+      if (numCircles >= this.circleCapacity) { overflowCircle = true; return; }
+      const [cu, cv] = ptToUV(cx, cy);
+      const [r, g, b, a] = rgba;
+      const base = numCircles * 2 * 4;
+      cd[base + 0] = cu;            cd[base + 1] = cv;
+      cd[base + 2] = -halfSideUV;   cd[base + 3] = halfWidthPx;  // negative → square
+      cd[base + 4] = r;             cd[base + 5] = g;
+      cd[base + 6] = b;             cd[base + 7] = a;
+      numCircles++;
+    };
+
+    // Write an analytical grid to the grid DataTexture.
+    // halfWidthPx < 0 encodes seamBypass: render the line even at UV seam fragments.
+    // dashPeriodPx: dash half-period in screen pixels (0 = solid).
+    //   Vertical gridlines (U-periodic) are dashed along rawUV.y.
+    //   Horizontal gridlines (V-periodic) are dashed along rawUV.x.
+    const addGrid = (uPeriod, vPeriod, rgba, halfWidthPx, uOffset = 0, vOffset = 0, dashPeriodPx = 0) => {
+      if (numGrids >= this.gridCapacity) { overflowGrid = true; return; }
+      const [r, g, b, a] = rgba;
+      const base = numGrids * 3 * 4; // 3 texels × 4 floats
+      gd[base + 0] = uPeriod;      gd[base + 1] = vPeriod;
+      gd[base + 2] = uOffset;      gd[base + 3] = vOffset;
+      gd[base + 4] = r;            gd[base + 5] = g;
+      gd[base + 6] = b;            gd[base + 7] = a;
+      gd[base + 8] = halfWidthPx;  // g2.r; sign encodes seamBypass
+      gd[base + 9] = dashPeriodPx; // g2.g; dash half-period in rawUV units; 0 = solid
+      numGrids++;
+    };
+
+    // Halo colour: always black (gives best contrast on the bright overlays
+    // we use — white, yellow, cyan, green).
+    // Note: pure black [0,0,0] and pure white [1,1,1] are the same in both sRGB and linear RGB.
+    const BLACK = [0, 0, 0, 1];
+
+    // Dash half-period in rawUV units, derived from getLineWidths() so that it
+    // scales with camera distance the same way the canvas overlay does.
+    // Canvas uses relDashLength = 8 (dash = 8× line width in overlay-tex-px), so:
+    //   halfPeriodUV = lineWidth_overlayTexPx × 4 / overlayTexW
+    // Stored in UV space (not screen px) so the GLSL mod argument stays bounded
+    // regardless of zoom — eliminates float-precision noise at high zoom.
+    // Divide out texFactor so dash size stays constant across texture resolutions.
+    // Divide out userScale (tilingScale) so dash size stays constant when the user
+    // changes texture scale in the tiled view.
+    const [absLineWidthX] = this.getLineWidths();
+    const texFactor = td ? Math.sqrt(im[0] / Math.max(td[0], td[1])) : 1;
+    const userScale = this.state.userScale || 1;
+    const dashHP = Math.max(absLineWidthX / texFactor * 4 / (overlayTexW * userScale), 1e-4);
+
+    // ---- Grid ---------------------------------------------------------------
+    // Drawn first (bottom layer) so seams and boundary paint on top.
+    // Grid periods are computed in vUv space (matching the canvas overlay coordinate system)
+    // so that cell sizes remain constant when userScale changes, and match canvas overlay visually.
+    // uPeriod_vUv = gx / (td[0] * stretch[0]), mapped to rawUV by dividing by xs.
+    // Phase offset: canvas starts lines at vUv=0 (tiled texture corner). To match this in rawUV:
+    //   rawUV_corner = (0 - (1-xs)/2) / xs = (xs-1)/(2*xs)  — the same shift used for seam lines.
+    if (this.state.grid) {
+      const [gx, gy] = this.state.grid;
+      const stretch = this.state.stretch ?? [1, 1];
+      const [xs, ys] = this.getTexRepeat();
+      const uPeriod = gx / (td[0] * stretch[0] * xs);
+      const vPeriod = gy / (td[1] * stretch[1] * ys);
+      const phaseU = (xs - 1) / (2 * xs);  // rawUV phase to start lines at vUv=0
+      const phaseV = (ys - 1) / (2 * ys);
+      const numCellsVisible = (td[0] * stretch[0] / gx) * (td[1] * stretch[1] / gy);
+      const fadeGrid = numCellsVisible > 20;
+      if (this.state.showGrid) {
+        const rgba   = hexColorToLinearRGBA('#229F');
+        const gridHW = 1.125;
+        if (fadeGrid) {
+          const fadedRgba = [rgba[0], rgba[1], rgba[2], rgba[3] * 0.5];
+          addGrid(uPeriod, vPeriod, fadedRgba, gridHW, phaseU, phaseV);
+          addGrid(10 * uPeriod, 10 * vPeriod, rgba,     gridHW, phaseU, phaseV);
+        } else {
+          addGrid(uPeriod, vPeriod, rgba, gridHW, phaseU, phaseV);
+        }
+      }
+      if (this.state.showGridSelection && this.state.gridSelection) {
+        const gs = this.state.gridSelection;
+        const single = (gs[0] === 1 && gs[1] === 1);
+        if (!single || this.gridSelectionState?.state === 'selecting') {
+          const selU = (gs[0] * gx) / (td[0] * stretch[0] * xs);
+          const selV = (gs[1] * gy) / (td[1] * stretch[1] * ys);
+          const uOff = phaseU + (gs.length >= 4 ? (gs[2] * gx) / (td[0] * stretch[0] * xs) : 0);
+          const vOff = phaseV + (gs.length >= 4 ? (gs[3] * gy) / (td[1] * stretch[1] * ys) : 0);
+          const selRgba     = hexColorToLinearRGBA('#090F');
+          const selHaloRgba = BLACK;
+          const selHW       = 1.875;
+          const selHaloHW   = selHW + 2.0;
+          const numSelCellsVisible = (td[0] * stretch[0] / (gs[0] * gx)) * (td[1] * stretch[1] / (gs[1] * gy));
+          if (numSelCellsVisible > 20) {
+            const fadedSelRgba     = [selRgba[0], selRgba[1], selRgba[2], selRgba[3] * 0.5];
+            const fadedSelHaloRgba = [selHaloRgba[0], selHaloRgba[1], selHaloRgba[2], selHaloRgba[3] * 0.5];
+            addGrid(selU, selV, fadedSelHaloRgba, selHaloHW, uOff, vOff);
+            addGrid(selU, selV, fadedSelRgba,     selHW,     uOff, vOff);
+            addGrid(10 * selU, 10 * selV, selHaloRgba, selHaloHW, uOff, vOff);
+            addGrid(10 * selU, 10 * selV, selRgba,     selHW,     uOff, vOff);
+          } else {
+            addGrid(selU, selV, selHaloRgba, selHaloHW, uOff, vOff);
+            addGrid(selU, selV, selRgba,     selHW,     uOff, vOff);
+          }
+        }
+      }
+    }
+
+    // ---- Seams --------------------------------------------------------------
+    // Tiled view: seams are tile boundaries, periodic in rawUV.
+    // Untiled view: seams are at the 1/4 and 3/4 positions of the texture
+    //   (where the texture edges meet on the mesh).
+    // Each seam is drawn as a halo (wider, contrasting colour) underneath a
+    // solid main stroke, giving visibility on any background.
+    if (this.state.showSeams) {
+      const seamColor = [1, 1, 1, 1];  // white dash
+      const seamHW    = 1.5;           // half-width in screen px
+      let seamPeriodU, seamPeriodV, seamOffU, seamOffV;
+      if (this.state.stretch) {
+        // Tiled: period = one tile width/height in rawUV.
+        // A tile boundary occurs where vUv is an integer, i.e. at
+        //   rawUV = (n + (xs−1)/2) / xs  — period 1/xs, first seam at (xs−1)/(2xs).
+        const [xs, ys] = this.getTexRepeat();
+        seamPeriodU = 1.0 / xs;
+        seamPeriodV = 1.0 / ys;
+        seamOffU    = (xs - 1) / (2 * xs);
+        seamOffV    = (ys - 1) / (2 * ys);
+      } else {
+        // Untiled: seams at 0.25 and 0.75 in rawUV (1/4 and 3/4 of the texture).
+        seamPeriodU = 0.5;
+        seamPeriodV = 0.5;
+        seamOffU    = 0.25;
+        seamOffV    = 0.25;
+      }
+      // Negative halfWidthPx → seamBypass (render even at UV seam fragments).
+      // Solid black baseline drawn first; dashed white composites on top.
+      addGrid(seamPeriodU, seamPeriodV, BLACK,     -seamHW, seamOffU, seamOffV, 0.0);     // solid black baseline
+      addGrid(seamPeriodU, seamPeriodV, seamColor, -seamHW, seamOffU, seamOffV, dashHP); // dashed white on top
+    }
+
+    // ---- Boundary (solid black baseline + dashed white on top) -------------
+    // Tile seam rectangle in untiled view.  Alternating black/white dashes
+    // give visibility on any background without a separate halo stroke.
+    if (this.state.boundary) {
+      const pts           = this.state.boundary;
+      const boundaryColor = hexColorToLinearRGBA('#FFFF');  // white dash
+      const boundaryHW    = 1.5;
+
+      // Pre-compute cumulative UV arc lengths so dash phase is continuous
+      // across segments even when the polyline turns corners.
+      const segUVLens = [];
+      let cumUV = 0.0;
+      for (let i = 0; i + 1 < pts.length; i++) {
+        segUVLens.push(cumUV);
+        const [au, av] = ptToUV(pts[i].x,     pts[i].y);
+        const [bu, bv] = ptToUV(pts[i + 1].x, pts[i + 1].y);
+        cumUV += Math.sqrt((bu - au) ** 2 + (bv - av) ** 2);
+      }
+
+      // Pass 1: solid black baseline — fills the gaps between white dashes.
+      // Pass 2: dashed white on top, phase-continuous across segments.
+      // Both passes drawn at the same halfWidthPx (no separate halo).
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [x0, y0, x1, y1] = [pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y];
+        addSeg(x0, y0, x1, y1, BLACK,         boundaryHW, 0, 0, true);                       // solid black baseline
+      }
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [x0, y0, x1, y1] = [pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y];
+        addSeg(x0, y0, x1, y1, boundaryColor, boundaryHW, 0, 0, true, dashHP, segUVLens[i]); // dashed white
+      }
+    }
+
+    // ---- Sub-boundary (solid black baseline + dashed yellow on top) ---------
+    // Non-stretched: coordinates are in texDims pixel space — use ptToUV.
+    // Stretched: coordinates are in base-tile pixel space [0..td] and must be
+    // mapped to rawUV (mesh UV) via the uvTransform repeat/offset so they
+    // appear in the primary tile of the tiled canvas.
+    if (this.state.subBoundary) {
+      const { path, stretched } = this.state.subBoundary;
+      if (path) {
+        const col    = hexColorToLinearRGBA('#FF0F');  // yellow dash
+        if (stretched && this.state.stretch) {
+          const [xs, ys] = this.getTexRepeat();
+          // tileSubBoundaryTiled coords are in actual tile pixel space (out_dims),
+          // which equals td * stretch (preview texDims × stretch ratio).
+          const tileW = td[0] * this.state.stretch[0];
+          const tileH = td[1] * this.state.stretch[1];
+          // rawUV.x = x/tileW/xs + (xs-1)/(2xs)
+          // rawUV.y = (1 - y/tileH)/ys + (ys-1)/(2ys)  [flipY: canvas top → UV bottom]
+          const toUV = (x, y) => [
+            x / tileW / xs + (xs - 1) / (2 * xs),
+            (1 - y / tileH) / ys + (ys - 1) / (2 * ys),
+          ];
+          const subHW = 0.85;
+
+          // Pre-compute UV coords and cumulative arc lengths for phase continuity.
+          const uvPts = path.map(p => toUV(p.x, p.y));
+          const segUVLens = [];
+          let cumUV = 0.0;
+          for (let i = 0; i + 1 < uvPts.length; i++) {
+            segUVLens.push(cumUV);
+            const du = uvPts[i + 1][0] - uvPts[i][0];
+            const dv = uvPts[i + 1][1] - uvPts[i][1];
+            cumUV += Math.sqrt(du * du + dv * dv);
+          }
+
+          // Pass 1: solid black baseline.  Pass 2: dashed yellow on top.
+          for (let i = 0; i + 1 < uvPts.length; i++) {
+            const [au, av] = uvPts[i];  const [bu, bv] = uvPts[i + 1];
+            addSegRaw(au, av, bu, bv, BLACK, subHW);                              // solid black baseline
+          }
+          for (let i = 0; i + 1 < uvPts.length; i++) {
+            const [au, av] = uvPts[i];  const [bu, bv] = uvPts[i + 1];
+            addSegRaw(au, av, bu, bv, col, subHW, false, dashHP, segUVLens[i]);   // dashed yellow
+          }
+        } else if (!stretched) {
+          const subHW = 1.5;
+
+          // Pre-compute cumulative UV arc lengths for phase continuity.
+          const segUVLens = [];
+          let cumUV = 0.0;
+          for (let i = 0; i + 1 < path.length; i++) {
+            segUVLens.push(cumUV);
+            const [au, av] = ptToUV(path[i].x,     path[i].y);
+            const [bu, bv] = ptToUV(path[i + 1].x, path[i + 1].y);
+            cumUV += Math.sqrt((bu - au) ** 2 + (bv - av) ** 2);
+          }
+
+          // Pass 1: solid black baseline.  Pass 2: dashed yellow on top.
+          for (let i = 0; i + 1 < path.length; i++) {
+            addSeg(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, BLACK, subHW, 0, 0, true);                       // solid black baseline
+          }
+          for (let i = 0; i + 1 < path.length; i++) {
+            addSeg(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, col,   subHW, 0, 0, true, dashHP, segUVLens[i]); // dashed yellow
+          }
+        }
+      }
+    }
+
+    // ---- Points control groups (circles + line segments) --------------------
+    if (this.state.pointsControl) {
+      const dsState  = this.dragState?.state ?? '';
+      const anySelected = ['draggingPoint', 'draggingRect', 'selected'].includes(dsState);
+
+      this.state.pointsControl.forEach((p, gi) => {
+        if (!p || !p.points || !p.visible) return;
+        const pts = p.points;
+        if (pts.length === 0) return;
+
+        const selGroup = anySelected && this.dragState?.group === gi;
+
+        // Special handling for active corners (gi === 0) and repeat region (gi === 2)
+        let groupAlphaScale;
+        let lineAlphaScale;
+
+        if (gi === 2) {
+          // Repeat region: always full alpha
+          groupAlphaScale = 1.0;
+          lineAlphaScale = 1.0;
+        } else if (gi === 0) {
+          // Active corners: full alpha unless control pts (gi === 1) are selected
+          const controlPtsSelected = anySelected && this.dragState?.group === 1;
+          groupAlphaScale = controlPtsSelected ? 0.5 : 1.0;
+          lineAlphaScale = controlPtsSelected ? 0.5 : 1.0;
+        } else {
+          // Default behavior for other groups
+          groupAlphaScale = (!selGroup && anySelected) ? 0.5 : 1.0;
+          // Lines are additionally faded when nothing at all is selected.
+          lineAlphaScale = anySelected ? groupAlphaScale : 0.5;
+        }
+
+        const isPairsMode = p.lines === 'pairs';
+        // When a point is selected inside a pairs group, fade all other pairs.
+        const selPairIdx = (selGroup && isPairsMode)
+          ? Math.floor((this.dragState?.point ?? 0) / 2)
+          : -1;
+        // Separate alpha helpers for circles (dots) and line segments.
+        const pairCircleAlpha = (pairIdx) =>
+          (selPairIdx >= 0 && pairIdx !== selPairIdx) ? 0.5 * groupAlphaScale : groupAlphaScale;
+        const pairLineAlpha = (pairIdx) =>
+          (selPairIdx >= 0 && pairIdx !== selPairIdx) ? 0.5 * lineAlphaScale : lineAlphaScale;
+
+        // Use dynamically calculated line widths from getLineWidths(), same as canvas overlay
+        const [absLineWidthX, absLineWidthY] = this.getLineWidths();
+        const avgLineWidth = (absLineWidthX + absLineWidthY) / 2;
+        // Canvas uses full width, shader uses half-width, and p.lineWidth is a multiplier.
+        // +1.25 constant ensures lines stay visible and grow slightly when zoomed in.
+        const baseHW   = (p.lineWidth ? (p.lineWidth * avgLineWidth / 6) : (avgLineWidth / 2)) + 1.25;
+        const lineHW   = baseHW;       // line segment half-width (screen pixels)
+        const circleHW = lineHW;       // circle ring half-width = same as line width
+        const haloHW   = lineHW + 2.0; // halo adds ~2 px on each side
+        // Fixed 15 texture-pixel radius in rawUV space (shader interprets as UV units).
+        const circleR  = 15 / im[0];
+
+        const baseColRaw = hexColorToLinearRGBA(p.color        ?? '#ffffff');
+        const selColRaw  = hexColorToLinearRGBA(p.selectedColor ?? p.color ?? '#ffff00');
+        const mkCol = (raw, alpha) => [raw[0], raw[1], raw[2], raw[3] * alpha];
+
+        // Halo colour: always black.
+        const baseHaloRaw = BLACK;
+        const selHaloRaw  = BLACK;
+
+        // Base colour for line segments (uses lineAlphaScale).
+        const baseCol     = mkCol(baseColRaw,  lineAlphaScale);
+        const baseHaloCol = mkCol(baseHaloRaw, lineAlphaScale);
+
+        // Point markers (circle or square outlines) — stay at groupAlphaScale, not faded by idle state.
+        if (!this.state.texDims) return;
+        const addHandle = p.pointShape === 'square' ? addSquare : addCircle;
+
+        // Geometry helper: emit all line segments for this group with a given colour and half-width.
+        // Called twice — first for halos (wider, contrasting), then for main strokes.
+        const drawGroupSegs = (useHalo) => {
+          const col = useHalo ? baseHaloCol : baseCol;
+          const hw  = useHalo ? haloHW      : lineHW;
+          const numPts = pts.length;
+          if ((p.lines === 'rect' || (p.lines === 'closed4' && this.dragState?.state === 'draggingRect')) && numPts >= 2) {
+            const [x0, y0] = [pts[0].x, pts[0].y];
+            const [x1, y1] = [pts[1].x, pts[1].y];
+            addSeg(x0, y0, x1, y0, col, hw);
+            addSeg(x1, y0, x1, y1, col, hw);
+            addSeg(x1, y1, x0, y1, col, hw);
+            addSeg(x0, y1, x0, y0, col, hw);
+          } else if (p.lines === 'closed4' && p.staggered) {
+            // --- Staggered closed4: tile-shift geometry drawn from 3 defined points ---
+            // Points are in texture-pixel space; the math mirrors drawPoints() in the canvas path.
+            const x0 = pts[0].x, y0 = pts[0].y;
+            const x1 = numPts >= 2 ? pts[1].x : x0;
+            const y1 = numPts >= 2 ? pts[1].y : y0;
+
+            // Primary edge P0→P1
+            if (numPts >= 2) {
+              addSeg(x0, y0, x1, y1, col, hw, circleR, circleR);
+            }
+
+            if (numPts >= 3) {
+              const x2 = pts[2].x, y2 = pts[2].y;
+
+              // Perpendicular distance from P2 to line P0→P1
+              const A = y1 - y0;
+              const B = x0 - x1;
+              const C = x1 * y0 - x0 * y1;
+              const den = Math.sqrt(A * A + B * B);
+              let orthoDist;
+              if (den < 1e-9) {
+                orthoDist = Math.sqrt((x2 - x0) ** 2 + (y2 - y0) ** 2);
+              } else {
+                orthoDist = Math.abs(A * x2 + B * y2 + C) / den;
+              }
+
+              const det = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+              const f = (det < 0) ? -1 : 1;
+              const primaryLength = Math.max(1e-9, Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2));
+              const primaryVector = [f * (x1 - x0) / primaryLength, f * (y1 - y0) / primaryLength];
+              const orthoVector   = [-primaryVector[1], primaryVector[0]];
+
+              // Construction points C0, C1: corners of the shifted tile edge
+              const c0 = [x0 + orthoDist * orthoVector[0], y0 + orthoDist * orthoVector[1]];
+              const c1 = [x1 + orthoDist * orthoVector[0], y1 + orthoDist * orthoVector[1]];
+
+              const dot = (x2 - x0) * (x1 - x0) + (y2 - y0) * (y1 - y0);
+              if (dot >= 0 && dot <= primaryLength ** 2) {
+                // P2 projects within the primary edge — draw full construction
+                addSeg(x0, y0, c0[0], c0[1], col, hw, circleR, 0);
+                addSeg(x1, y1, c1[0], c1[1], col, hw, circleR, 0);
+                addSeg(x2, y2, c0[0], c0[1], col, hw, circleR, 0);
+                addSeg(x2, y2, c1[0], c1[1], col, hw, circleR, 0);
+
+                // Short tick lines representing the shift into adjacent tiles
+                const len  = 0.1;
+                const diag = Math.sqrt(orthoDist ** 2 + primaryLength ** 2);
+                const vo   = [len * diag * orthoVector[0], len * diag * orthoVector[1]];
+                // Tick from P2 in ortho direction (shifted tile)
+                addSeg(x2, y2, x2 + vo[0], y2 + vo[1], col, hw, circleR, 0);
+
+                // Mirror tick in the shifted row at the opposite end
+                const shiftDist    = f * Math.sqrt((c1[0] - x2) ** 2 + (c1[1] - y2) ** 2);
+                const shiftPrimary = [shiftDist * primaryVector[0], shiftDist * primaryVector[1]];
+                const r0 = [x0 + shiftPrimary[0],          y0 + shiftPrimary[1]];
+                const r1 = [x0 + shiftPrimary[0] - vo[0],  y0 + shiftPrimary[1] - vo[1]];
+                addSeg(r0[0], r0[1], r1[0], r1[1], col, hw, 0, 0);
+
+                // Short ticks from P0/P1 into the non-shifted adjacent tile
+                const vp = [-f * vo[1], f * vo[0]];
+                addSeg(x0, y0,     x0 + vp[0],     y0 + vp[1],     col, hw, circleR, 0);
+                addSeg(x1, y1,     x1 - vp[0],     y1 - vp[1],     col, hw, circleR, 0);
+                addSeg(c0[0], c0[1], c0[0] + vp[0], c0[1] + vp[1], col, hw, 0, 0);
+                addSeg(c1[0], c1[1], c1[0] - vp[0], c1[1] - vp[1], col, hw, 0, 0);
+              } else {
+                // P2 projects outside primary edge — just draw C0→C1
+                addSeg(c0[0], c0[1], c1[0], c1[1], col, hw, 0, 0);
+              }
+            }
+
+          } else if ((p.lines === 'loop' || p.lines === 'closed' || p.lines === 'closed4') && numPts >= 2) {
+            for (let i = 0; i < numPts; i++) {
+              const a = pts[i], b = pts[(i + 1) % numPts];
+              addSeg(a.x, a.y, b.x, b.y, col, hw, circleR);
+            }
+          } else if (p.lines === 'pairs') {
+            const rawCol = useHalo ? baseHaloRaw : baseColRaw;
+            for (let i = 0; i + 1 < numPts; i += 2) {
+              const pCol = mkCol(rawCol, pairLineAlpha(Math.floor(i / 2)));
+              addSeg(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, pCol, hw, circleR);
+            }
+          } else if (p.lines === 'open') {
+            for (let i = 0; i + 1 < numPts; i++) {
+              addSeg(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, col, hw, circleR);
+            }
+          }
+        };
+
+        // Pass 1 — halos disabled.
+        // drawGroupSegs(true);
+
+        // Pass 2 — main strokes: composited on top of halos.
+        // Handles (circles/squares).
+        pts.forEach((pt, pi) => {
+          const isSelected = selGroup && this.dragState?.point === pi;
+          // isAddingNew: belt-and-suspenders guard for the addNew case — mirrors canvas overlay's
+          // drawPoint() which uses (groupSelected && i === selectedPoint) directly, without going
+          // through the anySelected gate that selGroup requires.
+          const isAddingNew = p.addNew && this.dragState?.addingNew !== null
+            && this.dragState?.group === gi && this.dragState?.point === pi;
+          const drawAsSelected = isSelected || isAddingNew;
+          const alpha = isPairsMode ? pairCircleAlpha(Math.floor(pi / 2)) : groupAlphaScale;
+          addHandle(pt.x, pt.y, circleR, circleHW,
+            drawAsSelected ? mkCol(selColRaw, alpha) : mkCol(baseColRaw, alpha));
+          if (drawAsSelected) {
+            // Cross-hairs inside the circle at 50% alpha.
+            const [cu, cv] = ptToUV(pt.x, pt.y);
+            const chCol = mkCol(selColRaw, alpha * 0.5);
+            addSegRaw(cu - circleR, cv, cu + circleR, cv, chCol, circleHW);
+            addSegRaw(cu, cv - circleR, cu, cv + circleR, chCol, circleHW);
+          }
+        });
+        // Line segment main strokes.
+        drawGroupSegs(false);
+      });
+    }
+
+    this.segTex.needsUpdate    = true;
+    this.circleTex.needsUpdate = true;
+    this.gridTex.needsUpdate   = true;
+
+    return { numSegs, numCircles, numGrids, overflowSeg, overflowCircle, overflowGrid };
   }
 
   updateStretch() {
@@ -3597,6 +4417,8 @@ class bivotJs {
     if (texture) {
       this.setTexRepeat(texture);
     }
+    // Overlay canvas texture depends on stretch; ensure it's rebuilt
+    this.state.dirty |= DirtyFlag.Overlay;
   }
 
   stretchUv(uv) {
@@ -3807,22 +4629,80 @@ class bivotJs {
     const absLineWidthX = ys * thickness;
     const absLineWidthY = xs * thickness;
 
-    ctx.beginPath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = absLineWidthX;
     var x0 = cellOffset ? cellOffset[0] * stretchFactors[0] : 0;
     var y0 = cellOffset ? cellOffset[1] * stretchFactors[1] : 0;
     x0 -= Math.floor(x0 / gridDimsStretch[0]) * gridDimsStretch[0];
     y0 -= Math.floor(y0 / gridDimsStretch[1]) * gridDimsStretch[1];
-    for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
-      ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y);
+
+    // Alpha-fade minor lines when more than 20 cells are visible, keeping every 10th line unfaded
+    const numCellsX = overlayTexH / gridDimsStretch[0];
+    const numCellsY = overlayTexW / gridDimsStretch[1];
+    const fadeGrid = numCellsX * numCellsY > 20;
+
+    let fadedColor = color;
+    if (fadeGrid) {
+      if (color.length === 5) { // #RGBA shorthand
+        const a = parseInt(color[4], 16);
+        const fadedA = Math.round(a * 0.5).toString(16);
+        fadedColor = color.slice(0, 4) + fadedA;
+      } else if (color.length === 9) { // #RRGGBBAA
+        const a = parseInt(color.slice(7, 9), 16);
+        const fadedA = Math.round(a * 0.5).toString(16).padStart(2, '0');
+        fadedColor = color.slice(0, 7) + fadedA;
+      }
     }
-    ctx.stroke();
-    ctx.lineWidth = absLineWidthY;
-    for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
-      ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1);
+
+    if (fadeGrid) {
+      // Horizontal lines
+      ctx.lineWidth = absLineWidthX;
+      ctx.beginPath();
+      ctx.strokeStyle = fadedColor;
+      let idx = 0;
+      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+        if (idx % 10 !== 0) { ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y); }
+        idx++;
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      idx = 0;
+      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+        if (idx % 10 === 0) { ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y); }
+        idx++;
+      }
+      ctx.stroke();
+      // Vertical lines
+      ctx.lineWidth = absLineWidthY;
+      ctx.beginPath();
+      ctx.strokeStyle = fadedColor;
+      idx = 0;
+      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+        if (idx % 10 !== 0) { ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1); }
+        idx++;
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      idx = 0;
+      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+        if (idx % 10 === 0) { ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1); }
+        idx++;
+      }
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = absLineWidthX;
+      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+        ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y);
+      }
+      ctx.stroke();
+      ctx.lineWidth = absLineWidthY;
+      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 
   drawRect(ctx, texDims, cellDims, p0, p1, stretch, color='#FFFF', thickness=1) {
@@ -3979,7 +4859,14 @@ class bivotJs {
     if (!p || !p.points) {
       return;
     }
-    const alphaStr = (!groupSelected && anySelected) ? '7f' : 'ff';
+    // dotAlphaStr: used for circle handles — faded only when another group is selected.
+    let alphaStr = (!groupSelected && anySelected) ? '7f' : 'ff';
+    // lineAlphaStr: additionally faded when nothing at all is selected.
+    let lineAlphaStr = !anySelected ? '7f' : alphaStr;
+    // For pairs mode: when a point in this group is selected, fade non-selected pairs.
+    const selPairIdx = (groupSelected && p.lines === 'pairs')
+      ? Math.floor((this.dragState.point ?? 0) / 2)
+      : -1;
     const numPoints = p.points.length;
     if (p.visible && numPoints > 0 && this.state.texDims) {
       const pMap = this.coordsToOverlay(p.points);
@@ -4014,7 +4901,7 @@ class bivotJs {
         const p1 = [x1 - c * ex * endPoints[1], y1 - s * ey * endPoints[1]];
         ctx.beginPath();
         ctx.lineWidth = Math.sqrt(Math.pow(absLineWidthX * c, 2) + Math.pow(absLineWidthY * s, 2));
-        ctx.strokeStyle = (p.color ?? '#ffffff') + alphaStr;
+        ctx.strokeStyle = (p.color ?? '#ffffff') + lineAlphaStr;
         ctx.moveTo(p0[0], p0[1]);
         ctx.lineTo(p1[0], p1[1]);
         ctx.stroke();
@@ -4098,12 +4985,20 @@ class bivotJs {
           }
         }
       } else if (p.lines === 'pairs') {
+        const baseAlpha = (!groupSelected && anySelected) ? '7f' : 'ff';
+        const baseLineAlpha = !anySelected ? '7f' : baseAlpha;
         for (var i = 0; i < numPoints; i++) {
+          // dots: faded for non-selected pair, otherwise group-selection fade only
+          alphaStr = (selPairIdx >= 0 && Math.floor(i / 2) !== selPairIdx) ? '3f' : baseAlpha;
           drawPoint(ctx, pMap, i, this.dragState.point);
         }
         for (var i = 0; i < Math.floor(numPoints / 2); i++) {
+          // lines: additionally faded when no selection; further faded for non-selected pair
+          lineAlphaStr = (selPairIdx >= 0 && i !== selPairIdx) ? '3f' : baseLineAlpha;
           drawLineSegment(ctx, pMap[i * 2].x, pMap[i * 2].y, pMap[i * 2 + 1].x, pMap[i * 2 + 1].y);
         }
+        alphaStr = baseAlpha;      // restore
+        lineAlphaStr = baseLineAlpha;  // restore
       } else { // No lines
         for (var i = 0; i < numPoints; i++) {
           drawPoint(ctx, pMap, i, this.dragState.point);
@@ -4352,12 +5247,36 @@ class bivotJs {
       if (this.stats) {
         this.stats.begin();
       }
-      const frameStartTimeMs = Date.now();
+      const frameStartTimeMs = Date.now(); // kept for updateAnimation (Date arithmetic)
 
       // Call update functions according to which dirty flag bits are set
       this.handleDirtyFlags();
 
       this.renderLoopUpdateCanvas();
+
+      // Flush overlay updates — coalesced to once per animation frame for both paths
+      if (this.state.useShaderOverlay && this.segTex && this._overlayNeedsRebuild) {
+        this._overlayNeedsRebuild = false;
+        const { numSegs, numCircles, numGrids,
+                overflowSeg, overflowCircle, overflowGrid } = this.buildVectorPrimitives();
+        this.uniforms.uNumSegs.value    = numSegs;
+        this.uniforms.uNumCircles.value = numCircles;
+        this.uniforms.uNumGrids.value   = numGrids;
+        // TODO(overlay-flicker): Keep previous overlay visible until replacement data is ready.
+        // Option 1 (low risk): if overflow occurs, grow buffers and rebuild again in this same
+        // render pass, then publish uNum* only once the rebuild completes without overflow.
+        // Option 2 (more robust): use front/back overlay texture sets and only swap after the
+        // back set is fully rebuilt (double-buffered overlay data).
+        if (overflowSeg || overflowCircle || overflowGrid) {
+          if (overflowSeg)    this._growOverlayBuffer('seg');
+          if (overflowCircle) this._growOverlayBuffer('circle');
+          if (overflowGrid)   this._growOverlayBuffer('grid');
+          this._overlayNeedsRebuild = true; // re-fill into the larger buffer next frame
+          this.requestRender();
+        }
+      } else {
+        this._flushCanvasOverlay();
+      }
 
       this.controls._targetEnd.z = 0 // Avoid centre of rotation floating above or below the shimmer
       const delta = this.clock.getDelta();
@@ -4368,6 +5287,12 @@ class bivotJs {
       this.composer.render();
 
       this.renderRequested = false;
+
+      // If overlay data still needs rebuild (e.g. after dynamic buffer growth),
+      // schedule a follow-up frame now that this render is complete.
+      if (this._overlayNeedsRebuild) {
+        this.requestRender();
+      }
 
       if (
         controlsUpdate && this.isVisible &&
