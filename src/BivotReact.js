@@ -322,6 +322,10 @@ function BivotReact(props) {
     texturesLoaded,
     setTexturesLoaded,
 
+    // If supplied, calling setTriggerSave(n => n + 1) from the parent will trigger a save.
+    // (Currently only supported for internal use)
+    triggerSave,
+
   } = props;
 
   const canvasRef = useRef();
@@ -707,6 +711,12 @@ function BivotReact(props) {
   useEffect(() => {
     setUserEnableKeypress(enableKeypress);
   }, [enableKeypress]);
+
+  useEffect(() => {
+    if (triggerSave > 0 && onSaveScreenshot) {
+      stateSave(onSaveScreenshot);
+    }
+  }, [triggerSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
