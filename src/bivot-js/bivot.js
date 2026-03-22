@@ -404,7 +404,7 @@ class bivotJs {
       _camPositionOffset: new THREE.Vector2(0, 0),
       _meshRotateZDegreesPrevious: 0,
       _statusText: '',
-      useShaderOverlay: true,
+      useShaderOverlay: false,
     };
 
     this.config = {
@@ -688,6 +688,7 @@ class bivotJs {
 
       this.renderer = this.initialiseRenderer();
       this.initShaderOverlay();
+      this._updateShaderIndicator();
       RectAreaLightUniformsLib.init(); // Initialise LTC look-up tables for area lighting
       this.composer = this.initialiseComposer(this.renderer, updateToneMapParams);
 
@@ -2223,7 +2224,7 @@ class bivotJs {
           break;
 
         case 86: // V
-          if (_self.state.enableKeypress && event.shiftKey && _self.segTex) {
+          if (_self.state.enableKeypress && event.shiftKey) {
             _self.toggleOverlayMode();
           }
           break;
@@ -3833,7 +3834,11 @@ class bivotJs {
     if (this.material) {
       if (this.state.useShaderOverlay) {
         this.material.defines['USE_SHADER_OVERLAY'] = 1;
+        // Dispose the old canvas overlay texture and replace with the stub.
+        const prev = this.uniforms.overlayMap.value;
         this.uniforms.overlayMap.value = this.overlayStubTex;
+        if (prev && prev !== this.overlayStubTex) prev.dispose();
+        this._canvasOverlayNeedsRebuild = false;
       } else {
         delete this.material.defines['USE_SHADER_OVERLAY'];
         // Restore canvas texture (will be rebuilt on next Overlay dirty flag)
@@ -3848,10 +3853,10 @@ class bivotJs {
 
   _updateShaderIndicator() {
     if (this.shaderIndicatorElem) {
-      const canvasMode = !this.state.useShaderOverlay;
-      this.shaderIndicatorElem.style.display = canvasMode ? 'block' : 'none';
-      if (canvasMode) {
-        this.shaderIndicatorElem.title = 'Canvas texture overlay active — Shift+V to toggle';
+      const shaderMode = this.state.useShaderOverlay;
+      this.shaderIndicatorElem.style.display = shaderMode ? 'block' : 'none';
+      if (shaderMode) {
+        this.shaderIndicatorElem.title = 'Shader overlay active — Shift+V to toggle';
       }
     }
   }
@@ -5255,24 +5260,26 @@ class bivotJs {
       this.renderLoopUpdateCanvas();
 
       // Flush overlay updates — coalesced to once per animation frame for both paths
-      if (this.state.useShaderOverlay && this.segTex && this._overlayNeedsRebuild) {
-        this._overlayNeedsRebuild = false;
-        const { numSegs, numCircles, numGrids,
-                overflowSeg, overflowCircle, overflowGrid } = this.buildVectorPrimitives();
-        this.uniforms.uNumSegs.value    = numSegs;
-        this.uniforms.uNumCircles.value = numCircles;
-        this.uniforms.uNumGrids.value   = numGrids;
-        // TODO(overlay-flicker): Keep previous overlay visible until replacement data is ready.
-        // Option 1 (low risk): if overflow occurs, grow buffers and rebuild again in this same
-        // render pass, then publish uNum* only once the rebuild completes without overflow.
-        // Option 2 (more robust): use front/back overlay texture sets and only swap after the
-        // back set is fully rebuilt (double-buffered overlay data).
-        if (overflowSeg || overflowCircle || overflowGrid) {
-          if (overflowSeg)    this._growOverlayBuffer('seg');
-          if (overflowCircle) this._growOverlayBuffer('circle');
-          if (overflowGrid)   this._growOverlayBuffer('grid');
-          this._overlayNeedsRebuild = true; // re-fill into the larger buffer next frame
-          this.requestRender();
+      if (this.state.useShaderOverlay && this.segTex) {
+        if (this._overlayNeedsRebuild) {
+          this._overlayNeedsRebuild = false;
+          const { numSegs, numCircles, numGrids,
+                  overflowSeg, overflowCircle, overflowGrid } = this.buildVectorPrimitives();
+          this.uniforms.uNumSegs.value    = numSegs;
+          this.uniforms.uNumCircles.value = numCircles;
+          this.uniforms.uNumGrids.value   = numGrids;
+          // TODO(overlay-flicker): Keep previous overlay visible until replacement data is ready.
+          // Option 1 (low risk): if overflow occurs, grow buffers and rebuild again in this same
+          // render pass, then publish uNum* only once the rebuild completes without overflow.
+          // Option 2 (more robust): use front/back overlay texture sets and only swap after the
+          // back set is fully rebuilt (double-buffered overlay data).
+          if (overflowSeg || overflowCircle || overflowGrid) {
+            if (overflowSeg)    this._growOverlayBuffer('seg');
+            if (overflowCircle) this._growOverlayBuffer('circle');
+            if (overflowGrid)   this._growOverlayBuffer('grid');
+            this._overlayNeedsRebuild = true; // re-fill into the larger buffer next frame
+            this.requestRender();
+          }
         }
       } else {
         this._flushCanvasOverlay();
