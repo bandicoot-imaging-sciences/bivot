@@ -1887,9 +1887,22 @@ class bivotJs {
     function jumpToPoint(group, point) {
       const points = _self.state.pointsControl[group].points;
       const pMap = _self.coordsToWorld([points[point]]);
+      if (!pMap) {
+        return;
+      }
+      const camZ = _self.camera.position.z;
 
-      _self.controls.setPosition(pMap[0].x, pMap[0].y, _self.camera.position.z);
-      _self.controls.setTarget(pMap[0].x, pMap[0].y, 0);
+      // Use setLookAt to set position+target atomically, avoiding the
+      // intermediate state that separate setPosition/setTarget calls create.
+      _self.controls.setLookAt(
+        pMap[0].x, pMap[0].y, camZ,
+        pMap[0].x, pMap[0].y, 0,
+        false
+      );
+      // Force camera.position to sync immediately (it normally only updates in
+      // the render-loop's controls.update(delta) call).
+      _self.controls.update(0);
+
       _self.updateOverlay();
       _self.requestRender();
       if (_self.opts.onPointSelect) {
@@ -2137,8 +2150,8 @@ class bivotJs {
           if (_self.state.enableKeypress) {
             // Shift+M: always jump to first corner
             if (event.shiftKey) {
-              if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
-                  _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+              const g0 = _self.state.pointsControl[0];
+              if (g0 && g0.visible && g0.points && g0.points.length > 0) {
                 _self.dragState.group = 0;
                 _self.dragState.point = 0;
                 _self.dragState.state = 'selected';
@@ -2164,9 +2177,8 @@ class bivotJs {
                 }
               } else {
                 // No point active: jump to first corner (same as Shift+M)
-                if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
-                    _self.state.pointsControl[0].draggable &&
-                    _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
+                const g0 = _self.state.pointsControl[0];
+                if (g0 && g0.visible && g0.draggable && g0.points && g0.points.length > 0) {
                   _self.dragState.group = 0;
                   _self.dragState.point = 0;
                   _self.dragState.state = 'selected';
@@ -2181,9 +2193,9 @@ class bivotJs {
           if (_self.state.enableKeypress) {
             // Shift+N: always jump to last corner
             if (event.shiftKey) {
-              if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
-                  _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
-                const points0 = _self.state.pointsControl[0].points;
+              const g0 = _self.state.pointsControl[0];
+              if (g0 && g0.visible && g0.points && g0.points.length > 0) {
+                const points0 = g0.points;
                 _self.dragState.group = 0;
                 _self.dragState.point = points0.length - 1;
                 _self.dragState.state = 'selected';
@@ -2209,10 +2221,9 @@ class bivotJs {
                 }
               } else {
                 // No point active: jump to last corner (same as Shift+N)
-                if (_self.state.pointsControl[0] && _self.state.pointsControl[0].visible &&
-                    _self.state.pointsControl[0].draggable &&
-                    _self.state.pointsControl[0].points && _self.state.pointsControl[0].points.length > 0) {
-                  const points0 = _self.state.pointsControl[0].points;
+                const g0 = _self.state.pointsControl[0];
+                if (g0 && g0.visible && g0.draggable && g0.points && g0.points.length > 0) {
+                  const points0 = g0.points;
                   _self.dragState.group = 0;
                   _self.dragState.point = points0.length - 1;
                   _self.dragState.state = 'selected';
@@ -3898,12 +3909,7 @@ class bivotJs {
     const td = this.state.texDims    || [1, 1];
     const im = this.untiledImDims    || [1, 1];
 
-    // Convert texture-pixel-space point to rawUV [0,1]² (matches ovRawUV in GLSL).
-    // rawUV.y is flipped because canvas is top-down, UV is bottom-up (flipY=true).
-    const ptToUV = (x, y) => [
-      (x - td[0] / 2) / im[0] + 0.5,
-      0.5 - (y - td[1] / 2) / im[1],
-    ];
+    const ptToUV = (x, y) => this.texelToUV(x, y);
 
     // Write a line segment to the segment DataTexture.
     // trimA / trimB: optional UV-space amounts to shorten the a-end and b-end respectively
@@ -4768,6 +4774,19 @@ class bivotJs {
     return texPix ? [texPix.x, texPix.y] : [1, 1];
   }
 
+  // Convert a texel-space point to rawUV [0,1]² — the common "centre texDims
+  // content inside the power-of-2 untiledImDims square" transform used by
+  // the shader overlay (ptToUV / ovRawUV), canvas overlay, and coordsToWorld.
+  // rawUV.y is flipped (bottom-up) to match the UV / texture convention.
+  texelToUV(x, y) {
+    const td = this.state.texDims    || [1, 1];
+    const im = this.untiledImDims    || [1, 1];
+    return [
+      (x - td[0] / 2) / im[0] + 0.5,
+      0.5 - (y - td[1] / 2) / im[1],
+    ];
+  }
+
   overlayToTexScale(point, stretchFactors=[1, 1]) {
     if (point && this.untiledImDims) {
       const x = point.x / (this.untiledImDims[0] * stretchFactors[0]) * overlayTexW;
@@ -4780,11 +4799,12 @@ class bivotJs {
 
   coordsToOverlay(points, stretchFactors=[1, 1]) {
     if (this.state.texDims && points && this.untiledImDims) {
-      const td = this.state.texDims;
       var pMap = [];
       for (var i = 0; i < points.length; i++) {
-        var x = ((points[i].x - td[0] / 2) / this.untiledImDims[0] + 0.5) * overlayTexW * stretchFactors[0];
-        var y = ((points[i].y - td[1] / 2) / this.untiledImDims[1] + 0.5) * overlayTexH * stretchFactors[1];
+        const [u, v] = this.texelToUV(points[i].x, points[i].y);
+        // Canvas is top-down so invert v back: canvasY = (1 - v) * height.
+        var x = u       * overlayTexW * stretchFactors[0];
+        var y = (1 - v) * overlayTexH * stretchFactors[1];
         pMap.push({ x, y });
       }
       return pMap;
@@ -4846,9 +4866,9 @@ class bivotJs {
 
         var pMap = [];
         for (var i = 0; i < pointsRot.length; i++) {
-          // Texture coordinates are in texDims space; normalize and map to mesh position
-          var x = ((    (pointsRot[i].x / this.state.texDims[0])) * xs + x0) * fx;
-          var y = ((1 - (pointsRot[i].y / this.state.texDims[1])) * ys + y0) * fy;
+          const [uvX, uvY] = this.texelToUV(pointsRot[i].x, pointsRot[i].y);
+          var x = (((uvX - u0) / us) * xs + x0) * fx;
+          var y = (((uvY - v0) / vs) * ys + y0) * fy;
           pMap.push({ x, y });
         }
         return pMap;
