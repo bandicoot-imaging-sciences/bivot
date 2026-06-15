@@ -260,6 +260,11 @@ function BivotReact(props) {
     // or any other value for regular rendering.
     textureDebug,
 
+    // If set, switch the diffuse (basecolour) texture to the given type
+    // (e.g. 'fit', 'softbox', 'cross-pol').  'auto' or 'default' uses the
+    // originally selected diffuse texture.
+    diffuseType,
+
     // Hover controls are disabled while this is true, including light
     // position and material tilt.  While hover controls are disabled,
     // drag rotation is only enabled via a keyboard modifier (e.g. ctrl).
@@ -769,6 +774,12 @@ function BivotReact(props) {
   }, [textureDebug]);
 
   useEffect(() => {
+    if (bivot.current && diffuseType) {
+      bivot.current.switchDiffuseType(diffuseType);
+    }
+  }, [diffuseType]);
+
+  useEffect(() => {
     setUserPixellated(pixellated);
     renderFrame(DirtyFlag.Textures);
   }, [pixellated]);
@@ -821,6 +832,7 @@ function BivotReact(props) {
     for (var k in galleryMat.textures) {
       texUserPaths[k] = path + galleryMat.textures[k];
     }
+
     return await fetchFilesWrapper(texUserPaths, context);
   }
 

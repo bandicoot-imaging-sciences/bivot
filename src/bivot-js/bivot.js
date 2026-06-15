@@ -2668,8 +2668,18 @@ class bivotJs {
         paths.set('alpha', {path: textures.alpha, format: THREE.RGBAFormat});
       }
 
-      let scanState = [];
+      // Load alternative diffuse type textures if available in metadata.
+      // Prefer pre-fetched presigned paths from textures object; fall back to
+      // constructing a path relative to the basecolor texture (for local/direct use).
       const metadata = material.config.renders[_self.scan];
+      const diffuseTypes = metadata?.state?.diffuseTypes || [];
+      const texturePath = textures.basecolor ? textures.basecolor.substring(0, textures.basecolor.lastIndexOf('/') + 1) : '';
+      for (const dtype of diffuseTypes) {
+        const altPath = textures[`basecolor-${dtype}`] || (texturePath + `brdf-basecolor-${dtype}.png`);
+        paths.set(`basecolor-${dtype}`, {path: altPath, format: THREE.RGBAFormat});
+      }
+
+      let scanState = [];
       if (metadata.hasOwnProperty('state')) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
@@ -4458,6 +4468,20 @@ class bivotJs {
 
   updateTextureLayer() {
     this.uniforms.textureLayer.value = this.state.textureLayer;
+  }
+
+  switchDiffuseType(type) {
+    const key = type === 'auto' ? 'diffuse' : `basecolor-${type}`;
+    let tex = this.brdfTextures ? this.brdfTextures.get(key) : null;
+    // Back-compat: legacy 'fit' materials store the basecolor as brdf-basecolor.png without a -fit suffix.
+    if (!tex && type === 'fit') {
+      tex = this.brdfTextures ? this.brdfTextures.get('diffuse') : null;
+    }
+    if (tex) {
+      this.uniforms.diffuseMap.value = tex;
+      this.uniforms.diffuseMap.value.needsUpdate = true;
+      this.requestRender();
+    }
   }
 
   updateTextures() {
