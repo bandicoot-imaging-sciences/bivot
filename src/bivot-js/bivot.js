@@ -4478,6 +4478,10 @@ class bivotJs {
       tex = this.brdfTextures ? this.brdfTextures.get('diffuse') : null;
     }
     if (tex) {
+      // Each diffuse type's texture keeps the repeat/offset it had when it was
+      // loaded; resync it to the current stretch/userScale so switching diffuse
+      // type doesn't also change the apparent zoom.
+      this.setTexRepeat(tex);
       this.uniforms.diffuseMap.value = tex;
       this.uniforms.diffuseMap.value.needsUpdate = true;
       this.requestRender();
