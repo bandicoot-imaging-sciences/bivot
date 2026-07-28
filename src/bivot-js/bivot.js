@@ -1522,6 +1522,17 @@ class bivotJs {
       }
     }
 
+    function rotateNudgeDelta(dx, dy) {
+      // Rotate a screen-space arrow-key nudge into texture-pixel space, so nudges keep
+      // moving in the visually expected direction when the material is rotated
+      // (meshRotateZDegrees). Inverse of the -meshRotateZDegrees rotation applied to
+      // pointsControl when mapping them to screen coordinates elsewhere in this file.
+      const theta = THREE.MathUtils.degToRad(_self.state.meshRotateZDegrees || 0);
+      const c = Math.cos(theta);
+      const s = Math.sin(theta);
+      return [c * dx - s * dy, s * dx + c * dy];
+    }
+
     function unstretchedDims(dims) {
       const inDims = dims ? dims : [1, 1];
       const stretch = _self.state.stretch ?? [1, 1];
@@ -2249,9 +2260,18 @@ class bivotJs {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
             }
-            p.y -= unit * (event.shiftKey ? 10 : 1);
+            var [dx, dy] = rotateNudgeDelta(0, -unit * (event.shiftKey ? 10 : 1));
+            p.x += dx;
+            p.y += dy;
+            if (p.x < 0) {
+              p.x = 0;
+            } else if (p.x > _self.state.texDims[0] - 1) {
+              p.x = _self.state.texDims[0] - 1;
+            }
             if (p.y < 0) {
               p.y = 0;
+            } else if (p.y > _self.state.texDims[1] - 1) {
+              p.y = _self.state.texDims[1] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
             adjustGridSelectPoint(p);
@@ -2272,8 +2292,17 @@ class bivotJs {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
             }
-            p.y += unit * (event.shiftKey ? 10 : 1);
-            if (p.y > _self.state.texDims[1] - 1) {
+            var [dx, dy] = rotateNudgeDelta(0, unit * (event.shiftKey ? 10 : 1));
+            p.x += dx;
+            p.y += dy;
+            if (p.x < 0) {
+              p.x = 0;
+            } else if (p.x > _self.state.texDims[0] - 1) {
+              p.x = _self.state.texDims[0] - 1;
+            }
+            if (p.y < 0) {
+              p.y = 0;
+            } else if (p.y > _self.state.texDims[1] - 1) {
               p.y = _self.state.texDims[1] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
@@ -2295,9 +2324,18 @@ class bivotJs {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
             }
-            p.x -= unit * (event.shiftKey ? 10 : 1);
+            var [dx, dy] = rotateNudgeDelta(-unit * (event.shiftKey ? 10 : 1), 0);
+            p.x += dx;
+            p.y += dy;
             if (p.x < 0) {
               p.x = 0;
+            } else if (p.x > _self.state.texDims[0] - 1) {
+              p.x = _self.state.texDims[0] - 1;
+            }
+            if (p.y < 0) {
+              p.y = 0;
+            } else if (p.y > _self.state.texDims[1] - 1) {
+              p.y = _self.state.texDims[1] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
             adjustGridSelectPoint(p);
@@ -2318,9 +2356,18 @@ class bivotJs {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
             }
-            p.x += unit * (event.shiftKey ? 10 : 1);
-            if (p.x > _self.state.texDims[0] - 1) {
+            var [dx, dy] = rotateNudgeDelta(unit * (event.shiftKey ? 10 : 1), 0);
+            p.x += dx;
+            p.y += dy;
+            if (p.x < 0) {
+              p.x = 0;
+            } else if (p.x > _self.state.texDims[0] - 1) {
               p.x = _self.state.texDims[0] - 1;
+            }
+            if (p.y < 0) {
+              p.y = 0;
+            } else if (p.y > _self.state.texDims[1] - 1) {
+              p.y = _self.state.texDims[1] - 1;
             }
             _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point] = p;
             adjustGridSelectPoint(p);
