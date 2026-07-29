@@ -15,7 +15,8 @@
     "dist"
   ],
   "np": {
-    "contents": "dist"
+    "contents": "dist",
+    "cleanup": false
   },
   "engines": {
     "node": ">=10"
