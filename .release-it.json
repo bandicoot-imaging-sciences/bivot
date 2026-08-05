@@ -14,7 +14,7 @@
   "hooks": {
     "before:init": "pnpm test",
     "after:bump": "pnpm run build && pnpm --dir src/bivot-js run build",
-    "after:release": "pnpm publish"
+    "after:release": "echo 'Now run \"pnpm login && pnpm publish\"'"
   },
   "plugins": {
     "@release-it/bumper": {
