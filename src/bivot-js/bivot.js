@@ -449,7 +449,7 @@ class bivotJs {
     if (this.opts.state) {
       // Merge in to state only the keys provided in the options; use defaults for others
       for (let k in this.state) {
-        if (!Object.prototype.hasOwnProperty.call(this.opts.state, k)) {
+        if (!(k in this.opts.state)) {
           this.opts.state[k] = this.state[k];
         }
       }
@@ -666,7 +666,7 @@ class bivotJs {
       } else if (this.config.loadJpeg) {
         this.config.textureFormat = 'JPG';
       }
-      if (Object.prototype.hasOwnProperty.call(this.config, 'textureFormat') && typeof this.config.textureFormat === 'string') {
+      if ('textureFormat' in this.config && typeof this.config.textureFormat === 'string') {
         this.config.textureFormat = this.config.textureFormat.toUpperCase();
       }
 
@@ -841,7 +841,7 @@ class bivotJs {
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
       convertLegacyState(_self.scans);
-      if (Object.prototype.hasOwnProperty.call(_self.opts, 'show')) {
+      if ('show' in _self.opts) {
         var s = _self.opts.show;
         const n = Number(s);
         if (Number.isInteger(n)) {
@@ -855,7 +855,7 @@ class bivotJs {
         _self.scan = s;
       }
       // Use the first scan in the list if no valid starting scan has been provided
-      if (!Object.prototype.hasOwnProperty.call(_self.scans, _self.scan)) {
+      if (!(_self.scan in _self.scans)) {
         _self.scan = Object.keys(_self.scans)[0];
       }
     }
@@ -1007,9 +1007,9 @@ class bivotJs {
             // Handle the case where the material set file has no state.zoom field
             // but it does have zoom settings in config
             if (!render['state'].zoom &&
-              Object.prototype.hasOwnProperty.call(bivotMatRender, 'cameraPositionZ') &&
-              Object.prototype.hasOwnProperty.call(bivotMatRender, 'controlsMinDistance') &&
-              Object.prototype.hasOwnProperty.call(bivotMatRender, 'controlsMaxDistance')) {
+              'cameraPositionZ' in bivotMatRender &&
+              'controlsMinDistance' in bivotMatRender &&
+              'controlsMaxDistance' in bivotMatRender) {
               render['state'].zoom = [
                 bivotMatRender['controlsMinDistance'],
                 bivotMatRender['controlsMaxDistance'],
@@ -1130,7 +1130,7 @@ class bivotJs {
 
       for (const [key, value] of parsedUrl.searchParams) {
         const decodeValue = decodeURI(value)
-        if (Object.prototype.hasOwnProperty.call(validFlags, key)) {
+        if (key in validFlags) {
           const validValues = validFlags[key];
           if (Array.isArray(validValues)) {
             if (validValues.includes(decodeValue)) {
@@ -1170,16 +1170,16 @@ class bivotJs {
     }
 
     function processUrlFlags() {
-      if (Object.prototype.hasOwnProperty.call(urlFlags, 'show')) {
+      if ('show' in urlFlags) {
         _self.scan = urlFlags.show;
       }
-      if (Object.prototype.hasOwnProperty.call(urlFlags, 'textureFormat')) {
+      if ('textureFormat' in urlFlags) {
         _self.config.textureFormat = urlFlags.textureFormat;
       }
-      if (Object.prototype.hasOwnProperty.call(urlFlags, 'bivotFps')) {
+      if ('bivotFps' in urlFlags) {
         showStats(true);
       }
-      if (Object.prototype.hasOwnProperty.call(urlFlags, 'adaptFps')) {
+      if ('adaptFps' in urlFlags) {
         if (urlFlags['adaptFps'] == 0) {
           // Disable adaptive FPS
           _self.adaptFramerate['measuring'] = false;
@@ -2712,10 +2712,10 @@ class bivotJs {
       }
 
       let scanState = [];
-      if (Object.prototype.hasOwnProperty.call(metadata, 'state')) {
+      if ('state' in metadata) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
-      if (Object.prototype.hasOwnProperty.call(metadata, 'version')) {
+      if ('version' in metadata) {
         scanState.brdfVersion = metadata.version;
       }
 
@@ -2755,10 +2755,10 @@ class bivotJs {
               console.debug('Loaded metadata from ' + jsonFilename + ':', metadata);
 
               // Read valid render.json parameters, if present
-              if (Object.prototype.hasOwnProperty.call(metadata, 'state')) {
+              if ('state' in metadata) {
                 jsonToState(metadata.state, scanState);
               }
-              if (Object.prototype.hasOwnProperty.call(metadata, 'version')) {
+              if ('version' in metadata) {
                 scanState.brdfVersion = metadata.version;
               }
             } catch(e) {
@@ -2781,27 +2781,27 @@ class bivotJs {
       // Read valid bivot-renders.json parameters, if present
       const curScan = _self.scans[_self.scan];
       var curPosition = _self.camera.position.clone();
-      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionX')) {
+      if ('cameraPositionX' in curScan) {
         curPosition.x = curScan.cameraPositionX;
       }
-      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionY')) {
+      if ('cameraPositionY' in curScan) {
         curPosition.y = curScan.cameraPositionY;
       }
-      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionZ')) {
+      if ('cameraPositionZ' in curScan) {
         curPosition.z = curScan.cameraPositionZ;
       }
       _self.controls.setPosition(curPosition.x, curPosition.y, curPosition.z);
 
-      if (Object.prototype.hasOwnProperty.call(curScan, 'controlsMinDistance')) {
+      if ('controlsMinDistance' in curScan) {
         _self.controls.minDistance = curScan.controlsMinDistance;
       }
-      if (Object.prototype.hasOwnProperty.call(curScan, 'controlsMaxDistance')) {
+      if ('controlsMaxDistance' in curScan) {
         _self.controls.maxDistance = curScan.controlsMaxDistance;
       }
-      if (Object.prototype.hasOwnProperty.call(curScan, 'state')) {
+      if ('state' in curScan) {
         jsonToState(curScan.state, bivotState, _self.vectorKeys);
       }
-      if (Object.prototype.hasOwnProperty.call(curScan, 'version')) {
+      if ('version' in curScan) {
         bivotState.brdfVersion = curScan.version;
       }
 
@@ -3301,7 +3301,7 @@ class bivotJs {
       tryingLowMesh = false;
     }
     if (cacheOnly) {
-      if (Object.prototype.hasOwnProperty.call(_self.meshCache, meshPath)) {
+      if (meshPath in _self.meshCache) {
         // Mesh has already been cached
         return;
       }
@@ -3323,7 +3323,7 @@ class bivotJs {
       );
     } else {
       _self.meshPathUsed = meshPath;
-      if (Object.prototype.hasOwnProperty.call(_self.meshCache, meshPath)) {
+      if (meshPath in _self.meshCache) {
         // Mesh cache hit.  Switch to the requested mesh which is already loaded.
         _self.meshPathUsed = meshPath;
         _self.changeMesh(_self.meshCache[meshPath]);
@@ -3386,7 +3386,7 @@ class bivotJs {
 
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
-    if (!Object.prototype.hasOwnProperty.call(geom.attributes, 'normal')) {
+    if (!('normal' in geom.attributes)) {
       console.debug('Computing vertex normals...');
       geom.computeVertexNormals();
     }
