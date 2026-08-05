@@ -1,0 +1,28 @@
+{
+  "npm": {
+    "publish": false
+  },
+  "git": {
+    "commitMessage": "Release v${version}",
+    "tagName": "v${version}",
+    "requireBranch": "master",
+    "requireCommits": true
+  },
+  "github": {
+    "release": false
+  },
+  "hooks": {
+    "before:init": "pnpm test",
+    "after:bump": "pnpm run build && pnpm --dir src/bivot-js run build",
+    "after:release": "pnpm publish"
+  },
+  "plugins": {
+    "@release-it/bumper": {
+      "out": [
+        { "file": "README.md", "type": "text/markdown" },
+        { "file": "src/bivot-js/index.html", "type": "text/plain" },
+        { "file": "src/bivot-js/example/*.html", "type": "text/plain" }
+      ]
+    }
+  }
+}
