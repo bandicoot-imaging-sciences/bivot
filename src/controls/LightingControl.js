@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles/index.js';
 import { Grid, Tooltip, Button, Typography } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({

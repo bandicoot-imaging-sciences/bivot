@@ -1,4 +1,3 @@
-import React from 'react';
 import PopupColorControl from './PopupColorControl';
 
 function BackgroundColorControl({ value, onChange }) {

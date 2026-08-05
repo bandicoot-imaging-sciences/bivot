@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem, ThemeProvider } from '@material-ui/core';
+import { Grid, Typography, ButtonGroup, Button, Tooltip, Select, MenuItem } from '@material-ui/core';
 import { CropLandscape, CropSquare, CropPortrait } from '@material-ui/icons';
 
 const aspects = {
@@ -79,7 +79,7 @@ function AspectControl({ value, onChange }) {
         ))}
       </Select>
     );
-  }, [size]);
+  }, [size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function modeFromSize(size) {
     if (size[0] > size[1]) {
@@ -101,8 +101,8 @@ function AspectControl({ value, onChange }) {
   }
 
   async function onSelect(event) {
-    strVal = event.target.value;
-    arrVal = strVal.split(',').map(item => Number(item));
+    const strVal = event.target.value;
+    const arrVal = strVal.split(',').map(item => Number(item));
     setSize(arrVal);
     onChange(arrVal);
   }

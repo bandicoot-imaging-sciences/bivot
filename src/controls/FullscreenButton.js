@@ -1,7 +1,7 @@
 import React from 'react';
-import { Grid, Button } from '@material-ui/core';
+import { Button } from '@material-ui/core';
 import { AspectRatio } from '@material-ui/icons';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles/index.js';
 
 import { isFullScreenAvailable, openFullScreen } from '../utils/displayLib';
 

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Grid, Typography, Tooltip, Button, Popover } from '@material-ui/core';
-import { ChromePicker } from 'react-color';
+// react-color's CJS build sets both __esModule and exports.default, which webpack/Babel
+// interop unwraps to (making a plain default import resolve to the ChromePicker component
+// itself rather than the module namespace) but Node's native ESM/CJS interop does not (a
+// default import there is always the whole module.exports object). A plain named import
+// avoids the default-unwrapping mismatch in bundlers, but Node's static cjs-module-lexer
+// analysis fails to detect ChromePicker there, since react-color defines it via an
+// Object.defineProperty getter rather than a plain assignment. Importing the namespace and
+// falling back to .default.ChromePicker covers both cases at runtime.
+import * as ReactColor from 'react-color';
+const ChromePicker = ReactColor.ChromePicker || ReactColor.default.ChromePicker;
 
 import { colStringToObj } from '../utils/colorLib';
 
@@ -38,17 +47,6 @@ function PopupColorControl({ label, description, value, onChange }) {
   const button = {
     backgroundColor: '#efefef'
   };
-  const popover = {
-    position: 'absolute',
-    zIndex: '2',
-  }
-  const cover = {
-    position: 'fixed',
-    top: '0px',
-    right: '0px',
-    bottom: '0px',
-    left: '0px',
-  }
 
   return (
     <Grid container spacing={2}>

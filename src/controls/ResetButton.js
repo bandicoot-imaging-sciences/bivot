@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Tooltip, Button } from '@material-ui/core';
+import { Tooltip, Button } from '@material-ui/core';
 
 function ResetButton({ onChange }) {
   return (

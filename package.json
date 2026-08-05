@@ -9,7 +9,7 @@
     "access": "public"
   },
   "main": "dist/index.js",
-  "module": "dist/index.modern.js",
+  "type": "module",
   "source": "src/index.js",
   "files": [
     "dist"
@@ -23,21 +23,21 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "build": "microbundle       --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs --jsx React.createElement",
-    "watch": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f cjs --jsx React.createElement",
+    "build": "microbundle       --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f esm --jsx React.createElement --jsxFragment React.Fragment",
+    "watch": "microbundle watch --no-sourcemap --no-compress --css-modules false --no-pkg-main -o dist/index.js -f esm --jsx React.createElement --jsxFragment React.Fragment",
     "prepare": "run-s build",
-    "debug:example": "run-s build && cp dist/index.js example/node_modules/@bandicoot/bivot/dist && cp package.json example/node_modules/@bandicoot/bivot && rm -rf example/.next/cache",
+    "debug:example": "run-s build && cp dist/index.js example/node_modules/@bandicoot/bivot/dist && cp package.json example/node_modules/@bandicoot/bivot && node scripts/sync-runtime-deps.cjs example && rm -rf example/.next/cache",
     "watch:example": "watch 'pnpm run debug:example' src --ignoreDotFiles",
-    "debug:shopfront": "run-s build && cp dist/index.js ../shopfront/node_modules/@bandicoot/bivot/dist && cp package.json ../shopfront/node_modules/@bandicoot/bivot && rm -rf ../shopfront/.next/cache",
+    "debug:shopfront": "run-s build && cp dist/index.js ../shopfront/node_modules/@bandicoot/bivot/dist && cp package.json ../shopfront/node_modules/@bandicoot/bivot && node scripts/sync-runtime-deps.cjs ../shopfront && rm -rf ../shopfront/.next/cache",
     "watch:shopfront": "watch 'pnpm run debug:shopfront' src --ignoreDotFiles",
     "test": "run-s test:unit test:lint test:build",
     "test:build": "run-s build",
-    "test:lint": "exit 0 && eslint .",
+    "test:lint": "eslint .",
     "test:unit": "exit 0 && cross-env CI=1 react-scripts test --env=jsdom",
     "test:watch": "react-scripts test --env=jsdom",
     "predeploy": "cd example && pnpm install && pnpm run build",
     "deploy": "gh-pages -d example/build",
-    "publish:dist": "node scripts/publish-dist.js --stage prod",
+    "publish:dist": "node scripts/publish-dist.cjs --stage prod",
     "postpublish": "run-s publish:dist"
   },
   "peerDependencies": {
@@ -61,6 +61,7 @@
     "eslint-plugin-prettier": "^3.1.1",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-react": "^7.33.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-standard": "^4.0.1",
     "gh-pages": "^2.2.0",
     "microbundle": "^0.15.1",
@@ -72,7 +73,10 @@
   },
   "dependencies": {
     "@material-ui/icons": "^4.9.1",
+    "camera-controls": "^1.36.2",
     "react-color": "^2.19.3",
-    "stats.js": "^0.17.0"
+    "resize-observer-polyfill": "^1.5.1",
+    "three": "^0.149.0",
+    "ua-parser-js": "^1.0.33"
   }
 }

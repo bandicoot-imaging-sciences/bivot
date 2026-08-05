@@ -1,6 +1,6 @@
 import React from 'react';
-import { Grid, Typography, Checkbox, Tooltip, ButtonGroup, Button } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { Grid, Typography, Checkbox, Tooltip, ButtonGroup } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles/index.js';
 
 const useStyles = makeStyles((theme) => ({
   checkbox: {

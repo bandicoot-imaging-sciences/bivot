@@ -1,8 +1,8 @@
 
 // Return true if the given object has no properties
 export function isEmpty(obj) {
-  for(var key in obj) {
-      if(obj.hasOwnProperty(key))
+  for (let key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key))
           return false;
   }
   return true;

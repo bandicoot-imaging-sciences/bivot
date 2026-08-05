@@ -1,14 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Paper, Grid, CircularProgress, makeStyles } from '@material-ui/core';
+import { Paper, Grid, CircularProgress } from '@material-ui/core';
 
-import { AppBar, Tabs, Tab, Tooltip, Typography } from '@material-ui/core';
-import { useTheme } from '@material-ui/core/styles';
-import LightingIcon from '@material-ui/icons/WbSunny';
-import ColourIcon from '@material-ui/icons/Palette';
-import LayoutIcon from '@material-ui/icons/SquareFoot';
+import { AppBar, Tabs, Tab, Tooltip } from '@material-ui/core';
+import { useTheme } from '@material-ui/core/styles/index.js';
+import WbSunnyModule from '@material-ui/icons/WbSunny.js';
+import PaletteModule from '@material-ui/icons/Palette.js';
+import SquareFootModule from '@material-ui/icons/SquareFoot.js';
+// Node's native ESM/CJS interop doesn't unwrap Babel's `exports.default`
+// the way bundlers do, so handle both shapes defensively.
+const LightingIcon = WbSunnyModule.default || WbSunnyModule;
+const ColourIcon = PaletteModule.default || PaletteModule;
+const LayoutIcon = SquareFootModule.default || SquareFootModule;
 
 import Bivot, { defaultSize, initialRepeatFactorX, DirtyFlag } from './bivot-js/bivot';
-import { jsonToState, copyStateFields } from './bivot-js/stateUtils';
+import { copyStateFields } from './bivot-js/stateUtils';
 
 import IntensityControl from './controls/IntensityControl';
 import BrightnessControl from './controls/BrightnessControl';
@@ -30,7 +35,6 @@ import ColorTemperatureControl from './controls/ColorTemperatureControl';
 import HueControl from './controls/HueControl';
 import SaturationControl from './controls/SaturationControl';
 import LightingControl from './controls/LightingControl';
-import ShowSeamsControl from './controls/ShowSeamsControl';
 
 
 import { loadJsonFile } from './utils/jsonLib';
@@ -77,11 +81,6 @@ const styles = {
 
 var zoomIndex = -1; // Index of the current zoom slider being moved
 var zoomInitialVal = [0, 0, 0]; // [min, unused, max] zoom at the beginning of the current slider move
-
-function handleCanvasContextMenu(e) {
-  e.preventDefault();
-  e.stopPropagation();
-};
 
 function BivotReact(props) {
   //
@@ -324,7 +323,6 @@ function BivotReact(props) {
     lightControlCallback,
 
     // Textures loaded state of the live Shimmer View.
-    texturesLoaded,
     setTexturesLoaded,
 
     // If supplied, calling setTriggerSave(n => n + 1) from the parent will trigger a save.
@@ -419,8 +417,8 @@ function BivotReact(props) {
     metresPerPixelTextures: undefined,
   };
 
-  const [state, _setState] = useState({ ...defaultState });
-  const [checkpointState, _setCheckpointState] = useState({});
+  const [state] = useState({ ...defaultState });
+  const [checkpointState] = useState({});
 
   function updateAutoRotateOverride(val) {
     if (val === true) {
@@ -459,7 +457,6 @@ function BivotReact(props) {
   // // If autoRotate is set in props, then override state
   // updateAutoRotateOverride(autoRotate);
 
-  const [pixelRatio, setPixelRatio] = useState(window.devicePixelRatio || 1);
   const [materialSetInternal, setMaterialSetInternal] = useState({});
   const [loading, setLoading] = useState(true);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
@@ -505,7 +502,7 @@ function BivotReact(props) {
   const [showGrid, setShowGrid] = useState(state.showGrid);
   const [showGridSelection, setShowGridSelection] = useState(state.showGridSelection);
   const [enableGridSelect, setEnableGridSelect] = useState(state.enableGridSelect);
-  const [onSelectGrid, setOnSelectGrid] = useState(state.onSelectGrid);
+  const [onSelectGrid] = useState(state.onSelectGrid);
   const [pointsControl, setPointsControl] = useState(state.pointsControl);
   const [userEnableKeypress, setUserEnableKeypress] = useState(state.enableKeypress);
   const [stretch, setStretch] = useState(state.stretch);
@@ -523,8 +520,8 @@ function BivotReact(props) {
   const [exposureLocal, setExposureLocal] = useState(state.exposure);
   const [aoStrengthLocal, setAoStrengthLocal] = useState(state.aoStrength);
   const [backgroundColorLocal, setBackgroundColorLocal] = useState(state.backgroundColor);
-  const [displacementScaleLocal, setDisplacementScaleLocal] = useState(state.displacementScale);
-  const [texturesLoadedLocal, setTexturesLoadedLocal] = useState(false);
+  const [displacementScaleLocal] = useState(state.displacementScale);
+  const [, setTexturesLoadedLocal] = useState(false);
 
   // Switching between local and caller-provided synchronisation props
   var sizeBivot = size ?? sizeLocal;
@@ -536,7 +533,6 @@ function BivotReact(props) {
   var backgroundColorBivot = backgroundColor ?? backgroundColorLocal;
   var setBackgroundColorBivot = setBackgroundColor ?? setBackgroundColorLocal;
   var displacementScaleBivot = displacementScale ?? displacementScaleLocal;
-  var texturesLoadedBivot = texturesLoaded ?? texturesLoadedLocal;
   var setTexturesLoadedBivot = setTexturesLoaded ?? setTexturesLoadedLocal;
 
   // Hook up state, used in bivotJs, so that it updates when our useState values update
@@ -596,7 +592,7 @@ function BivotReact(props) {
       setIsLoadPending(false);
       loadBivot();
     }
-  }, [isLoadPending, isShuttingDown, deferLoading]);
+  }, [isLoadPending, isShuttingDown, deferLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shutdownCompleteCallback = useCallback(() => {
     // console.debug(`shutdownCompleteCallback ${id}`);
@@ -625,7 +621,7 @@ function BivotReact(props) {
       setTexturesLoadedBivot(false);
     }
     onChangeMaterial();
-  }, [material]);
+  }, [material]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Shut down bivot when the component closes
   useEffect(() => {
@@ -654,7 +650,7 @@ function BivotReact(props) {
     if (w && h) {
       updateSize([w, h]);
     }
-  }, [width, height]);
+  }, [width, height]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (state && diag) {
@@ -679,7 +675,7 @@ function BivotReact(props) {
       setCurrentZoom(currentZoom * ratio);
       renderFrame(DirtyFlag.Zoom);
     }
-  }, [state, diag]);
+  }, [state, diag]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function onChangeFullScreen() {
@@ -705,13 +701,13 @@ function BivotReact(props) {
       state.skipLoadedMesh = !objectMesh;
       updateMeshOverride(objectMesh);
     }
-  }, [objectMesh]);
+  }, [objectMesh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (cachedMeshes) {
       updateMeshesToCache(cachedMeshes);
     }
-  }, [cachedMeshes]);
+  }, [cachedMeshes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setUserEnableKeypress(enableKeypress);
@@ -725,45 +721,45 @@ function BivotReact(props) {
 
   useEffect(() => {
     updateShowSeams(Boolean(tilingSeams));
-  }, [tilingSeams]);
+  }, [tilingSeams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updateBoundary(tilingBoundary);
-  }, [tilingBoundary]);
+  }, [tilingBoundary]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updateSubBoundary(tilingSubBoundary);
-  }, [tilingSubBoundary]);
+  }, [tilingSubBoundary]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     mapUserGrid(userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled);
-  }, [userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled]);
+  }, [userGrid, userGridSelection, showUserGrid, showUserGridSelection, userGridSelectionEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updatePointsControl(userPointsControl);
-  }, [userPointsControl]);
+  }, [userPointsControl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     sizeRef.current = sizeBivot;
     renderFrame(DirtyFlag.Canvas);
-  }, [sizeBivot]);
+  }, [sizeBivot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     renderFrame(DirtyFlag.Background);
-  }, [backgroundColorBivot]);
+  }, [backgroundColorBivot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updateUserScale(tilingScale);
-  }, [tilingScale]);
+  }, [tilingScale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     renderFrame(DirtyFlag.Displacement)
-  }, [displacementScale]);
+  }, [displacementScale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     hoverDisabledRef.current = hoverDisabled;
     updateHoverDisabledOverride(hoverDisabled);
-  }, [hoverDisabled]);
+  }, [hoverDisabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     updateAutoRotateOverride(autoRotate);
@@ -771,7 +767,7 @@ function BivotReact(props) {
 
   useEffect(() => {
     updateTextureLayer(textureDebug);
-  }, [textureDebug]);
+  }, [textureDebug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (bivot.current && diffuseType) {
@@ -782,20 +778,20 @@ function BivotReact(props) {
   useEffect(() => {
     setUserPixellated(pixellated);
     renderFrame(DirtyFlag.Textures);
-  }, [pixellated]);
+  }, [pixellated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (userLightControl) {
       updateLightControl(userLightControl, usePersistentLightControl);
     }
-  }, [userLightControl, usePersistentLightControl]);
+  }, [userLightControl, usePersistentLightControl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     document.addEventListener('fullscreenchange', fullScreenChanged);
     return () => {
       document.removeEventListener('fullscreenchange', fullScreenChanged);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getMatFromMatSet(materialSet, materialIndex=0) {
     if (materialSet && materialSet.materials) {
@@ -803,10 +799,6 @@ function BivotReact(props) {
       return gallery[gallery.length - 1]; // Only use last gallery Material in the array
     }
     return null;
-  }
-
-  function getIdFromMatSet(materialSet, materialIndex=0) {
-    return materialSet.materials[materialIndex].materialId;
   }
 
   async function fetchFilesWrapper(paths, context) {
@@ -861,14 +853,14 @@ function BivotReact(props) {
           context = userId;
         } else {
           // General materialUserPath with material assumed to be in same directory as material set
-          var parts = materialUserPath.split('/');
+          let parts = materialUserPath.split('/');
           parts.pop();
           basePath = parts.join('/');
           filename = url['ms'];
           context = userId;
         }
       } else if (materialSet) {
-        var parts = materialSet.split('/');
+        let parts = materialSet.split('/');
         parts.pop();
         basePath = parts.join('/');
         filename = materialSet;
@@ -988,7 +980,12 @@ function BivotReact(props) {
     updateAutoRotate(autoRotatePeriodMs);
     updateDragControl('rotate', dragControlsRotation);
     updateDragControl('pan', dragControlsPanning);
-    updateDragControl('limits', camTiltLimitDegrees > 0);
+    // Restore the exact saved tilt-limit values rather than routing through
+    // updateDragControl('limits', ...), which only knows how to set them to
+    // defaultState's value or 0 (it's designed for the on/off UI checkbox,
+    // not for reapplying a specific saved/configured number).
+    setCamTiltLimitDegrees(camTiltLimitDegrees);
+    setLightTiltLimitDegrees(lightTiltLimitDegrees);
     updateMeshOverride(meshOverride);
     updateAoStrength(aoStrength);
     updateColorTemperature(colorTemperature);
@@ -1023,7 +1020,8 @@ function BivotReact(props) {
 
   // Called when bivot finishes loading the material, or a mesh update.
   async function loadingCompleteCallback(shimmerLoaded, meshLoaded) {
-    if (bivot.current) {
+    const bivotInstance = bivot.current;
+    if (bivotInstance) {
       console.debug('Bivot loading complete.  Shimmer:', shimmerLoaded, '  Mesh:', meshLoaded);
       if (statusCallback !== undefined) {
         statusCallback(2); // Loaded
@@ -1031,7 +1029,7 @@ function BivotReact(props) {
 
       if (meshLoaded) {
         try {
-          setDiag(bivot.current.getDiag());
+          setDiag(bivotInstance.getDiag());
         } catch(e) {
           console.debug('bivot.current.getDiag() unavailable');
         }
@@ -1044,7 +1042,7 @@ function BivotReact(props) {
           }
           updateHoverDisabledOverride(hoverDisabledRef.current);
         }
-        const meshPath = bivot.current.getMeshPathUsed();
+        const meshPath = bivotInstance.getMeshPathUsed();
         if (meshChoices && Object.values(meshChoices).includes(meshPath)) {
           setMeshOverride(meshPath);
         }

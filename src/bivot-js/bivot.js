@@ -181,6 +181,9 @@ const overlayTexH = 2048;
 const lineThicknessFactor = 1.0;
 const pointSizeFactor = 5;
 
+// Physical distance units are in metres.
+const sensorHeight = 0.024;
+
 export const defaultSize = [792, 528];
 export const initialRepeatFactorX = 1.5;
 
@@ -445,8 +448,8 @@ class bivotJs {
 
     if (this.opts.state) {
       // Merge in to state only the keys provided in the options; use defaults for others
-      for (var k in this.state) {
-        if (!this.opts.state.hasOwnProperty(k)) {
+      for (let k in this.state) {
+        if (!Object.prototype.hasOwnProperty.call(this.opts.state, k)) {
           this.opts.state[k] = this.state[k];
         }
       }
@@ -520,7 +523,7 @@ class bivotJs {
     this._canvasOverlayNeedsRebuild = false;
     this._overlayNeedsRebuild = false;
     this.diag = null;
-    this.untiledImDims = [1, 1]; // Texture image dimensions derived from texDims
+    this.paddedTexDims = [1, 1]; // Texture image dimensions derived from texDims
     this.areaLightSetupDone = false;
 
     this.needsResize = false;
@@ -575,7 +578,7 @@ class bivotJs {
       try {
         return await navigator.userAgentData.getHighEntropyValues(['platform', 'platformVersion']);
       } catch(e) {
-        if (!(e instanceof NotAllowedError)) {
+        if (e.name !== 'NotAllowedError') {
           // NotAllowedError means the broswer has declined to give the needed info.
           // Any other error is re-thrown.
           throw e;
@@ -663,7 +666,7 @@ class bivotJs {
       } else if (this.config.loadJpeg) {
         this.config.textureFormat = 'JPG';
       }
-      if (this.config.hasOwnProperty('textureFormat') && typeof this.config.textureFormat === 'string') {
+      if (Object.prototype.hasOwnProperty.call(this.config, 'textureFormat') && typeof this.config.textureFormat === 'string') {
         this.config.textureFormat = this.config.textureFormat.toUpperCase();
       }
 
@@ -757,9 +760,6 @@ class bivotJs {
       if (_self.overlay) {
         var img = document.createElement('img');
 
-        const aspectRatio = _self.state.size[0] / _self.state.size[1];
-        const pixelRatio = window.devicePixelRatio || 1;
-
         if (_self.opts.thumbnail) {
           img.src = _self.opts.thumbnail;
         } else if (_self.opts.materialSet) {
@@ -841,7 +841,7 @@ class bivotJs {
         _self.scans = await loadRender(_self.opts.renderPath, _self.opts.material);
       }
       convertLegacyState(_self.scans);
-      if (_self.opts.hasOwnProperty('show')) {
+      if (Object.prototype.hasOwnProperty.call(_self.opts, 'show')) {
         var s = _self.opts.show;
         const n = Number(s);
         if (Number.isInteger(n)) {
@@ -855,7 +855,7 @@ class bivotJs {
         _self.scan = s;
       }
       // Use the first scan in the list if no valid starting scan has been provided
-      if (!_self.scans.hasOwnProperty(_self.scan)) {
+      if (!Object.prototype.hasOwnProperty.call(_self.scans, _self.scan)) {
         _self.scan = Object.keys(_self.scans)[0];
       }
     }
@@ -942,13 +942,13 @@ class bivotJs {
       }
       _self.firstRenderLoaded = true;
       baselineTiltSet = false;
-    };
+    }
 
     // Merge state from three input state objects (first, second, third in precedence order) into the supplied
     // ouput state object (out), for all keys in the supplied keys list, with a subset of the keys in the
     // vectorKeys list which need special handling during the merge.
     function mergeDictKeys(first, second, third, keys, vectorKeys, out) {
-      keys.forEach(function(item, index) {
+      keys.forEach(function(item) {
         let t = vectorKeys[item];
         if (item in first) {
           if (t == undefined) {
@@ -985,8 +985,8 @@ class bivotJs {
             const galleryMat = galleryMats[galleryMats.length - 1];
             const render = galleryMat.config.renders[galleryMat.name];
             var bivotMat = {};
-            for (var key in galleryMat) {
-              if (key != 'config' && galleryMat.hasOwnProperty(key)) {
+            for (let key in galleryMat) {
+              if (key != 'config' && Object.prototype.hasOwnProperty.call(galleryMat, key)) {
                 bivotMat[key] = galleryMat[key];
               }
             }
@@ -998,8 +998,8 @@ class bivotJs {
               }
             };
             const bivotMatRender = bivotMat.config.renders[galleryMat.name];
-            for (var key in render) {
-              if (key != 'state' && render.hasOwnProperty(key)) {
+            for (let key in render) {
+              if (key != 'state' && Object.prototype.hasOwnProperty.call(render, key)) {
                 bivotMatRender[key] = render[key];
               }
             }
@@ -1007,9 +1007,9 @@ class bivotJs {
             // Handle the case where the material set file has no state.zoom field
             // but it does have zoom settings in config
             if (!render['state'].zoom &&
-              bivotMatRender.hasOwnProperty('cameraPositionZ') &&
-              bivotMatRender.hasOwnProperty('controlsMinDistance') &&
-              bivotMatRender.hasOwnProperty('controlsMaxDistance')) {
+              Object.prototype.hasOwnProperty.call(bivotMatRender, 'cameraPositionZ') &&
+              Object.prototype.hasOwnProperty.call(bivotMatRender, 'controlsMinDistance') &&
+              Object.prototype.hasOwnProperty.call(bivotMatRender, 'controlsMaxDistance')) {
               render['state'].zoom = [
                 bivotMatRender['controlsMinDistance'],
                 bivotMatRender['controlsMaxDistance'],
@@ -1042,7 +1042,7 @@ class bivotJs {
 
           // Copy JSON config file into config.
           // For the initialState we do a merge instead of a plain copy.
-          for (var k in jsonConfig) {
+          for (let k in jsonConfig) {
             if (k == 'initialState') {
               jsonToState(jsonConfig[k], config.initialState, vectorKeys);
             } else {
@@ -1057,7 +1057,7 @@ class bivotJs {
         }
       } else if (optsConfig) {
         console.debug('Using provided config object');
-        for (var k in optsConfig) {
+        for (let k in optsConfig) {
           if (k == 'initialState') {
             jsonToState(optsConfig[k], config.initialState, vectorKeys);
           } else {
@@ -1075,7 +1075,7 @@ class bivotJs {
           console.debug(`Loaded ${renderFilename}:`, JSON.parse(JSON.stringify(jsonRender)));
           if (urlFlags.showcase == 1) {
             for (let r in jsonRender.renders) {
-              if (jsonRender.renders.hasOwnProperty(r)) {
+              if (Object.prototype.hasOwnProperty.call(jsonRender.renders, r)) {
                 if (jsonRender.renders[r].showcase > 0) {
                   scans[r] = jsonRender.renders[r];
                 }
@@ -1112,7 +1112,7 @@ class bivotJs {
         callback(req.status, req.response);
       };
       req.send();
-    };
+    }
 
     function getUrlFlags() {
       const validFlags = {
@@ -1130,7 +1130,7 @@ class bivotJs {
 
       for (const [key, value] of parsedUrl.searchParams) {
         const decodeValue = decodeURI(value)
-        if (validFlags.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(validFlags, key)) {
           const validValues = validFlags[key];
           if (Array.isArray(validValues)) {
             if (validValues.includes(decodeValue)) {
@@ -1170,16 +1170,16 @@ class bivotJs {
     }
 
     function processUrlFlags() {
-      if (urlFlags.hasOwnProperty('show')) {
+      if (Object.prototype.hasOwnProperty.call(urlFlags, 'show')) {
         _self.scan = urlFlags.show;
       }
-      if (urlFlags.hasOwnProperty('textureFormat')) {
+      if (Object.prototype.hasOwnProperty.call(urlFlags, 'textureFormat')) {
         _self.config.textureFormat = urlFlags.textureFormat;
       }
-      if (urlFlags.hasOwnProperty('bivotFps')) {
+      if (Object.prototype.hasOwnProperty.call(urlFlags, 'bivotFps')) {
         showStats(true);
       }
-      if (urlFlags.hasOwnProperty('adaptFps')) {
+      if (Object.prototype.hasOwnProperty.call(urlFlags, 'adaptFps')) {
         if (urlFlags['adaptFps'] == 0) {
           // Disable adaptive FPS
           _self.adaptFramerate['measuring'] = false;
@@ -1195,7 +1195,7 @@ class bivotJs {
         }
       }
       // Debugging options, disabled for now
-      // if (urlFlags.hasOwnProperty('adaptFpsCount')) {
+      // if (Object.prototype.hasOwnProperty.call(urlFlags, 'adaptFpsCount')) {
       //   _self.adaptFramerate['framesCollected'] = urlFlags['adaptFpsCount'];
       //   _self.adaptFramerate['outliersDropped'] = urlFlags['adaptFpsCount'] / 2;
       // }
@@ -1304,8 +1304,6 @@ class bivotJs {
     }
 
     function initialiseCamera(focalLength) {
-      // Physical distance units are in metres.
-      const sensorHeight = 0.024;
       fov = fieldOfView(focalLength, sensorHeight);
       const aspect = 2;  // the canvas default
       const near = 0.01;
@@ -1314,7 +1312,7 @@ class bivotJs {
       return camera;
     }
 
-    function controlsChange(event) {
+    function controlsChange() {
       if (_self.opts.setZoomCallback) {
         _self.opts.setZoomCallback(_self.camera.position.length());
         _self.state.cameraPan = _self.controls.getTarget();
@@ -1377,7 +1375,7 @@ class bivotJs {
       return window.matchMedia("(pointer: coarse)").matches;
     }
 
-    function requestTiltPermission(event) {
+    function requestTiltPermission() {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
           .then(permissionState => {
@@ -1495,8 +1493,8 @@ class bivotJs {
         } else {
           // Map from useful texture to full texture image
           const uv = {
-            x: (stretchedUv.x - 0.5) * _self.untiledImDims[0] / texDimsUnstretched[0] + 0.5,
-            y: ((1 - stretchedUv.y) - 0.5) * _self.untiledImDims[1] / texDimsUnstretched[1] + 0.5
+            x: (stretchedUv.x - 0.5) * _self.paddedTexDims[0] / texDimsUnstretched[0] + 0.5,
+            y: ((1 - stretchedUv.y) - 0.5) * _self.paddedTexDims[1] / texDimsUnstretched[1] + 0.5
           };
           return [uv.x * texDimsUnstretched[0], uv.y * texDimsUnstretched[1]];
         }
@@ -1509,7 +1507,7 @@ class bivotJs {
         const texDimsUnstretched = unstretchedDims(_self.state.texDims);
         const pxS = p.x * texDimsUnstretched[0] / _self.state.texDims[0];
         const pyS = p.y * texDimsUnstretched[1] / _self.state.texDims[1];
-        const { coords, phase } = _self.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
+        const { coords } = _self.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
         const { p0, p1 }  = _self.gridSelectionState;
         if (_self.findClosestPoint(p0, p1, coords) === 0) {
           _self.gridSelectionState.p0 = coords;
@@ -1543,7 +1541,7 @@ class bivotJs {
     }
 
     function findNearestDraggablePoint(u, v) {
-      const td = _self.untiledImDims;
+      const td = _self.paddedTexDims;
       // Compute the inverse hit-radius scale factors for pointsDist (dist < 1 = hit).
       // Shader overlay: circles are drawn at a fixed 15-texel rawUV radius (circleR = 15/im[0]),
       // which equals 15 texDims pixels in x and 15*(td[1]/td[0]) in y — constant regardless of zoom.
@@ -1860,7 +1858,7 @@ class bivotJs {
       }
     }
 
-    function onDocumentMouseOut(event) {
+    function onDocumentMouseOut() {
       // Reset light position and camera tilt if the mouse moves out.
       if (_self.lights && _self.state.tiltZeroOnMouseOut) {
         _self.state.lightPosition.set(_self.state.lightPositionOffset.x, _self.state.lightPositionOffset.y, 1);
@@ -1887,11 +1885,11 @@ class bivotJs {
       }
     }
 
-    function onCanvasMouseOver(event) {
+    function onCanvasMouseOver() {
       _self.mouseInCanvas = true;
     }
 
-    function onCanvasMouseOut(event) {
+    function onCanvasMouseOut() {
       _self.mouseInCanvas = false;
     }
 
@@ -1918,19 +1916,6 @@ class bivotJs {
       _self.requestRender();
       if (_self.opts.onPointSelect) {
         _self.opts.onPointSelect(group, point);
-      }
-    }
-
-    function tryJumpToFirstPoint(group) {
-      if (_self.dragState.state === 'none') {
-        if (_self.state.pointsControl && group < _self.state.pointsControl.length) {
-          if (_self.state.pointsControl[group] && _self.state.pointsControl[group].points && _self.state.pointsControl[group].points.length > 0) {
-            _self.dragState.group = group;
-            _self.dragState.point = 0;
-            _self.dragState.state = 'selected';
-            jumpToPoint(group, 0);
-          }
-        }
       }
     }
 
@@ -2120,12 +2105,12 @@ class bivotJs {
                     }
                   } else {
                     // Jump to next pair (we're not at last pair, so next pair exists)
-                    var newP;
+                    let newP;
                     if (points.length == 1) {
                       newP = 0;
                     } else {
-                      var newP1 = 2 * Math.floor(p / 2) + 2;
-                      var newP2 = newP1 + 1;
+                      let newP1 = 2 * Math.floor(p / 2) + 2;
+                      let newP2 = newP1 + 1;
                       // Find nearest point in the next pair
                       if (newP2 >= points.length) {
                         newP = newP1;
@@ -2138,7 +2123,7 @@ class bivotJs {
                   }
                 } else {
                   // Other groups: jump to next point
-                  var newP = (p + 1) % points.length;
+                  let newP = (p + 1) % points.length;
                   _self.dragState.point = newP;
                   jumpToPoint(group, newP);
                 }
@@ -2254,13 +2239,13 @@ class bivotJs {
         case 38: // Up
           if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
-            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            var unit = 1;
+            let p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            let unit = 1;
             if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
             }
-            var [dx, dy] = rotateNudgeDelta(0, -unit * (event.shiftKey ? 10 : 1));
+            let [dx, dy] = rotateNudgeDelta(0, -unit * (event.shiftKey ? 10 : 1));
             p.x += dx;
             p.y += dy;
             if (p.x < 0) {
@@ -2286,13 +2271,13 @@ class bivotJs {
         case 40: // Down
           if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
-            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            var unit = 1;
+            let p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            let unit = 1;
             if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[1] * _self.state.texDims[1] / texDimsUnstretched[1];
             }
-            var [dx, dy] = rotateNudgeDelta(0, unit * (event.shiftKey ? 10 : 1));
+            let [dx, dy] = rotateNudgeDelta(0, unit * (event.shiftKey ? 10 : 1));
             p.x += dx;
             p.y += dy;
             if (p.x < 0) {
@@ -2318,13 +2303,13 @@ class bivotJs {
         case 37: // Left
           if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
-            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            var unit = 1;
+            let p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            let unit = 1;
             if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
             }
-            var [dx, dy] = rotateNudgeDelta(-unit * (event.shiftKey ? 10 : 1), 0);
+            let [dx, dy] = rotateNudgeDelta(-unit * (event.shiftKey ? 10 : 1), 0);
             p.x += dx;
             p.y += dy;
             if (p.x < 0) {
@@ -2350,13 +2335,13 @@ class bivotJs {
         case 39: // Right
           if (_self.state.enableKeypress && _self.dragState.state === 'selected') {
             event.preventDefault();
-            var p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
-            var unit = 1;
+            let p = _self.state.pointsControl[_self.dragState.group].points[_self.dragState.point];
+            let unit = 1;
             if (_self.state.pointsControl[_self.dragState.group].snapToGrid && _self.state.grid) {
               const texDimsUnstretched = unstretchedDims(_self.state.texDims);
               unit = _self.state.grid[0] * _self.state.texDims[0] / texDimsUnstretched[0];
             }
-            var [dx, dy] = rotateNudgeDelta(unit * (event.shiftKey ? 10 : 1), 0);
+            let [dx, dy] = rotateNudgeDelta(unit * (event.shiftKey ? 10 : 1), 0);
             p.x += dx;
             p.y += dy;
             if (p.x < 0) {
@@ -2448,7 +2433,7 @@ class bivotJs {
       }
     }
 
-    function onOverlayWheel(event) {
+    function onOverlayWheel() {
       _self.updateOverlay();  // Update overlay to preserve apparent line thicknesses
     }
 
@@ -2522,7 +2507,7 @@ class bivotJs {
 
       // If a materialSet was provided, set the texture format directly from the texture file extensions
       if (_self.opts.material || _self.opts.materialSet) {
-        for (var [key, value] of brdfTexturePaths) {
+        for (let [, value] of brdfTexturePaths) {
           _self.config.textureFormat = value.path.split('.').pop().toUpperCase();
           break;
         }
@@ -2563,7 +2548,7 @@ class bivotJs {
       //console.debug(JSON.parse(JSON.stringify(brdfTexturePaths)));
       for (let [key, value] of brdfTexturePaths) {
         loader.load(value.path,
-          function (textureOrBitmap, textureData) {
+          function (textureOrBitmap) {
             // Run after each texture is loaded.
             // ImageBitmapLoader returns an ImageBitmap, while TextureLoader and EXRLoader return a Texture
             let texture;
@@ -2621,8 +2606,8 @@ class bivotJs {
               console.debug(`Failed to set new texture in _self.brdfTextures: ${key}`)
             }
           },
-          function (xhr) {},
-          function (error) {
+          function () {},
+          function () {
             console.debug('Failed to load texture:', key);
           }
         );
@@ -2681,7 +2666,7 @@ class bivotJs {
         loadScanMetadata(loadManager, tex_dir, keys);
       }
 
-      _self.untiledImDims = calcImDims(_self.state.texDims);
+      _self.paddedTexDims = calcImDims(_self.state.texDims);
     }
 
     function loadScanFromMaterial(loadManager, material, keys, location) {
@@ -2727,10 +2712,10 @@ class bivotJs {
       }
 
       let scanState = [];
-      if (metadata.hasOwnProperty('state')) {
+      if (Object.prototype.hasOwnProperty.call(metadata, 'state')) {
         jsonToState(metadata.state, scanState, _self.vectorKeys);
       }
-      if (metadata.hasOwnProperty('version')) {
+      if (Object.prototype.hasOwnProperty.call(metadata, 'version')) {
         scanState.brdfVersion = metadata.version;
       }
 
@@ -2770,10 +2755,10 @@ class bivotJs {
               console.debug('Loaded metadata from ' + jsonFilename + ':', metadata);
 
               // Read valid render.json parameters, if present
-              if (metadata.hasOwnProperty('state')) {
+              if (Object.prototype.hasOwnProperty.call(metadata, 'state')) {
                 jsonToState(metadata.state, scanState);
               }
-              if (metadata.hasOwnProperty('version')) {
+              if (Object.prototype.hasOwnProperty.call(metadata, 'version')) {
                 scanState.brdfVersion = metadata.version;
               }
             } catch(e) {
@@ -2796,27 +2781,27 @@ class bivotJs {
       // Read valid bivot-renders.json parameters, if present
       const curScan = _self.scans[_self.scan];
       var curPosition = _self.camera.position.clone();
-      if (curScan.hasOwnProperty('cameraPositionX')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionX')) {
         curPosition.x = curScan.cameraPositionX;
       }
-      if (curScan.hasOwnProperty('cameraPositionY')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionY')) {
         curPosition.y = curScan.cameraPositionY;
       }
-      if (curScan.hasOwnProperty('cameraPositionZ')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'cameraPositionZ')) {
         curPosition.z = curScan.cameraPositionZ;
       }
       _self.controls.setPosition(curPosition.x, curPosition.y, curPosition.z);
 
-      if (curScan.hasOwnProperty('controlsMinDistance')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'controlsMinDistance')) {
         _self.controls.minDistance = curScan.controlsMinDistance;
       }
-      if (curScan.hasOwnProperty('controlsMaxDistance')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'controlsMaxDistance')) {
         _self.controls.maxDistance = curScan.controlsMaxDistance;
       }
-      if (curScan.hasOwnProperty('state')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'state')) {
         jsonToState(curScan.state, bivotState, _self.vectorKeys);
       }
-      if (curScan.hasOwnProperty('version')) {
+      if (Object.prototype.hasOwnProperty.call(curScan, 'version')) {
         bivotState.brdfVersion = curScan.version;
       }
 
@@ -2877,9 +2862,9 @@ class bivotJs {
       loadScansImpl(paths, texDir + 'brdf-mesh.obj', texDir + 'brdf-mesh_low.obj', loadManager);
     }
 
-    function onStart(url, itemsLoaded, itemsTotal) {
+    function onStart() {
       //console.debug('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
-    };
+    }
 
     function onProgress(url, itemsLoaded, itemsTotal) {
       if (itemsLoaded > 0) {
@@ -2887,19 +2872,12 @@ class bivotJs {
       }
       const progress = itemsLoaded / itemsTotal;
       _self.progressBarElem.style.transform = `scaleX(${progress})`;
-    };
+    }
 
     function fieldOfView(focalLength, sensorHeight) {
       // Focal length is in mm for easier GUI control.
       // Three.js defines the field of view angle as the vertical angle.
       return 2 * Math.atan(sensorHeight / (2 * focalLength / 1000)) * 180 / Math.PI;
-    }
-
-    function updateFOV() {
-      fov = fieldOfView(_self.state.focalLength, sensorHeight);
-      _self.camera.fov = fov;
-      _self.camera.updateProjectionMatrix();
-      _self.requestRender();
     }
 
     function addControlPanel() {
@@ -2939,7 +2917,7 @@ class bivotJs {
     canvas.width = w * pixelRatio;
     canvas.height = h * pixelRatio;
 
-    this.resizeObserver = new ResizeObserver(entries => {
+    this.resizeObserver = new ResizeObserver(() => {
       this.updateCanvasOnResize();
     });
     this.resizeObserver.observe(this.canvas);
@@ -3046,7 +3024,7 @@ class bivotJs {
     var numLights = 1;
     const control = this.lightControl();
     if (control) {
-      const { mode, stationary, moving } = control;
+      const { mode, stationary } = control;
       if (mode === 'moving') {
         lightVectors.push(this.state.lightPosition);
       } else {
@@ -3177,7 +3155,7 @@ class bivotJs {
     const cacheOnly = this.state.skipLoadedMesh && !this.state.loadingComplete
     if (this.meshPathUsed !== meshPath) {
       const _self = this;
-      function onLoadUpdateMesh() {
+      const onLoadUpdateMesh = function() {
         // Hide progress bar and activate the loaded mesh
         _self.loadingElem.style.display = 'none';
         _self.activateLoadedMesh(_self);
@@ -3323,17 +3301,17 @@ class bivotJs {
       tryingLowMesh = false;
     }
     if (cacheOnly) {
-      if (_self.meshCache.hasOwnProperty(meshPath)) {
+      if (Object.prototype.hasOwnProperty.call(_self.meshCache, meshPath)) {
         // Mesh has already been cached
         return;
       }
       _self.loadMeshByExtension(tryMeshPath, loadManager,
-        function(loadedObject, isGLTF) {
+        function(loadedObject) {
           const meshElem = _self.getMeshElemFromObject(loadedObject);
           _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
         },
-        function (xhr) {},
-        function (error) {
+        function () {},
+        function () {
           if (tryingLowMesh) {
             // Couldn't load low-res mesh.  Retry loading, this time using the standard mesh
             console.debug('Mesh cache: Low mesh not loaded, falling back to standard mesh:', meshPath);
@@ -3345,7 +3323,7 @@ class bivotJs {
       );
     } else {
       _self.meshPathUsed = meshPath;
-      if (_self.meshCache.hasOwnProperty(meshPath)) {
+      if (Object.prototype.hasOwnProperty.call(_self.meshCache, meshPath)) {
         // Mesh cache hit.  Switch to the requested mesh which is already loaded.
         _self.meshPathUsed = meshPath;
         _self.changeMesh(_self.meshCache[meshPath]);
@@ -3353,7 +3331,7 @@ class bivotJs {
       } else {
         // Mesh cache miss.  Load the mesh from the given path.
         _self.loadMeshByExtension(tryMeshPath, loadManager,
-          function(loadedObject, isGLTF) {
+          function(loadedObject) {
             const meshElem = _self.getMeshElemFromObject(loadedObject);
             _self.meshCache[meshPath] = meshElem;  // Add to mesh cache
             _self.changeMesh(meshElem);
@@ -3363,8 +3341,8 @@ class bivotJs {
               loadManager.onLoad();
             }
           },
-          function (xhr) {},
-          function (error) {
+          function () {},
+          function () {
             if (tryingLowMesh) {
               // Couldn't load low-res mesh.  Retry loading, this time using the standard mesh
               console.debug('Mesh load: Low mesh not loaded, falling back to standard mesh:', meshPath);
@@ -3408,7 +3386,7 @@ class bivotJs {
 
     // START: work around for https://github.com/mrdoob/three.js/issues/20492
     // TODO: Remove after upgrading to future Three.js release (r122) that will include a fix.
-    if (!geom.attributes.hasOwnProperty('normal')) {
+    if (!Object.prototype.hasOwnProperty.call(geom.attributes, 'normal')) {
       console.debug('Computing vertex normals...');
       geom.computeVertexNormals();
     }
@@ -3964,7 +3942,7 @@ class bivotJs {
     let overflowGrid   = false;
 
     const td = this.state.texDims    || [1, 1];
-    const im = this.untiledImDims    || [1, 1];
+    const im = this.paddedTexDims    || [1, 1];
 
     const ptToUV = (x, y) => this.texelToUV(x, y);
 
@@ -4332,7 +4310,6 @@ class bivotJs {
 
         // Halo colour: always black.
         const baseHaloRaw = BLACK;
-        const selHaloRaw  = BLACK;
 
         // Base colour for line segments (uses lineAlphaScale).
         const baseCol     = mkCol(baseColRaw,  lineAlphaScale);
@@ -4576,9 +4553,10 @@ class bivotJs {
       return 0;
     }
 
+    let i;
     for (i = phase1 * step; i <= 1; i += step) {
-      var x = x0 + (x1 - x0) * i;
-      var y = y0 + (y1 - y0) * i;
+      let x = x0 + (x1 - x0) * i;
+      let y = y0 + (y1 - y0) * i;
       if (strokeOn) {
         ctx.lineTo(x, y);
       } else {
@@ -4744,7 +4722,7 @@ class bivotJs {
       ctx.beginPath();
       ctx.strokeStyle = fadedColor;
       let idx = 0;
-      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+      for (let y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
         if (idx % 10 !== 0) { ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y); }
         idx++;
       }
@@ -4752,7 +4730,7 @@ class bivotJs {
       ctx.beginPath();
       ctx.strokeStyle = color;
       idx = 0;
-      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+      for (let y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
         if (idx % 10 === 0) { ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y); }
         idx++;
       }
@@ -4762,7 +4740,7 @@ class bivotJs {
       ctx.beginPath();
       ctx.strokeStyle = fadedColor;
       idx = 0;
-      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+      for (let x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
         if (idx % 10 !== 0) { ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1); }
         idx++;
       }
@@ -4770,7 +4748,7 @@ class bivotJs {
       ctx.beginPath();
       ctx.strokeStyle = color;
       idx = 0;
-      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+      for (let x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
         if (idx % 10 === 0) { ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1); }
         idx++;
       }
@@ -4779,12 +4757,12 @@ class bivotJs {
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = absLineWidthX;
-      for (var y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
+      for (let y = y0; y <= overlayTexW - 1; y += gridDimsStretch[1]) {
         ctx.moveTo(0, y); ctx.lineTo(overlayTexW - 1, y);
       }
       ctx.stroke();
       ctx.lineWidth = absLineWidthY;
-      for (var x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
+      for (let x = x0; x <= overlayTexH - 1; x += gridDimsStretch[0]) {
         ctx.moveTo(x, 0); ctx.lineTo(x, overlayTexH - 1);
       }
       ctx.stroke();
@@ -4829,7 +4807,7 @@ class bivotJs {
       var texFactor = 1;
       if (this.state.texDims) {
         const maxDim = Math.max(this.state.texDims[0], this.state.texDims[1]);
-        texFactor = Math.sqrt(this.untiledImDims[0] / maxDim);
+        texFactor = Math.sqrt(this.paddedTexDims[0] / maxDim);
       }
       const absLineWidthX = windowFactor * ys * distFactor * lineThicknessFactor * texFactor;
       const absLineWidthY = windowFactor * xs * distFactor * lineThicknessFactor * texFactor;
@@ -4850,12 +4828,12 @@ class bivotJs {
   }
 
   // Convert a texel-space point to rawUV [0,1]² — the common "centre texDims
-  // content inside the power-of-2 untiledImDims square" transform used by
+  // content inside the power-of-2 paddedTexDims square" transform used by
   // the shader overlay (ptToUV / ovRawUV), canvas overlay, and coordsToWorld.
   // rawUV.y is flipped (bottom-up) to match the UV / texture convention.
   texelToUV(x, y) {
     const td = this.state.texDims    || [1, 1];
-    const im = this.untiledImDims    || [1, 1];
+    const im = this.paddedTexDims    || [1, 1];
     return [
       (x - td[0] / 2) / im[0] + 0.5,
       0.5 - (y - td[1] / 2) / im[1],
@@ -4863,9 +4841,9 @@ class bivotJs {
   }
 
   overlayToTexScale(point, stretchFactors=[1, 1]) {
-    if (point && this.untiledImDims) {
-      const x = point.x / (this.untiledImDims[0] * stretchFactors[0]) * overlayTexW;
-      const y = point.y / (this.untiledImDims[1] * stretchFactors[1]) * overlayTexH;
+    if (point && this.paddedTexDims) {
+      const x = point.x / (this.paddedTexDims[0] * stretchFactors[0]) * overlayTexW;
+      const y = point.y / (this.paddedTexDims[1] * stretchFactors[1]) * overlayTexH;
       return { x, y };
     } else {
       return null;
@@ -4873,7 +4851,7 @@ class bivotJs {
   }
 
   coordsToOverlay(points, stretchFactors=[1, 1]) {
-    if (this.state.texDims && points && this.untiledImDims) {
+    if (this.state.texDims && points && this.paddedTexDims) {
       var pMap = [];
       for (var i = 0; i < points.length; i++) {
         const [u, v] = this.texelToUV(points[i].x, points[i].y);
@@ -4976,7 +4954,7 @@ class bivotJs {
       const [absLineWidthX, absLineWidthY] = this.getLineWidths();
       const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
 
-      function drawPoint(ctx, arr, i, selectedPoint=-1) {
+      const drawPoint = function(ctx, arr, i, selectedPoint=-1) {
         ctx.beginPath();
         const pointSelected = (groupSelected && i === selectedPoint);
         ctx.strokeStyle = ((pointSelected ? p.selectedColor : p.color) ?? '#ffffff') + alphaStr;
@@ -4991,9 +4969,9 @@ class bivotJs {
           ctx.ellipse(arr[i].x, arr[i].y, ex, ey, 0, 0, 2 * Math.PI);
         }
         ctx.stroke();
-      }
+      };
 
-      function drawLineSegment(ctx, x0, y0, x1, y1, endPoints=[1, 1]) {
+      const drawLineSegment = function(ctx, x0, y0, x1, y1, endPoints=[1, 1]) {
         const angle = Math.atan2((y1 - y0) / ey, (x1 - x0) / ex);
         const c = Math.cos(angle);
         const s = Math.sin(angle);
@@ -5005,7 +4983,7 @@ class bivotJs {
         ctx.moveTo(p0[0], p0[1]);
         ctx.lineTo(p1[0], p1[1]);
         ctx.stroke();
-      }
+      };
 
       if (p.lines === 'rect' || (p.lines === 'closed4' && this.dragState.state === 'draggingRect')) {
         drawPoint(ctx, pMap, 0, this.dragState.point);
@@ -5058,7 +5036,7 @@ class bivotJs {
               // Add short lines into the adjacent tiles that are shifted
               const len = 0.1  // Length of short lines, relative to the tile diagonal
               const diag = Math.sqrt(Math.pow(orthoDist, 2) + Math.pow(primaryLength, 2));
-              const vo = [len * diag * orthoVector[0], len * diag * orthoVector[1]];;
+              const vo = [len * diag * orthoVector[0], len * diag * orthoVector[1]];
               drawLineSegment(ctx, x2, y2, x2 + vo[0], y2 + vo[1], [1, 0]);
               const shiftDist = f * Math.sqrt(Math.pow(c1[0] - x2, 2) + Math.pow(c1[1] - y2, 2));
               const shiftPrimary = [shiftDist * primaryVector[0], shiftDist * primaryVector[1]];
@@ -5077,7 +5055,7 @@ class bivotJs {
             }
           }
         } else {
-          for (var i = 1; i < numPoints; i++) {
+          for (let i = 1; i < numPoints; i++) {
             drawLineSegment(ctx, pMap[i-1].x, pMap[i-1].y, pMap[i].x, pMap[i].y);
           }
           if (numPoints >= 4) {
@@ -5087,12 +5065,12 @@ class bivotJs {
       } else if (p.lines === 'pairs') {
         const baseAlpha = (!groupSelected && anySelected) ? '7f' : 'ff';
         const baseLineAlpha = !anySelected ? '7f' : baseAlpha;
-        for (var i = 0; i < numPoints; i++) {
+        for (let i = 0; i < numPoints; i++) {
           // dots: faded for non-selected pair, otherwise group-selection fade only
           alphaStr = (selPairIdx >= 0 && Math.floor(i / 2) !== selPairIdx) ? '3f' : baseAlpha;
           drawPoint(ctx, pMap, i, this.dragState.point);
         }
-        for (var i = 0; i < Math.floor(numPoints / 2); i++) {
+        for (let i = 0; i < Math.floor(numPoints / 2); i++) {
           // lines: additionally faded when no selection; further faded for non-selected pair
           lineAlphaStr = (selPairIdx >= 0 && i !== selPairIdx) ? '3f' : baseLineAlpha;
           drawLineSegment(ctx, pMap[i * 2].x, pMap[i * 2].y, pMap[i * 2 + 1].x, pMap[i * 2 + 1].y);
@@ -5100,7 +5078,7 @@ class bivotJs {
         alphaStr = baseAlpha;      // restore
         lineAlphaStr = baseLineAlpha;  // restore
       } else { // No lines
-        for (var i = 0; i < numPoints; i++) {
+        for (let i = 0; i < numPoints; i++) {
           drawPoint(ctx, pMap, i, this.dragState.point);
         }
       }
@@ -5247,7 +5225,7 @@ class bivotJs {
     if (sx === null || sy === null) {
       const [absLineWidthX, absLineWidthY] = this.getLineWidths();
       const [ex, ey] = this.getPointRadii(absLineWidthX, absLineWidthY);
-      const td = this.untiledImDims;
+      const td = this.paddedTexDims;
       const maxDim = Math.max(td[0], td[1]);
       sxi = (overlayTexW / maxDim) / ex;
       syi = (overlayTexH / maxDim) / ey;
@@ -5340,7 +5318,7 @@ class bivotJs {
     }
   }
 
-  render(timeMs) {
+  render() {
     if (this.shutdownRequested) {
         this.doShutdown();
     } else if (this.controls && this.composer) {
@@ -5511,7 +5489,7 @@ class bivotJs {
     for (const [i, p] of pc.points.entries()) {
       const pxS = p.x * texDimsUnstretched[0] / this.state.texDims[0];
       const pyS = p.y * texDimsUnstretched[1] / this.state.texDims[1];
-      const { coords, _phase } = this.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
+      const { coords } = this.texToGridCoords([pxS, pyS], texDimsUnstretched, [0, 0]);
       for (const [j, gs] of gsP.entries()) {
         if (coords[0] === gs[0] && coords[1] === gs[1]) {
           matched[i] = j;
@@ -5527,7 +5505,7 @@ class bivotJs {
     if (matched.filter(c => c === null).length === 1 || round) {
       var toSetI;
       var toSetP;
-      for ([i, m] of matched.entries()) {
+      for (const [i, m] of matched.entries()) {
         if (m !== null) {
           toSetI = 1 - i;
           toSetP = gsP[1 - m];
@@ -5642,7 +5620,7 @@ class bivotJs {
 
   disposeMeshCache() {
     if (this.meshCache) {
-      for (const [key, mesh] of Object.entries(this.meshCache)) {
+      for (const [, mesh] of Object.entries(this.meshCache)) {
         mesh.geometry.dispose();
         mesh.material.dispose();
       }
@@ -5676,18 +5654,18 @@ class bivotJs {
         this.resizeObserver.disconnect();
       }
 
-      for (var i = 0; i < this.timeouts.length; i++) {
+      for (let i = 0; i < this.timeouts.length; i++) {
         clearTimeout(this.timeouts[i]);
       }
       this.timeouts = [];
 
-      for (var i = 0; i < this.listeners.length; i++) {
+      for (let i = 0; i < this.listeners.length; i++) {
         const { object, type, listener } = this.listeners[i];
         object.removeEventListener(type, listener);
       }
       this.listeners = [];
 
-      for (var i = 0; i < this.elements.length; i++) {
+      for (let i = 0; i < this.elements.length; i++) {
         const elem = this.elements[i];
         elem.parentNode.removeChild(elem);
       }

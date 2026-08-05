@@ -24,7 +24,7 @@ export function useWindowSize(callback) {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return windowSize;
 }
@@ -32,7 +32,7 @@ export function useWindowSize(callback) {
 
 export function useScripts(scripts, whenLoaded) {
   const initialState = {count: 0};
-  function reducer(state, action) {
+  function reducer(state) {
     return {count: state.count + 1};
   }
 
@@ -56,7 +56,7 @@ export function useScripts(scripts, whenLoaded) {
     if (scriptsLoaded.count == scripts.length) {
       whenLoaded();
     }
-  }, [scriptsLoaded.count]);
+  }, [scriptsLoaded.count]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return () => {
     for (var i = 0; i < scripts.length; i++) {
