@@ -608,7 +608,10 @@ class bivotJs {
 
     // Device orientation events require user permission for iOS > 13.
     // We use a feature detector for tilt permission in case Android picks up the same API.
-    let orientPermNeeded = (typeof DeviceOrientationEvent !== 'undefined'
+    // Desktop Chromium now exposes requestPermission too, so also require a touch-first device;
+    // without that, desktop visitors were offered "Tap for tilt control" with no gyro to control.
+    let orientPermNeeded = (touchDetected
+                        && typeof DeviceOrientationEvent !== 'undefined'
                         && typeof DeviceOrientationEvent.requestPermission === 'function');
     // Do we actually want to use the device orientation for anything?
     // We set this later after loading the config.
@@ -1436,7 +1439,8 @@ class bivotJs {
         injectStyle(requestButton, styles['bivot-button']);
         requestButton.innerHTML = 'Tap for tilt control';
         requestButton.onclick = requestTiltPermission;
-        subtitleTextElem.appendChild(requestButton);
+        // This runs on every status update; replace rather than add, or the buttons pile up.
+        subtitleTextElem.replaceChildren(requestButton);
       } else if (_self.state._statusText.length == 0) {
         subtitleElem.style.display = 'none';
         subtitleTextElem.innerHTML = '';
