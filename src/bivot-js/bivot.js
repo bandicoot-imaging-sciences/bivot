@@ -1983,7 +1983,8 @@ class bivotJs {
       }
       // If dragState isn't active, jump to the first visible and editable group, if any
       var group = _self.dragState.group;
-      if (group === null) {
+      // pointsControl is only set by editors (BivotReact); plain embeds have none.
+      if (group === null && _self.state.pointsControl) {
         for (const [i, pc] of _self.state.pointsControl.entries()) {
           if (pc.visible && pc.draggable) {
             group = i;
